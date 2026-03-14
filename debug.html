@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Debug - Gemini Models</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 20px; }
+    h1 { color: #c8ff00; margin-bottom: 10px; }
+    .subtitle { color: #888; margin-bottom: 20px; }
+
+    .api-section { margin-bottom: 20px; background: #1a1a1a; border-radius: 12px; padding: 20px; }
+    .api-section label { font-weight: 600; display: block; margin-bottom: 8px; }
+    .api-row { display: flex; gap: 10px; }
+    .api-row input { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #333; background: #111; color: #fff; font-size: 14px; }
+    .api-row button { padding: 10px 20px; border-radius: 8px; border: none; background: #c8ff00; color: #000; font-weight: 600; cursor: pointer; }
+    .api-row button:hover { background: #b8ef00; }
+
+    .actions { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+    .actions button { padding: 10px 20px; border-radius: 8px; border: 1px solid #333; background: #222; color: #fff; cursor: pointer; font-size: 14px; }
+    .actions button:hover { background: #333; }
+    .actions button.primary { background: #c8ff00; color: #000; border: none; font-weight: 600; }
+
+    #status { padding: 10px; margin: 10px 0; border-radius: 8px; display: none; }
+    #status.info { display: block; background: #1a2a1a; border: 1px solid #3a5a3a; color: #8f8; }
+    #status.error { display: block; background: #2a1a1a; border: 1px solid #5a3a3a; color: #f88; }
+
+    .models-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 12px; margin-top: 15px; }
+    .model-card { background: #111; border: 1px solid #333; border-radius: 10px; padding: 14px; }
+    .model-card h3 { font-size: 14px; color: #c8ff00; margin-bottom: 6px; word-break: break-all; }
+    .model-card .info { font-size: 12px; color: #888; line-height: 1.6; }
+    .model-card .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin: 2px; }
+    .tag.generate { background: #1a3a1a; color: #8f8; }
+    .tag.image { background: #1a1a3a; color: #88f; }
+    .tag.other { background: #2a2a1a; color: #cc8; }
+
+    .test-section { margin-top: 20px; background: #1a1a1a; border-radius: 12px; padding: 20px; }
+    .test-section h2 { color: #c8ff00; margin-bottom: 15px; }
+    .test-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .test-card { background: #111; border: 1px solid #333; border-radius: 10px; padding: 14px; }
+    .test-card h4 { font-size: 13px; margin-bottom: 8px; }
+    .test-card .result { font-size: 12px; padding: 8px; border-radius: 6px; margin-top: 8px; min-height: 40px; }
+    .result.pending { background: #1a1a2a; color: #88f; }
+    .result.success { background: #1a2a1a; color: #8f8; }
+    .result.fail { background: #2a1a1a; color: #f88; }
+    .test-card img { max-width: 100%; border-radius: 6px; margin-top: 8px; }
+
+    .log { margin-top: 20px; background: #111; border-radius: 10px; padding: 15px; max-height: 300px; overflow-y: auto; }
+    .log h3 { color: #c8ff00; margin-bottom: 10px; }
+    .log pre { font-size: 12px; color: #aaa; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>Debug - Gemini API Models</h1>
+  <p class="subtitle">Verifique modelos disponiveis e teste geracao de imagem</p>
+
+  <div class="api-section">
+    <label>API Key do Gemini</label>
+    <div class="api-row">
+      <input type="password" id="apiKeyInput" placeholder="Cole sua API key aqui...">
+      <button onclick="saveKey()">Salvar</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" onclick="listModels()">Listar Todos os Modelos</button>
+    <button onclick="listImageModels()">Filtrar Modelos de Imagem</button>
+    <button class="primary" onclick="testAllImageModels()">Testar Geracao de Imagem</button>
+    <button onclick="testTextModels()">Testar Modelos de Texto</button>
+    <button onclick="clearLog()">Limpar Log</button>
+  </div>
+
+  <div id="status"></div>
+
+  <div id="modelsContainer"></div>
+  <div id="testContainer"></div>
+
+  <div class="log">
+    <h3>Log</h3>
+    <pre id="logArea">Pronto. Cole sua API key e clique em "Listar Todos os Modelos".</pre>
+  </div>
+
+  <script>
+    // Load key from localStorage (same as main site)
+    const keyInput = document.getElementById('apiKeyInput');
+    const saved = localStorage.getItem('gemini_api_key');
+    if (saved) keyInput.value = saved;
+
+    function saveKey() {
+      const key = keyInput.value.trim();
+      if (!key) return showStatus('Cole uma API key valida', 'error');
+      localStorage.setItem('gemini_api_key', key);
+      showStatus('API key salva com sucesso!', 'info');
+    }
+
+    function getKey() {
+      const key = keyInput.value.trim() || localStorage.getItem('gemini_api_key');
+      if (!key) { showStatus('Insira uma API key primeiro', 'error'); return null; }
+      return key;
+    }
+
+    function showStatus(msg, type) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = type;
+    }
+
+    function log(msg) {
+      const el = document.getElementById('logArea');
+      const time = new Date().toLocaleTimeString();
+      el.textContent += `\n[${time}] ${msg}`;
+      el.parentElement.scrollTop = el.parentElement.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('logArea').textContent = 'Log limpo.';
+    }
+
+    // ========== LIST MODELS ==========
+    async function listModels() {
+      const key = getKey(); if (!key) return;
+      showStatus('Carregando modelos...', 'info');
+      log('Listando todos os modelos...');
+
+      try {
+        let allModels = [];
+        let pageToken = '';
+        do {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=100${pageToken ? '&pageToken=' + pageToken : ''}`;
+          const res = await fetch(url);
+          if (!res.ok) { const err = await res.text(); throw new Error(`HTTP ${res.status}: ${err}`); }
+          const data = await res.json();
+          allModels = allModels.concat(data.models || []);
+          pageToken = data.nextPageToken || '';
+        } while (pageToken);
+
+        log(`Total: ${allModels.length} modelos encontrados`);
+        showStatus(`${allModels.length} modelos encontrados`, 'info');
+        renderModels(allModels);
+      } catch (e) {
+        log(`ERRO: ${e.message}`);
+        showStatus(`Erro: ${e.message}`, 'error');
+      }
+    }
+
+    async function listImageModels() {
+      const key = getKey(); if (!key) return;
+      showStatus('Filtrando modelos de imagem...', 'info');
+      log('Buscando modelos que suportam geracao de imagem...');
+
+      try {
+        let allModels = [];
+        let pageToken = '';
+        do {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=100${pageToken ? '&pageToken=' + pageToken : ''}`;
+          const res = await fetch(url);
+          if (!res.ok) { const err = await res.text(); throw new Error(`HTTP ${res.status}: ${err}`); }
+          const data = await res.json();
+          allModels = allModels.concat(data.models || []);
+          pageToken = data.nextPageToken || '';
+        } while (pageToken);
+
+        const imageModels = allModels.filter(m => {
+          const name = (m.name || '').toLowerCase();
+          const desc = (m.description || '').toLowerCase();
+          const methods = m.supportedGenerationMethods || [];
+          return name.includes('image') || name.includes('imagen') || name.includes('banana') ||
+                 desc.includes('image generation') || desc.includes('image output') ||
+                 methods.includes('generateImages');
+        });
+
+        log(`${imageModels.length} modelos de imagem encontrados de ${allModels.length} total`);
+        showStatus(`${imageModels.length} modelos de imagem encontrados`, 'info');
+        renderModels(imageModels);
+      } catch (e) {
+        log(`ERRO: ${e.message}`);
+        showStatus(`Erro: ${e.message}`, 'error');
+      }
+    }
+
+    function renderModels(models) {
+      const container = document.getElementById('modelsContainer');
+      if (!models.length) { container.innerHTML = '<p style="color:#f88;padding:20px;">Nenhum modelo encontrado.</p>'; return; }
+
+      let html = '<div class="models-grid">';
+      models.forEach(m => {
+        const methods = m.supportedGenerationMethods || [];
+        const tags = methods.map(method => {
+          if (method.includes('generate') && method.includes('Content')) return `<span class="tag generate">${method}</span>`;
+          if (method.includes('image') || method.includes('Image')) return `<span class="tag image">${method}</span>`;
+          return `<span class="tag other">${method}</span>`;
+        }).join('');
+
+        html += `
+          <div class="model-card">
+            <h3>${m.name || 'N/A'}</h3>
+            <div class="info">
+              <div><strong>Display:</strong> ${m.displayName || 'N/A'}</div>
+              <div><strong>Descricao:</strong> ${(m.description || 'N/A').substring(0, 150)}</div>
+              <div><strong>Metodos:</strong> ${tags || 'Nenhum'}</div>
+              <div><strong>Input tokens:</strong> ${m.inputTokenLimit || 'N/A'} | <strong>Output:</strong> ${m.outputTokenLimit || 'N/A'}</div>
+            </div>
+          </div>`;
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    // ========== TEST IMAGE GENERATION ==========
+    const IMAGE_MODELS_TO_TEST = [
+      'gemini-3.1-flash-image-preview',
+      'gemini-3-pro-image-preview',
+      'nano-banana-pro-preview',
+      'gemini-2.5-flash-image',
+      'gemini-2.0-flash-exp',
+      'imagen-3.0-generate-002',
+      'imagen-3.0-generate-001',
+    ];
+
+    async function testAllImageModels() {
+      const key = getKey(); if (!key) return;
+      showStatus('Testando geracao de imagem em todos os modelos...', 'info');
+      log('Iniciando teste de geracao de imagem...');
+
+      const container = document.getElementById('testContainer');
+      let html = '<div class="test-section"><h2>Teste de Geracao de Imagem</h2><div class="test-grid">';
+      IMAGE_MODELS_TO_TEST.forEach(model => {
+        html += `
+          <div class="test-card" id="test-${model.replace(/[^a-z0-9]/g, '-')}">
+            <h4>${model}</h4>
+            <div class="result pending" id="result-${model.replace(/[^a-z0-9]/g, '-')}">Testando...</div>
+          </div>`;
+      });
+      html += '</div></div>';
+      container.innerHTML = html;
+
+      for (const model of IMAGE_MODELS_TO_TEST) {
+        await testImageModel(key, model);
+      }
+      showStatus('Teste completo!', 'info');
+    }
+
+    async function testImageModel(key, model) {
+      const id = model.replace(/[^a-z0-9]/g, '-');
+      const resultEl = document.getElementById(`result-${id}`);
+      const cardEl = document.getElementById(`test-${id}`);
+      log(`Testando ${model}...`);
+
+      try {
+        // Try generateContent approach (for Gemini models)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const body = {
+          contents: [{ parts: [{ text: "Generate a small image of a blue cat" }] }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+        };
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const status = res.status;
+        const data = await res.json();
+
+        if (!res.ok) {
+          const errMsg = data.error?.message || JSON.stringify(data).substring(0, 200);
+          resultEl.textContent = `HTTP ${status}: ${errMsg}`;
+          resultEl.className = 'result fail';
+          log(`${model}: FALHOU - HTTP ${status}: ${errMsg}`);
+          return;
+        }
+
+        // Check for image in response
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const imagePart = parts.find(p => p.inlineData);
+        if (imagePart) {
+          const b64 = imagePart.inlineData.data;
+          const mime = imagePart.inlineData.mimeType || 'image/png';
+          resultEl.textContent = 'SUCESSO! Imagem gerada:';
+          resultEl.className = 'result success';
+          cardEl.innerHTML += `<img src="data:${mime};base64,${b64}" alt="test">`;
+          log(`${model}: SUCESSO - imagem gerada!`);
+        } else {
+          const textPart = parts.find(p => p.text);
+          resultEl.textContent = `Resposta sem imagem: ${(textPart?.text || 'vazio').substring(0, 150)}`;
+          resultEl.className = 'result fail';
+          log(`${model}: Sem imagem na resposta`);
+        }
+      } catch (e) {
+        resultEl.textContent = `Erro: ${e.message}`;
+        resultEl.className = 'result fail';
+        log(`${model}: ERRO - ${e.message}`);
+      }
+    }
+
+    // ========== TEST TEXT MODELS ==========
+    const TEXT_MODELS_TO_TEST = [
+      'gemini-2.5-pro',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+    ];
+
+    async function testTextModels() {
+      const key = getKey(); if (!key) return;
+      showStatus('Testando modelos de texto...', 'info');
+      log('Iniciando teste de modelos de texto...');
+
+      const container = document.getElementById('testContainer');
+      let html = '<div class="test-section"><h2>Teste de Modelos de Texto</h2><div class="test-grid">';
+      TEXT_MODELS_TO_TEST.forEach(model => {
+        html += `
+          <div class="test-card" id="test-${model.replace(/[^a-z0-9]/g, '-')}">
+            <h4>${model}</h4>
+            <div class="result pending" id="result-${model.replace(/[^a-z0-9]/g, '-')}">Testando...</div>
+          </div>`;
+      });
+      html += '</div></div>';
+      container.innerHTML = html;
+
+      for (const model of TEXT_MODELS_TO_TEST) {
+        await testTextModel(key, model);
+      }
+      showStatus('Teste de texto completo!', 'info');
+    }
+
+    async function testTextModel(key, model) {
+      const id = model.replace(/[^a-z0-9]/g, '-');
+      const resultEl = document.getElementById(`result-${id}`);
+      log(`Testando texto ${model}...`);
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const body = {
+          contents: [{ parts: [{ text: "Responda apenas: OK funcionando" }] }],
+        };
+
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const status = res.status;
+        const data = await res.json();
+
+        if (!res.ok) {
+          const errMsg = data.error?.message || JSON.stringify(data).substring(0, 200);
+          resultEl.textContent = `HTTP ${status}: ${errMsg}`;
+          resultEl.className = 'result fail';
+          log(`${model}: FALHOU - HTTP ${status}`);
+          return;
+        }
+
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
+        resultEl.textContent = `SUCESSO: ${text.substring(0, 100)}`;
+        resultEl.className = 'result success';
+        log(`${model}: SUCESSO`);
+      } catch (e) {
+        resultEl.textContent = `Erro: ${e.message}`;
+        resultEl.className = 'result fail';
+        log(`${model}: ERRO - ${e.message}`);
+      }
+    }
+  </script>
+</body>
+</html>
