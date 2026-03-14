@@ -1,5 +1,8 @@
 // === AI Performance Studio - Main Application ===
 
+// Gemini API Key - configure aqui
+const GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
   initTabs();
@@ -10,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initLightbox();
   initGallery();
   initKeyboardShortcuts();
+  initApiKeyModal();
 });
 
 // === SIDEBAR ===
@@ -150,23 +154,198 @@ function initPrompt() {
   });
 }
 
-function enhancePrompt(textarea) {
-  const original = textarea.value;
+async function enhancePrompt(textarea) {
+  const apiKey = localStorage.getItem('gemini_api_key');
+
+  if (!apiKey) {
+    openApiKeyModal();
+    return;
+  }
+
+  const original = textarea.value.trim();
+  if (!original) {
+    showToast('Escreva um prompt primeiro', 'error');
+    return;
+  }
+
+  // UI feedback - loading state
   textarea.parentElement.classList.add('prompt-enhancing');
+  const enhanceBtn = document.querySelector('.prompt-actions .btn-small:first-child');
+  const originalBtnHTML = enhanceBtn.innerHTML;
+  enhanceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Pensando...';
+  enhanceBtn.disabled = true;
+  textarea.disabled = true;
 
-  // Simulate AI enhancement
-  const enhancements = [
-    ', iluminacao volumetrica, ray tracing, ultra detalhado',
-    ', composicao cinematica, profundidade de campo, 8k resolucao',
-    ', cores vibrantes, atmosfera epica, qualidade masterpiece',
-    ', detalhes intricados, iluminacao global, renderizado fotorrealista'
-  ];
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-thinking-exp:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Voce e um especialista em criar prompts para geracao de imagens com IA (Midjourney, Stable Diffusion, DALL-E, Flux).
 
-  setTimeout(() => {
-    textarea.value = original + enhancements[Math.floor(Math.random() * enhancements.length)];
+Melhore esse prompt mantendo a ideia original mas adicionando detalhes tecnicos de iluminacao, composicao, estilo artistico, qualidade e resolucao que vao gerar uma imagem muito superior.
+
+Responda APENAS com o prompt melhorado, sem explicacoes, sem aspas, sem prefixos. Apenas o texto do prompt melhorado.
+
+Prompt original: ${original}`
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.8,
+            maxOutputTokens: 500
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 403 || response.status === 401) {
+        throw new Error('API key invalida. Verifique sua chave do Gemini.');
+      }
+      throw new Error(errorData.error?.message || `Erro ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Gemini Thinking model returns thoughts + response in candidates
+    let enhancedText = '';
+    const candidate = data.candidates?.[0];
+    if (candidate?.content?.parts) {
+      // Get the last text part (the actual response, not the thinking)
+      for (const part of candidate.content.parts) {
+        if (part.text) {
+          enhancedText = part.text.trim();
+        }
+      }
+    }
+
+    if (enhancedText) {
+      textarea.value = enhancedText;
+      // Auto-resize
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+      showToast('Prompt melhorado com Gemini AI!', 'success');
+    } else {
+      throw new Error('Resposta vazia do Gemini');
+    }
+
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    showToast(error.message || 'Erro ao melhorar prompt', 'error');
+
+    if (error.message.includes('API key invalida')) {
+      localStorage.removeItem('gemini_api_key');
+      openApiKeyModal();
+    }
+  } finally {
     textarea.parentElement.classList.remove('prompt-enhancing');
-    showToast('Prompt melhorado!', 'success');
-  }, 1500);
+    enhanceBtn.innerHTML = originalBtnHTML;
+    enhanceBtn.disabled = false;
+    textarea.disabled = false;
+    textarea.focus();
+  }
+}
+
+// === API KEY MODAL ===
+function initApiKeyModal() {
+  const modal = document.createElement('div');
+  modal.id = 'apiKeyModal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3><i class="fas fa-key" style="color: var(--accent); margin-right: 8px;"></i>Configurar Gemini API</h3>
+        <button class="btn-icon" onclick="closeApiKeyModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 14px;">
+          Para usar o botao "Melhorar" com IA, voce precisa de uma API key do Google Gemini.
+          <a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--accent);">Criar chave gratis aqui</a>
+        </p>
+        <div class="setting-group">
+          <label>API Key do Gemini</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="password" class="input-field" id="apiKeyInput" placeholder="Cole sua API key aqui...">
+            <button class="btn-tiny" id="toggleKeyVisibility" title="Mostrar/ocultar"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+        <div style="margin-top: 10px; padding: 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.78rem; color: var(--text-secondary);">
+          <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
+          Sua chave fica salva apenas no seu navegador (localStorage) e nunca e enviada para nossos servidores.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeApiKeyModal()">Cancelar</button>
+        <button class="btn-primary" id="saveApiKeyBtn"><i class="fas fa-check"></i> Salvar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Save key
+  document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (!key) {
+      showToast('Cole uma API key valida', 'error');
+      return;
+    }
+    localStorage.setItem('gemini_api_key', key);
+    closeApiKeyModal();
+    showToast('API key salva com sucesso!', 'success');
+  });
+
+  // Toggle visibility
+  document.getElementById('toggleKeyVisibility').addEventListener('click', () => {
+    const input = document.getElementById('apiKeyInput');
+    const icon = document.getElementById('toggleKeyVisibility').querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.className = 'fas fa-eye-slash';
+    } else {
+      input.type = 'password';
+      icon.className = 'fas fa-eye';
+    }
+  });
+
+  // Enter to save
+  document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('saveApiKeyBtn').click();
+  });
+
+  // Show config button in sidebar footer if key exists
+  updateApiKeyStatus();
+}
+
+function openApiKeyModal() {
+  const modal = document.getElementById('apiKeyModal');
+  const input = document.getElementById('apiKeyInput');
+  const savedKey = localStorage.getItem('gemini_api_key') || '';
+  input.value = savedKey;
+  modal.classList.add('open');
+}
+
+function closeApiKeyModal() {
+  document.getElementById('apiKeyModal').classList.remove('open');
+  updateApiKeyStatus();
+}
+
+function updateApiKeyStatus() {
+  const hasKey = !!localStorage.getItem('gemini_api_key');
+  const creditsDisplay = document.querySelector('.credits-display');
+  if (hasKey) {
+    creditsDisplay.innerHTML = '<i class="fas fa-check-circle" style="color: var(--green);"></i> <span>Gemini conectado</span>';
+    creditsDisplay.style.cursor = 'pointer';
+    creditsDisplay.onclick = openApiKeyModal;
+  } else {
+    creditsDisplay.innerHTML = '<i class="fas fa-key"></i> <span>Configurar Gemini</span>';
+    creditsDisplay.style.cursor = 'pointer';
+    creditsDisplay.onclick = openApiKeyModal;
+  }
 }
 
 // === SETTINGS ===
