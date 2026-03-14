@@ -58,6 +58,8 @@ function initTopbar() {
 }
 
 // === PROMPT ===
+let syncTimeout = null;
+
 function initPrompt() {
   const textarea = document.getElementById('promptInput');
 
@@ -67,96 +69,182 @@ function initPrompt() {
     textarea.style.height = textarea.scrollHeight + 'px';
   });
 
-  // Enhance button (Gemini)
+  // Enhance button (Gemini) - opens bilingual
   document.getElementById('enhanceBtn').addEventListener('click', () => {
     if (!textarea.value.trim()) {
       showToast('Escreva um prompt primeiro', 'error');
       return;
     }
-    enhancePrompt(textarea);
+    enhancePromptBilingual(textarea.value.trim());
+  });
+
+  // Language buttons
+  document.getElementById('langPT').addEventListener('click', () => {
+    document.getElementById('langPT').classList.add('active');
+    document.getElementById('langEN').classList.remove('active');
+  });
+  document.getElementById('langEN').addEventListener('click', () => {
+    document.getElementById('langEN').classList.add('active');
+    document.getElementById('langPT').classList.remove('active');
+  });
+
+  // PT textarea edit -> auto sync to EN
+  document.getElementById('promptPT').addEventListener('input', () => {
+    clearTimeout(syncTimeout);
+    const syncStatus = document.getElementById('syncStatus');
+    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
+    syncStatus.className = 'bilingual-sync';
+
+    syncTimeout = setTimeout(() => {
+      syncPTtoEN();
+    }, 1500); // Wait 1.5s after user stops typing
+  });
+
+  // Use English button
+  document.getElementById('useEnglishBtn').addEventListener('click', () => {
+    const enText = document.getElementById('promptEN').value.trim();
+    if (enText) {
+      document.getElementById('promptInput').value = enText;
+      document.getElementById('promptInput').style.height = 'auto';
+      document.getElementById('promptInput').style.height = document.getElementById('promptInput').scrollHeight + 'px';
+      showToast('Prompt EN aplicado!', 'success');
+    }
+  });
+
+  // Close bilingual
+  document.getElementById('closeBilingualBtn').addEventListener('click', () => {
+    document.getElementById('bilingualArea').style.display = 'none';
   });
 }
 
-// === GEMINI ENHANCE ===
-async function enhancePrompt(textarea) {
+// === GEMINI ENHANCE (BILINGUAL) ===
+async function callGemini(prompt) {
   const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) { openApiKeyModal(); return null; }
 
-  if (!apiKey) {
-    openApiKeyModal();
-    return;
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 1.0, maxOutputTokens: 65536 }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 401 || response.status === 400) {
+      localStorage.removeItem('gemini_api_key');
+      openApiKeyModal();
+      throw new Error('API key invalida. Cole uma nova chave.');
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Erro ${response.status}`);
   }
 
-  const original = textarea.value.trim();
+  const data = await response.json();
+  let text = '';
+  const candidate = data.candidates?.[0];
+  if (candidate?.content?.parts) {
+    for (const part of candidate.content.parts) {
+      if (part.text) text = part.text.trim();
+    }
+  }
+  return text;
+}
+
+async function enhancePromptBilingual(original) {
+  const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) { openApiKeyModal(); return; }
 
   // UI loading
-  const wrap = textarea.closest('.prompt-input-wrap');
   const enhanceBtn = document.getElementById('enhanceBtn');
-  wrap.parentElement.parentElement.classList.add('prompt-enhancing');
   enhanceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   enhanceBtn.disabled = true;
-  textarea.disabled = true;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `INSTRUCAO: Voce vai receber um prompt para geracao de imagem com IA. Sua unica tarefa e reescrever esse prompt de forma melhorada, mais detalhada e profissional. NAO escreva explicacoes, NAO escreva introducoes, NAO escreva "Aqui esta", NAO escreva nada alem do prompt melhorado. Retorne SOMENTE o texto do prompt melhorado, nada mais.\n\nPrompt para melhorar: ${original}`
-            }]
-          }],
-          generationConfig: {
-            temperature: 1.0,
-            maxOutputTokens: 65536
-          }
-        })
-      }
+    const result = await callGemini(
+      `INSTRUCAO: Voce vai receber um prompt para geracao de imagem com IA. Faca o seguinte:
+
+1. Melhore o prompt tornando-o mais detalhado e profissional para geracao de imagem.
+2. Retorne o resultado em DUAS linguas: Portugues e Ingles.
+
+FORMATO OBRIGATORIO (siga exatamente):
+---PT---
+(prompt melhorado em portugues aqui)
+---EN---
+(prompt melhorado em ingles aqui)
+
+NAO escreva explicacoes, NAO escreva introducoes, NAO escreva nada fora do formato acima.
+
+Prompt original: ${original}`
     );
 
-    if (!response.ok) {
-      if (response.status === 403 || response.status === 401 || response.status === 400) {
-        localStorage.removeItem('gemini_api_key');
-        openApiKeyModal();
-        throw new Error('API key invalida. Cole uma nova chave.');
-      }
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `Erro ${response.status}`);
+    if (!result) throw new Error('Resposta vazia');
+
+    // Parse PT and EN
+    let ptText = '';
+    let enText = '';
+
+    const ptMatch = result.match(/---PT---\s*([\s\S]*?)\s*---EN---/);
+    const enMatch = result.match(/---EN---\s*([\s\S]*?)$/);
+
+    if (ptMatch) ptText = ptMatch[1].trim();
+    if (enMatch) enText = enMatch[1].trim();
+
+    // Fallback if format not matched
+    if (!ptText && !enText) {
+      ptText = result;
+      enText = result;
     }
 
-    const data = await response.json();
-    let enhancedText = '';
-    const candidate = data.candidates?.[0];
-    if (candidate?.content?.parts) {
-      for (const part of candidate.content.parts) {
-        if (part.text) enhancedText = part.text.trim();
-      }
-    }
+    // Fill bilingual area
+    document.getElementById('promptPT').value = ptText;
+    document.getElementById('promptEN').value = enText;
+    document.getElementById('bilingualArea').style.display = 'block';
+    document.getElementById('syncStatus').innerHTML = '<i class="fas fa-check"></i> Sincronizado';
+    document.getElementById('syncStatus').className = 'bilingual-sync';
 
-    if (enhancedText) {
-      textarea.value = enhancedText;
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-      showToast('Prompt melhorado com Gemini AI!', 'success');
-    } else {
-      throw new Error('Resposta vazia do Gemini');
-    }
+    // Also update main prompt with EN (for generation)
+    document.getElementById('promptInput').value = enText;
+
+    showToast('Prompt melhorado em PT e EN!', 'success');
 
   } catch (error) {
     console.error('Gemini error:', error);
     showToast(error.message || 'Erro ao melhorar prompt', 'error');
-    if (error.message.toLowerCase().includes('api key') || error.message.toLowerCase().includes('invalid')) {
-      localStorage.removeItem('gemini_api_key');
-      openApiKeyModal();
-    }
   } finally {
-    wrap.parentElement.parentElement.classList.remove('prompt-enhancing');
     enhanceBtn.innerHTML = '<i class="fas fa-magic"></i>';
     enhanceBtn.disabled = false;
-    textarea.disabled = false;
-    textarea.focus();
+  }
+}
+
+// Sync PT edits to EN automatically
+async function syncPTtoEN() {
+  const ptText = document.getElementById('promptPT').value.trim();
+  if (!ptText) return;
+
+  const syncStatus = document.getElementById('syncStatus');
+  syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+  syncStatus.className = 'bilingual-sync syncing';
+
+  try {
+    const enText = await callGemini(
+      `INSTRUCAO: Traduza o texto abaixo para ingles. Este e um prompt para geracao de imagem com IA. Retorne SOMENTE a traducao, nada mais. Sem explicacoes, sem prefixos.\n\nTexto: ${ptText}`
+    );
+
+    if (enText) {
+      document.getElementById('promptEN').value = enText;
+      document.getElementById('promptInput').value = enText;
+      syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
+      syncStatus.className = 'bilingual-sync';
+    }
+  } catch (error) {
+    syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro ao sincronizar';
+    syncStatus.className = 'bilingual-sync';
+    console.error('Sync error:', error);
   }
 }
 

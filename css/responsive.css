@@ -25,6 +25,12 @@
   .topbar-nav::-webkit-scrollbar { display: none; }
 }
 
+@media (max-width: 768px) {
+  .bilingual-container {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   html { font-size: 13px; }
 
