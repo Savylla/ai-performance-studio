@@ -123,7 +123,7 @@ function initPrompt() {
   const promptInput = document.getElementById('promptInput');
   promptInput.addEventListener('input', () => {
     promptInput.style.height = 'auto';
-    promptInput.style.height = Math.min(promptInput.scrollHeight, 200) + 'px';
+    promptInput.style.height = promptInput.scrollHeight + 'px';
   });
 
   // Enhance prompt button
@@ -223,7 +223,7 @@ async function enhancePrompt(textarea) {
       textarea.value = enhancedText;
       // Auto-resize
       textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+      textarea.style.height = textarea.scrollHeight + 'px';
       showToast('Prompt melhorado com Gemini AI!', 'success');
     } else {
       throw new Error('Resposta vazia do Gemini');

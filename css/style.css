@@ -402,6 +402,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.9rem;
   line-height: 1.5;
   resize: vertical;
+  max-height: none;
   transition: border-color var(--transition);
 }
 
