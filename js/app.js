@@ -313,6 +313,7 @@ async function startGeneration() {
   const activeRatio = document.querySelector('.ratio-pill.active');
   const ratio = activeRatio?.dataset.ratio || '1:1';
   const qty = parseInt(document.querySelector('.qty-pill.active')?.dataset.qty || 1);
+  const selectedModel = document.getElementById('modelSelect').value;
 
   // Show loading
   document.getElementById('displayEmpty').style.display = 'none';
@@ -344,7 +345,7 @@ async function startGeneration() {
     document.getElementById('displayResults').style.display = 'block';
 
     // Try generating with Gemini models (try each until one works)
-    const imageData = await generateWithGemini(apiKey, prompt, ratio, i);
+    const imageData = await generateWithGemini(apiKey, prompt, ratio, i, selectedModel);
 
     if (imageData) {
       success++;
@@ -385,13 +386,15 @@ async function startGeneration() {
   }
 }
 
-async function generateWithGemini(apiKey, prompt, ratio, variation) {
+async function generateWithGemini(apiKey, prompt, ratio, variation, selectedModel) {
   const ratioText = ratio !== '1:1' ? ` The image should have a ${ratio} aspect ratio.` : '';
   const variationText = variation > 0 ? ` Create a unique variation #${variation + 1}.` : '';
   const fullPrompt = `Generate an image: ${prompt}${ratioText}${variationText}`;
 
-  // Try each model, with retry on rate limit (429)
-  for (const model of IMAGE_MODELS) {
+  // If user picked a specific model, only try that one; otherwise try all
+  const modelsToTry = selectedModel === 'auto' ? IMAGE_MODELS : [selectedModel];
+
+  for (const model of modelsToTry) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         if (attempt > 0) {
