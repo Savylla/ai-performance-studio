@@ -283,10 +283,10 @@ function initSettings() {
 // Models: gemini-2.5-flash-image, nano-banana-pro-preview
 
 const IMAGE_MODELS = [
-  'gemini-2.5-flash-preview-04-17',
-  'gemini-2.0-flash-exp',
   'gemini-2.5-flash-image',
-  'nano-banana-pro-preview'
+  'nano-banana-pro-preview',
+  'gemini-3-pro-image-preview',
+  'gemini-3.1-flash-image-preview'
 ];
 
 function initGeneration() {
@@ -380,62 +380,77 @@ async function startGeneration() {
   if (success > 0) {
     showToast(`${success} imagem(ns) gerada(s) com Gemini!`, 'success');
   } else {
-    showToast('Erro ao gerar. Verifique sua API key ou tente novamente.', 'error');
+    showToast('Quota excedida. Aguarde 1-2 minutos e tente novamente.', 'error');
   }
 }
 
 async function generateWithGemini(apiKey, prompt, ratio, variation) {
-  // Build aspect ratio instruction
   const ratioText = ratio !== '1:1' ? ` The image should have a ${ratio} aspect ratio.` : '';
   const variationText = variation > 0 ? ` Create a unique variation #${variation + 1}.` : '';
-
   const fullPrompt = `Generate an image: ${prompt}${ratioText}${variationText}`;
 
-  // Try each model until one succeeds
+  // Try each model, with retry on rate limit (429)
   for (const model of IMAGE_MODELS) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: fullPrompt }] }],
-            generationConfig: {
-              responseModalities: ['IMAGE', 'TEXT'],
-              temperature: 1.0
-            }
-          })
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) {
+          // Update loading text
+          const loadingCards = document.querySelectorAll('.card-loading-state span');
+          loadingCards.forEach(s => s.textContent = `Aguardando quota... tentativa ${attempt + 1}/3`);
+          await delay(10000 * attempt); // Wait 10s, 20s
         }
-      );
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        console.warn(`Model ${model} failed:`, err.error?.message);
-        continue; // Try next model
-      }
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: fullPrompt }] }],
+              generationConfig: {
+                responseModalities: ['IMAGE', 'TEXT'],
+                temperature: 1.0
+              }
+            })
+          }
+        );
 
-      const data = await response.json();
-      const candidate = data.candidates?.[0];
+        if (response.status === 429) {
+          console.warn(`Model ${model}: rate limited, attempt ${attempt + 1}`);
+          if (attempt < 2) continue; // Retry after delay
+          break; // Try next model
+        }
 
-      if (candidate?.content?.parts) {
-        for (const part of candidate.content.parts) {
-          if (part.inlineData) {
-            return {
-              base64: part.inlineData.data,
-              mimeType: part.inlineData.mimeType || 'image/png'
-            };
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          console.warn(`Model ${model} failed:`, err.error?.message);
+          break; // Don't retry non-429 errors, try next model
+        }
+
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+
+        if (candidate?.content?.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.inlineData) {
+              return {
+                base64: part.inlineData.data,
+                mimeType: part.inlineData.mimeType || 'image/png'
+              };
+            }
           }
         }
-      }
 
-      console.warn(`Model ${model}: no image in response`);
-    } catch (error) {
-      console.warn(`Model ${model} error:`, error);
+        console.warn(`Model ${model}: no image in response`);
+        break; // Got response but no image, try next model
+      } catch (error) {
+        console.warn(`Model ${model} error:`, error);
+        break;
+      }
     }
   }
 
-  return null; // All models failed
+  return null;
 }
 
 function base64ToBlobUrl(base64, mimeType) {
