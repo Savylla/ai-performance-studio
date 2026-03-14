@@ -26,45 +26,26 @@
         <span class="nav-section-title">Criar</span>
         <a href="#" class="nav-item active" data-tab="image">
           <i class="fas fa-image"></i><span>Imagem</span>
-          <span class="nav-badge">Flux</span>
+          <span class="nav-badge">8 APIs</span>
         </a>
         <a href="#" class="nav-item" data-tab="video">
           <i class="fas fa-video"></i><span>Video</span>
           <span class="nav-badge new">Novo</span>
         </a>
-        <a href="#" class="nav-item" data-tab="edit">
-          <i class="fas fa-wand-magic-sparkles"></i><span>Editar</span>
-        </a>
-        <a href="#" class="nav-item" data-tab="upscale">
-          <i class="fas fa-expand"></i><span>Upscale</span>
-        </a>
-      </div>
-
-      <div class="nav-section">
-        <span class="nav-section-title">Explorar</span>
-        <a href="#" class="nav-item" data-tab="gallery">
-          <i class="fas fa-th-large"></i><span>Galeria</span>
-        </a>
-        <a href="#" class="nav-item" data-tab="models">
-          <i class="fas fa-cube"></i><span>Modelos</span>
-        </a>
-        <a href="#" class="nav-item" data-tab="styles">
-          <i class="fas fa-palette"></i><span>Estilos</span>
-        </a>
-        <a href="#" class="nav-item" data-tab="moodboard">
-          <i class="fas fa-grip"></i><span>Moodboard</span>
+        <a href="#" class="nav-item" data-tab="audio">
+          <i class="fas fa-headphones"></i><span>Audio</span>
           <span class="nav-badge new">Novo</span>
+        </a>
+        <a href="#" class="nav-item" data-tab="text">
+          <i class="fas fa-font"></i><span>Texto</span>
+          <span class="nav-badge">4 APIs</span>
         </a>
       </div>
 
       <div class="nav-section">
         <span class="nav-section-title">Ferramentas</span>
-        <a href="#" class="nav-item" data-tab="batch">
-          <i class="fas fa-layer-group"></i><span>Batch</span>
-        </a>
-        <a href="#" class="nav-item" data-tab="workflow">
-          <i class="fas fa-diagram-project"></i><span>Workflow</span>
-          <span class="nav-badge new">Novo</span>
+        <a href="#" class="nav-item" data-tab="gallery">
+          <i class="fas fa-th-large"></i><span>Galeria</span>
         </a>
         <a href="#" class="nav-item" data-tab="history">
           <i class="fas fa-clock-rotate-left"></i><span>Historico</span>
@@ -73,11 +54,11 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="credits-display">
-        <i class="fas fa-coins"></i>
-        <span>250 creditos</span>
+      <div class="credits-display" id="creditsDisplay">
+        <i class="fas fa-key"></i>
+        <span>Configurar APIs</span>
       </div>
-      <a href="#" class="nav-item">
+      <a href="#" class="nav-item" onclick="openApiKeyModal(); return false;">
         <i class="fas fa-gear"></i><span>Configuracoes</span>
       </a>
     </div>
@@ -97,58 +78,127 @@
         </div>
       </div>
       <nav class="topbar-nav">
-        <a href="#" class="topbar-link active">Explore</a>
-        <a href="#" class="topbar-link">Image</a>
-        <a href="#" class="topbar-link">Video</a>
-        <a href="#" class="topbar-link">Audio</a>
-        <a href="#" class="topbar-link">Edit</a>
-        <a href="#" class="topbar-link">Character</a>
-        <a href="#" class="topbar-link">MoodBoard</a>
+        <a href="#" class="topbar-link active" data-tab="image"><i class="fas fa-image"></i> Imagem</a>
+        <a href="#" class="topbar-link" data-tab="video"><i class="fas fa-video"></i> Video</a>
+        <a href="#" class="topbar-link" data-tab="audio"><i class="fas fa-headphones"></i> Audio</a>
+        <a href="#" class="topbar-link" data-tab="text"><i class="fas fa-font"></i> Texto</a>
       </nav>
       <div class="topbar-actions">
-        <button class="btn-icon" title="Historico"><i class="fas fa-clock-rotate-left"></i></button>
-        <button class="btn-icon" title="Comunidade"><i class="fas fa-users"></i></button>
+        <button class="btn-icon" title="Configurar APIs" onclick="openApiKeyModal()"><i class="fas fa-key"></i></button>
         <div class="user-avatar">
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" alt="Avatar">
         </div>
       </div>
     </header>
 
-    <!-- Image Display Area (Full Screen) -->
-    <div class="image-display" id="imageDisplay">
-      <!-- Empty State -->
+    <!-- ==================== TAB CONTENTS ==================== -->
+
+    <!-- IMAGE Tab -->
+    <div class="tab-content active" id="tabImage">
       <div class="display-empty" id="displayEmpty">
         <div class="empty-illustration">
           <div class="empty-glow"></div>
           <i class="fas fa-wand-magic-sparkles"></i>
         </div>
         <h3>Descreva a cena que voce imagina</h3>
-        <p>Digite seu prompt abaixo e gere imagens incriveis com IA</p>
+        <p>Escolha um provedor abaixo e gere imagens incriveis com IA</p>
       </div>
-
-      <!-- Loading State -->
       <div class="display-loading" id="displayLoading" style="display: none;">
         <div class="loading-spinner">
           <div class="spinner-ring"></div>
           <span class="loading-main-text">Gerando imagem com IA...</span>
-          <span class="loading-sub-text">Isso pode levar 10-30 segundos por imagem</span>
+          <span class="loading-sub-text">Isso pode levar 10-30 segundos</span>
         </div>
       </div>
-
-      <!-- Results Grid -->
       <div class="display-results" id="displayResults" style="display: none;">
-        <div class="results-masonry" id="resultsMasonry">
-          <!-- Images inserted here -->
+        <div class="results-masonry" id="resultsMasonry"></div>
+      </div>
+    </div>
+
+    <!-- VIDEO Tab -->
+    <div class="tab-content" id="tabVideo">
+      <div class="display-empty">
+        <div class="empty-illustration">
+          <div class="empty-glow"></div>
+          <i class="fas fa-film"></i>
+        </div>
+        <h3>Gere videos com IA</h3>
+        <p>Descreva o video que voce quer criar</p>
+      </div>
+      <div class="display-results" id="videoResults" style="display: none;">
+        <div class="results-masonry" id="videoMasonry"></div>
+      </div>
+    </div>
+
+    <!-- AUDIO Tab -->
+    <div class="tab-content" id="tabAudio">
+      <div class="audio-workspace">
+        <!-- Audio sub-tabs -->
+        <div class="audio-subtabs">
+          <button class="audio-subtab active" data-audiotab="tts"><i class="fas fa-volume-up"></i> Text-to-Speech</button>
+          <button class="audio-subtab" data-audiotab="transcribe"><i class="fas fa-microphone"></i> Transcricao</button>
+        </div>
+
+        <!-- TTS Section -->
+        <div class="audio-section active" id="audioTTS">
+          <div class="audio-output-area">
+            <div class="audio-empty-state">
+              <i class="fas fa-volume-up"></i>
+              <h3>Text-to-Speech</h3>
+              <p>Digite texto abaixo e converta em audio</p>
+            </div>
+            <div class="audio-player-area" id="ttsPlayerArea" style="display:none;">
+              <audio controls id="ttsAudioPlayer" style="width:100%;"></audio>
+              <button class="btn-download-audio" id="ttsDownloadBtn"><i class="fas fa-download"></i> Download Audio</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transcription Section -->
+        <div class="audio-section" id="audioTranscribe">
+          <div class="audio-output-area">
+            <div class="audio-empty-state">
+              <i class="fas fa-microphone"></i>
+              <h3>Transcricao de Audio</h3>
+              <p>Grave audio ou fale para transcrever em texto</p>
+            </div>
+            <div class="transcription-result" id="transcriptionResult" style="display:none;">
+              <div class="transcription-text" id="transcriptionText"></div>
+              <button class="btn-copy-text" onclick="copyTranscription()"><i class="fas fa-copy"></i> Copiar</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Bottom Control Bar (Higgsfield Style) -->
+    <!-- TEXT Tab -->
+    <div class="tab-content" id="tabText">
+      <div class="text-workspace">
+        <div class="text-output-area" id="textOutputArea">
+          <div class="display-empty">
+            <div class="empty-illustration">
+              <div class="empty-glow"></div>
+              <i class="fas fa-pen-fancy"></i>
+            </div>
+            <h3>Gere texto com IA</h3>
+            <p>Escolha um provedor e digite seu prompt</p>
+          </div>
+        </div>
+        <div class="text-result-area" id="textResultArea" style="display:none;">
+          <div class="text-result-header">
+            <span id="textProviderUsed"></span>
+            <button class="btn-copy-text" onclick="copyTextResult()"><i class="fas fa-copy"></i> Copiar</button>
+          </div>
+          <div class="text-result-content" id="textResultContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== BOTTOM BAR ==================== -->
     <div class="bottom-bar">
-      <!-- Bilingual Prompt Area (visible after enhance) -->
+      <!-- Bilingual Area (for image enhance) -->
       <div class="bilingual-area" id="bilingualArea" style="display: none;">
         <div class="bilingual-container">
-          <!-- PT Panel -->
           <div class="bilingual-panel">
             <div class="bilingual-header">
               <span class="bilingual-label">PT Portugues</span>
@@ -156,7 +206,6 @@
             </div>
             <textarea id="promptPT" class="bilingual-textarea" placeholder="Prompt em portugues..." rows="3"></textarea>
           </div>
-          <!-- EN Panel -->
           <div class="bilingual-panel">
             <div class="bilingual-header">
               <span class="bilingual-label en-label">EN English</span>
@@ -175,62 +224,143 @@
       <div class="prompt-row">
         <div class="prompt-input-wrap">
           <i class="fas fa-sparkles prompt-icon"></i>
-          <textarea id="promptInput" placeholder="Descreva a cena que voce imagina..." rows="1"></textarea>
-          <div class="lang-buttons">
-            <button class="lang-btn active" id="langPT" title="Melhorar em Portugues">PT</button>
-            <button class="lang-btn" id="langEN" title="Melhorar em Ingles">EN</button>
+          <textarea id="promptInput" placeholder="Descreva o que voce quer criar..." rows="1"></textarea>
+          <div class="lang-buttons" id="langButtons">
+            <button class="lang-btn active" id="langPT" title="Portugues">PT</button>
+            <button class="lang-btn" id="langEN" title="English">EN</button>
           </div>
-          <button class="prompt-btn enhance-btn" id="enhanceBtn" title="Melhorar prompt com Gemini AI">
+          <button class="prompt-btn enhance-btn" id="enhanceBtn" title="Melhorar prompt com IA">
             <i class="fas fa-magic"></i>
           </button>
-          <button class="prompt-btn send-btn" id="generateBtn" title="Gerar imagem">
+          <button class="prompt-btn send-btn" id="generateBtn" title="Gerar">
             <i class="fas fa-arrow-up"></i>
           </button>
         </div>
       </div>
 
-      <!-- Settings Row -->
-      <div class="settings-row">
-        <!-- Model Selector -->
-        <div class="setting-inline model-selector">
-          <i class="fas fa-cube"></i>
-          <select id="modelSelect">
-            <option value="auto">Auto (mais novo)</option>
-            <option value="gemini-3.1-flash-image-preview">3.1 Flash Image</option>
-            <option value="gemini-3-pro-image-preview">3 Pro Image</option>
-            <option value="nano-banana-pro-preview">Nano Banana</option>
-            <option value="gemini-2.5-flash-image">2.5 Flash Image</option>
-          </select>
+      <!-- IMAGE Settings -->
+      <div class="settings-row tab-settings active" id="settingsImage">
+        <div class="setting-inline provider-selector">
+          <div class="provider-pills" id="imageProviders">
+            <span class="provider-label">Provedor:</span>
+            <button class="provider-pill active" data-provider="pollinations-flux" title="Gratis, sem API key">
+              <span class="dot free"></span> Flux
+            </button>
+            <button class="provider-pill" data-provider="pollinations-turbo" title="Gratis, sem API key">
+              <span class="dot free"></span> Turbo
+            </button>
+            <button class="provider-pill" data-provider="pollinations-sd" title="Gratis, sem API key">
+              <span class="dot free"></span> Stable Diff
+            </button>
+            <button class="provider-pill" data-provider="gemini-auto" title="Gemini Free Tier (precisa key)">
+              <span class="dot key"></span> Gemini Auto
+            </button>
+            <button class="provider-pill" data-provider="gemini-3.1-flash-image-preview" title="Gemini Free Tier">
+              <span class="dot key"></span> 3.1 Flash
+            </button>
+            <button class="provider-pill" data-provider="gemini-3-pro-image-preview" title="Gemini Free Tier">
+              <span class="dot key"></span> 3 Pro
+            </button>
+            <button class="provider-pill" data-provider="nano-banana-pro-preview" title="Gemini Free Tier">
+              <span class="dot key"></span> Nano Banana
+            </button>
+            <button class="provider-pill" data-provider="gemini-2.5-flash-image" title="Gemini Free Tier">
+              <span class="dot key"></span> 2.5 Flash
+            </button>
+          </div>
         </div>
-
-        <!-- Aspect Ratio -->
-        <div class="setting-inline ratio-group">
-          <button class="ratio-pill" data-ratio="3:4" data-w="768" data-h="1024">3:4</button>
-          <button class="ratio-pill" data-ratio="9:16" data-w="576" data-h="1024">9:16</button>
-          <button class="ratio-pill active" data-ratio="1:1" data-w="1024" data-h="1024">1:1</button>
-          <button class="ratio-pill" data-ratio="16:9" data-w="1024" data-h="576">16:9</button>
-          <button class="ratio-pill" data-ratio="4:3" data-w="1024" data-h="768">4:3</button>
-        </div>
-
-        <!-- Quantity -->
-        <div class="setting-inline qty-group">
-          <button class="qty-pill active" data-qty="1">1</button>
-          <button class="qty-pill" data-qty="2">2</button>
-          <button class="qty-pill" data-qty="4">4</button>
-        </div>
-
-        <!-- Seed -->
-        <div class="setting-inline seed-group">
-          <button class="seed-toggle" id="seedToggle" title="Seed aleatorio">
-            <i class="fas fa-dice"></i>
-            <span>Random</span>
+        <div class="settings-row-bottom">
+          <div class="setting-inline ratio-group">
+            <button class="ratio-pill" data-ratio="3:4" data-w="768" data-h="1024">3:4</button>
+            <button class="ratio-pill" data-ratio="9:16" data-w="576" data-h="1024">9:16</button>
+            <button class="ratio-pill active" data-ratio="1:1" data-w="1024" data-h="1024">1:1</button>
+            <button class="ratio-pill" data-ratio="16:9" data-w="1024" data-h="576">16:9</button>
+            <button class="ratio-pill" data-ratio="4:3" data-w="1024" data-h="768">4:3</button>
+          </div>
+          <div class="setting-inline qty-group">
+            <button class="qty-pill active" data-qty="1">1</button>
+            <button class="qty-pill" data-qty="2">2</button>
+            <button class="qty-pill" data-qty="4">4</button>
+          </div>
+          <div class="setting-inline seed-group">
+            <button class="seed-toggle" id="seedToggle" title="Seed aleatorio">
+              <i class="fas fa-dice"></i>
+              <span>Random</span>
+            </button>
+          </div>
+          <button class="generate-main" id="generateBtnMain">
+            <i class="fas fa-bolt"></i>
+            <span>Gerar</span>
           </button>
         </div>
+      </div>
 
-        <!-- Generate Button -->
-        <button class="generate-main" id="generateBtnMain">
+      <!-- VIDEO Settings -->
+      <div class="settings-row tab-settings" id="settingsVideo">
+        <div class="setting-inline provider-selector">
+          <div class="provider-pills" id="videoProviders">
+            <span class="provider-label">Provedor:</span>
+            <button class="provider-pill active" data-provider="pollinations-video" title="Gratis, sem API key">
+              <span class="dot free"></span> Pollinations
+            </button>
+          </div>
+        </div>
+        <button class="generate-main" id="generateVideoBtn">
           <i class="fas fa-bolt"></i>
-          <span>Gerar</span>
+          <span>Gerar Video</span>
+        </button>
+      </div>
+
+      <!-- AUDIO Settings -->
+      <div class="settings-row tab-settings" id="settingsAudio">
+        <div class="setting-inline provider-selector">
+          <div class="provider-pills" id="audioProviders">
+            <span class="provider-label">TTS:</span>
+            <button class="provider-pill active" data-provider="browser-tts" title="Nativo do navegador, gratis ilimitado">
+              <span class="dot free"></span> Browser Nativo
+            </button>
+            <button class="provider-pill" data-provider="pollinations-tts" title="Gratis, sem API key - vozes premium">
+              <span class="dot free"></span> Pollinations TTS
+            </button>
+          </div>
+        </div>
+        <div class="setting-inline voice-selector" id="voiceSelector">
+          <select id="voiceSelect">
+            <option value="default">Voz Padrao</option>
+          </select>
+        </div>
+        <button class="generate-main" id="generateAudioBtn">
+          <i class="fas fa-play"></i>
+          <span>Falar</span>
+        </button>
+        <button class="generate-main record-btn" id="recordBtn" style="display:none;">
+          <i class="fas fa-microphone"></i>
+          <span>Gravar</span>
+        </button>
+      </div>
+
+      <!-- TEXT Settings -->
+      <div class="settings-row tab-settings" id="settingsText">
+        <div class="setting-inline provider-selector">
+          <div class="provider-pills" id="textProviders">
+            <span class="provider-label">Provedor:</span>
+            <button class="provider-pill active" data-provider="gemini-text" title="Gemini Free Tier (precisa key)">
+              <span class="dot key"></span> Gemini 2.5 Pro
+            </button>
+            <button class="provider-pill" data-provider="pollinations-text-openai" title="Gratis, sem API key">
+              <span class="dot free"></span> Pollinations
+            </button>
+            <button class="provider-pill" data-provider="pollinations-text-mistral" title="Gratis, sem API key">
+              <span class="dot free"></span> Mistral
+            </button>
+            <button class="provider-pill" data-provider="openrouter-text" title="Gratis, precisa key OpenRouter">
+              <span class="dot key"></span> OpenRouter
+            </button>
+          </div>
+        </div>
+        <button class="generate-main" id="generateTextBtn">
+          <i class="fas fa-bolt"></i>
+          <span>Gerar Texto</span>
         </button>
       </div>
     </div>
@@ -243,9 +373,7 @@
       <button class="lightbox-close"><i class="fas fa-times"></i></button>
       <img src="" alt="Preview" id="lightboxImg">
       <div class="lightbox-actions">
-        <button class="btn-light"><i class="fas fa-download"></i> Download</button>
-        <button class="btn-light"><i class="fas fa-expand"></i> Upscale</button>
-        <button class="btn-light"><i class="fas fa-copy"></i> Variacao</button>
+        <button class="btn-light" id="lightboxDownload"><i class="fas fa-download"></i> Download</button>
         <button class="btn-light"><i class="fas fa-heart"></i> Favoritar</button>
       </div>
       <div class="lightbox-info" id="lightboxInfo"></div>

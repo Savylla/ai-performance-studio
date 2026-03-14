@@ -29,6 +29,26 @@
   .bilingual-container {
     grid-template-columns: 1fr;
   }
+
+  .provider-pills {
+    gap: 3px;
+  }
+
+  .provider-pill {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+
+  .audio-subtabs {
+    width: 100%;
+  }
+
+  .audio-subtab {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
 }
 
 @media (max-width: 640px) {
@@ -36,11 +56,20 @@
 
   .topbar { padding: 0 12px; }
 
-  .topbar-nav { display: none; }
+  .topbar-nav { gap: 2px; }
+
+  .topbar-link {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+
+  .topbar-link i { display: none; }
 
   .bottom-bar { padding: 10px 12px; }
 
   .settings-row { gap: 6px; }
+
+  .settings-row-bottom { gap: 4px; }
 
   .ratio-pill { padding: 4px 8px; font-size: 0.7rem; }
 
@@ -58,10 +87,17 @@
 
   .lightbox-actions { gap: 4px; }
   .btn-light { padding: 6px 10px; font-size: 0.72rem; }
+
+  .voice-selector select {
+    max-width: 140px;
+    font-size: 0.72rem;
+  }
 }
 
 @media (max-width: 380px) {
   .ratio-group { display: none; }
+
+  .topbar-nav { display: none; }
 }
 
 /* Sidebar overlay */
