@@ -285,7 +285,7 @@ function initGeneration() {
   document.getElementById('generateBtnMain').addEventListener('click', startGeneration);
 }
 
-function startGeneration() {
+async function startGeneration() {
   const prompt = document.getElementById('promptInput').value.trim();
   if (!prompt) {
     showToast('Escreva um prompt para gerar', 'error');
@@ -301,9 +301,6 @@ function startGeneration() {
   const seedToggle = document.getElementById('seedToggle');
   const baseSeed = seedToggle.classList.contains('locked') ? parseInt(seedToggle.dataset.seed) : null;
 
-  const modelMap = { 'flux': 'flux', 'turbo': 'turbo', 'sdxl': 'flux-realism' };
-  const pollinationsModel = modelMap[model] || 'flux';
-
   // Show loading
   document.getElementById('displayEmpty').style.display = 'none';
   document.getElementById('displayResults').style.display = 'none';
@@ -317,37 +314,36 @@ function startGeneration() {
 
   const grid = document.getElementById('resultsMasonry');
   const ratio = activeRatio?.dataset.ratio || '1:1';
-  let loaded = 0;
+
+  // Generate images one at a time to avoid rate limits
   let success = 0;
 
   for (let i = 0; i < qty; i++) {
     const seed = baseSeed ? baseSeed + i : Math.floor(Math.random() * 999999999);
     const encodedPrompt = encodeURIComponent(prompt);
-    // Add cache-buster timestamp to force fresh generation
-    const timestamp = Date.now() + i;
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=${pollinationsModel}&nologo=true&enhance=true&t=${timestamp}`;
 
-    // Create card with loading state immediately
+    // Clean URL: Pollinations works best without size params (defaults to 1024x1024 Flux)
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&nologo=true`;
+
+    // Create card with loading state
     const card = document.createElement('div');
     card.className = 'result-card loading';
     card.innerHTML = `
       <div class="card-loading-state">
         <div class="spinner-ring small"></div>
-        <span>Gerando...</span>
+        <span>Gerando... (pode levar ate 30s)</span>
       </div>
     `;
     grid.insertBefore(card, grid.firstChild);
 
-    // Show results area immediately with loading cards
+    // Show results area immediately
     document.getElementById('displayLoading').style.display = 'none';
     document.getElementById('displayResults').style.display = 'block';
 
-    // Use <img> element to load (no CORS restriction)
-    const img = document.createElement('img');
-    img.crossOrigin = 'anonymous';
+    // Wait for image with retry
+    const loaded = await loadImageWithRetry(imageUrl, 2);
 
-    img.onload = () => {
-      loaded++;
+    if (loaded) {
       success++;
       card.classList.remove('loading');
       card.innerHTML = `
@@ -359,35 +355,52 @@ function startGeneration() {
         </div>
       `;
       card.addEventListener('click', () => openLightbox(imageUrl, prompt, ratio));
-
-      if (loaded === qty) finishGen(success);
-    };
-
-    img.onerror = () => {
-      loaded++;
+    } else {
       card.innerHTML = `
         <div class="card-error-state">
           <i class="fas fa-exclamation-triangle"></i>
-          <span>Erro</span>
+          <span>Erro - tente novamente</span>
         </div>
       `;
-      if (loaded === qty) finishGen(success);
+    }
+
+    // Small delay between images to avoid rate limit
+    if (i < qty - 1) await delay(2000);
+  }
+
+  genBtn.disabled = false;
+  sendBtn.disabled = false;
+  genBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Gerar</span>';
+
+  if (success > 0) {
+    showToast(`${success} imagem(ns) gerada(s)!`, 'success');
+  } else {
+    showToast('Erro ao gerar. Tente novamente em alguns segundos.', 'error');
+  }
+}
+
+function loadImageWithRetry(url, retries) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => resolve(true);
+
+    img.onerror = async () => {
+      if (retries > 0) {
+        await delay(3000);
+        resolve(await loadImageWithRetry(url, retries - 1));
+      } else {
+        resolve(false);
+      }
     };
 
-    // Start loading
-    img.src = imageUrl;
-  }
+    img.src = url;
+  });
+}
 
-  function finishGen(successCount) {
-    genBtn.disabled = false;
-    sendBtn.disabled = false;
-    genBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Gerar</span>';
-    if (successCount > 0) {
-      showToast(`${successCount} imagem(ns) gerada(s)!`, 'success');
-    } else {
-      showToast('Erro ao gerar. Tente novamente.', 'error');
-    }
-  }
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function downloadImage(url, filename) {
