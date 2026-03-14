@@ -279,7 +279,16 @@ function initSettings() {
   });
 }
 
-// === GENERATION (Real AI Images via Pollinations.ai - 100% FREE) ===
+// === IMAGE GENERATION (Gemini API - 100% FREE) ===
+// Models: gemini-2.5-flash-image, nano-banana-pro-preview
+
+const IMAGE_MODELS = [
+  'gemini-2.5-flash-preview-04-17',
+  'gemini-2.0-flash-exp',
+  'gemini-2.5-flash-image',
+  'nano-banana-pro-preview'
+];
+
 function initGeneration() {
   document.getElementById('generateBtn').addEventListener('click', startGeneration);
   document.getElementById('generateBtnMain').addEventListener('click', startGeneration);
@@ -293,13 +302,16 @@ async function startGeneration() {
     return;
   }
 
+  const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    openApiKeyModal();
+    showToast('Configure sua API key do Gemini primeiro', 'error');
+    return;
+  }
+
   const activeRatio = document.querySelector('.ratio-pill.active');
-  const width = parseInt(activeRatio?.dataset.w || 1024);
-  const height = parseInt(activeRatio?.dataset.h || 1024);
+  const ratio = activeRatio?.dataset.ratio || '1:1';
   const qty = parseInt(document.querySelector('.qty-pill.active')?.dataset.qty || 1);
-  const model = document.getElementById('modelSelect').value;
-  const seedToggle = document.getElementById('seedToggle');
-  const baseSeed = seedToggle.classList.contains('locked') ? parseInt(seedToggle.dataset.seed) : null;
 
   // Show loading
   document.getElementById('displayEmpty').style.display = 'none';
@@ -313,48 +325,41 @@ async function startGeneration() {
   genBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Gerando...</span>';
 
   const grid = document.getElementById('resultsMasonry');
-  const ratio = activeRatio?.dataset.ratio || '1:1';
-
-  // Generate images one at a time to avoid rate limits
   let success = 0;
 
   for (let i = 0; i < qty; i++) {
-    const seed = baseSeed ? baseSeed + i : Math.floor(Math.random() * 999999999);
-    const encodedPrompt = encodeURIComponent(prompt);
-
-    // Clean URL: Pollinations works best without size params (defaults to 1024x1024 Flux)
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?seed=${seed}&nologo=true`;
-
     // Create card with loading state
     const card = document.createElement('div');
     card.className = 'result-card loading';
     card.innerHTML = `
       <div class="card-loading-state">
         <div class="spinner-ring small"></div>
-        <span>Gerando... (pode levar ate 30s)</span>
+        <span>Gerando imagem ${i + 1}/${qty}...</span>
       </div>
     `;
     grid.insertBefore(card, grid.firstChild);
 
-    // Show results area immediately
     document.getElementById('displayLoading').style.display = 'none';
     document.getElementById('displayResults').style.display = 'block';
 
-    // Wait for image with retry
-    const loaded = await loadImageWithRetry(imageUrl, 2);
+    // Try generating with Gemini models (try each until one works)
+    const imageData = await generateWithGemini(apiKey, prompt, ratio, i);
 
-    if (loaded) {
+    if (imageData) {
       success++;
+      const blobUrl = base64ToBlobUrl(imageData.base64, imageData.mimeType);
+      const seed = Date.now() + i;
+
       card.classList.remove('loading');
       card.innerHTML = `
-        <img src="${imageUrl}" alt="Generated" crossorigin="anonymous">
+        <img src="${blobUrl}" alt="Generated">
         <div class="result-card-overlay">
-          <button title="Download" onclick="event.stopPropagation(); downloadImage('${imageUrl}', 'ai-image-${seed}.png')"><i class="fas fa-download"></i></button>
+          <button title="Download" onclick="event.stopPropagation(); downloadBase64('${imageData.base64}', '${imageData.mimeType}', 'ai-image-${seed}.png')"><i class="fas fa-download"></i></button>
           <button title="Variacao" onclick="event.stopPropagation(); startGeneration()"><i class="fas fa-copy"></i></button>
           <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
         </div>
       `;
-      card.addEventListener('click', () => openLightbox(imageUrl, prompt, ratio));
+      card.addEventListener('click', () => openLightbox(blobUrl, prompt, ratio));
     } else {
       card.innerHTML = `
         <div class="card-error-state">
@@ -364,8 +369,8 @@ async function startGeneration() {
       `;
     }
 
-    // Small delay between images to avoid rate limit
-    if (i < qty - 1) await delay(2000);
+    // Small delay between images
+    if (i < qty - 1) await delay(1000);
   }
 
   genBtn.disabled = false;
@@ -373,58 +378,95 @@ async function startGeneration() {
   genBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Gerar</span>';
 
   if (success > 0) {
-    showToast(`${success} imagem(ns) gerada(s)!`, 'success');
+    showToast(`${success} imagem(ns) gerada(s) com Gemini!`, 'success');
   } else {
-    showToast('Erro ao gerar. Tente novamente em alguns segundos.', 'error');
+    showToast('Erro ao gerar. Verifique sua API key ou tente novamente.', 'error');
   }
 }
 
-function loadImageWithRetry(url, retries) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
+async function generateWithGemini(apiKey, prompt, ratio, variation) {
+  // Build aspect ratio instruction
+  const ratioText = ratio !== '1:1' ? ` The image should have a ${ratio} aspect ratio.` : '';
+  const variationText = variation > 0 ? ` Create a unique variation #${variation + 1}.` : '';
 
-    img.onload = () => resolve(true);
+  const fullPrompt = `Generate an image: ${prompt}${ratioText}${variationText}`;
 
-    img.onerror = async () => {
-      if (retries > 0) {
-        await delay(3000);
-        resolve(await loadImageWithRetry(url, retries - 1));
-      } else {
-        resolve(false);
+  // Try each model until one succeeds
+  for (const model of IMAGE_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: {
+              responseModalities: ['IMAGE', 'TEXT'],
+              temperature: 1.0
+            }
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.warn(`Model ${model} failed:`, err.error?.message);
+        continue; // Try next model
       }
-    };
 
-    img.src = url;
-  });
+      const data = await response.json();
+      const candidate = data.candidates?.[0];
+
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.inlineData) {
+            return {
+              base64: part.inlineData.data,
+              mimeType: part.inlineData.mimeType || 'image/png'
+            };
+          }
+        }
+      }
+
+      console.warn(`Model ${model}: no image in response`);
+    } catch (error) {
+      console.warn(`Model ${model} error:`, error);
+    }
+  }
+
+  return null; // All models failed
+}
+
+function base64ToBlobUrl(base64, mimeType) {
+  const byteChars = atob(base64);
+  const byteArray = new Uint8Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) {
+    byteArray[i] = byteChars.charCodeAt(i);
+  }
+  const blob = new Blob([byteArray], { type: mimeType });
+  return URL.createObjectURL(blob);
+}
+
+function downloadBase64(base64, mimeType, filename) {
+  const blobUrl = base64ToBlobUrl(base64, mimeType);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(blobUrl);
+  showToast('Download iniciado!', 'success');
 }
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// downloadImage kept for legacy/fallback
 function downloadImage(url, filename) {
-  // Use a canvas to bypass CORS for download
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    canvas.toBlob((blob) => {
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(link.href);
-      showToast('Download iniciado!', 'success');
-    }, 'image/png');
-  };
-  img.onerror = () => {
-    window.open(url, '_blank');
-  };
-  img.src = url;
+  window.open(url, '_blank');
 }
 
 // === LIGHTBOX ===
