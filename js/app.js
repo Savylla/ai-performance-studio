@@ -282,11 +282,12 @@ function initSettings() {
 // === IMAGE GENERATION (Gemini API - 100% FREE) ===
 // Models: gemini-2.5-flash-image, nano-banana-pro-preview
 
+// Ordem: mais recente primeiro, fallback para mais antigo
 const IMAGE_MODELS = [
-  'gemini-2.5-flash-image',
-  'nano-banana-pro-preview',
+  'gemini-3.1-flash-image-preview',
   'gemini-3-pro-image-preview',
-  'gemini-3.1-flash-image-preview'
+  'nano-banana-pro-preview',
+  'gemini-2.5-flash-image'
 ];
 
 function initGeneration() {
