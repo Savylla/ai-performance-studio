@@ -485,6 +485,36 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(255,255,255,0.3);
 }
 
+/* Card loading state */
+.result-card.loading {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.card-loading-state, .card-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.card-error-state i {
+  font-size: 1.3rem;
+  color: var(--red);
+}
+
+.spinner-ring.small {
+  width: 28px;
+  height: 28px;
+  border-width: 2px;
+}
+
 /* === BOTTOM CONTROL BAR === */
 .bottom-bar {
   border-top: 1px solid var(--border);

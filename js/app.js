@@ -285,7 +285,7 @@ function initGeneration() {
   document.getElementById('generateBtnMain').addEventListener('click', startGeneration);
 }
 
-async function startGeneration() {
+function startGeneration() {
   const prompt = document.getElementById('promptInput').value.trim();
   if (!prompt) {
     showToast('Escreva um prompt para gerar', 'error');
@@ -293,7 +293,6 @@ async function startGeneration() {
     return;
   }
 
-  // Get settings
   const activeRatio = document.querySelector('.ratio-pill.active');
   const width = parseInt(activeRatio?.dataset.w || 1024);
   const height = parseInt(activeRatio?.dataset.h || 1024);
@@ -302,12 +301,7 @@ async function startGeneration() {
   const seedToggle = document.getElementById('seedToggle');
   const baseSeed = seedToggle.classList.contains('locked') ? parseInt(seedToggle.dataset.seed) : null;
 
-  // Map model to Pollinations model names
-  const modelMap = {
-    'flux': 'flux',
-    'turbo': 'turbo',
-    'sdxl': 'flux-realism'
-  };
+  const modelMap = { 'flux': 'flux', 'turbo': 'turbo', 'sdxl': 'flux-realism' };
   const pollinationsModel = modelMap[model] || 'flux';
 
   // Show loading
@@ -315,7 +309,6 @@ async function startGeneration() {
   document.getElementById('displayResults').style.display = 'none';
   document.getElementById('displayLoading').style.display = 'block';
 
-  // Disable buttons
   const genBtn = document.getElementById('generateBtnMain');
   const sendBtn = document.getElementById('generateBtn');
   genBtn.disabled = true;
@@ -323,105 +316,102 @@ async function startGeneration() {
   genBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Gerando...</span>';
 
   const grid = document.getElementById('resultsMasonry');
-  let successCount = 0;
+  const ratio = activeRatio?.dataset.ratio || '1:1';
+  let loaded = 0;
+  let success = 0;
 
-  // Generate images sequentially for reliability
   for (let i = 0; i < qty; i++) {
     const seed = baseSeed ? baseSeed + i : Math.floor(Math.random() * 999999999);
+    const encodedPrompt = encodeURIComponent(prompt);
+    // Add cache-buster timestamp to force fresh generation
+    const timestamp = Date.now() + i;
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=${pollinationsModel}&nologo=true&enhance=true&t=${timestamp}`;
 
-    try {
-      const imageUrl = await generateSingleImage(prompt, width, height, seed, pollinationsModel);
+    // Create card with loading state immediately
+    const card = document.createElement('div');
+    card.className = 'result-card loading';
+    card.innerHTML = `
+      <div class="card-loading-state">
+        <div class="spinner-ring small"></div>
+        <span>Gerando...</span>
+      </div>
+    `;
+    grid.insertBefore(card, grid.firstChild);
 
-      if (imageUrl) {
-        const safePrompt = prompt.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-        const card = document.createElement('div');
-        card.className = 'result-card';
-        card.innerHTML = `
-          <img src="${imageUrl}" alt="Generated" crossorigin="anonymous">
-          <div class="result-card-overlay">
-            <button title="Download" onclick="event.stopPropagation(); downloadImage(this.closest('.result-card').querySelector('img').src, 'ai-image-${seed}.png')"><i class="fas fa-download"></i></button>
-            <button title="Variacao" onclick="event.stopPropagation(); startGeneration()"><i class="fas fa-copy"></i></button>
-            <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
-          </div>
-        `;
-        const ratio = activeRatio?.dataset.ratio || '1:1';
-        card.addEventListener('click', () => openLightbox(card.querySelector('img').src, prompt, ratio));
-        grid.insertBefore(card, grid.firstChild);
-        successCount++;
-
-        // Show results progressively
-        document.getElementById('displayLoading').style.display = 'none';
-        document.getElementById('displayResults').style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Generation error:', error);
-    }
-  }
-
-  // Finish
-  genBtn.disabled = false;
-  sendBtn.disabled = false;
-  genBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Gerar</span>';
-
-  if (successCount > 0) {
+    // Show results area immediately with loading cards
     document.getElementById('displayLoading').style.display = 'none';
     document.getElementById('displayResults').style.display = 'block';
-    showToast(`${successCount} imagem(ns) gerada(s)!`, 'success');
-  } else {
-    document.getElementById('displayLoading').style.display = 'none';
-    document.getElementById('displayEmpty').style.display = 'flex';
-    showToast('Erro ao gerar. Tente novamente.', 'error');
+
+    // Use <img> element to load (no CORS restriction)
+    const img = document.createElement('img');
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      loaded++;
+      success++;
+      card.classList.remove('loading');
+      card.innerHTML = `
+        <img src="${imageUrl}" alt="Generated" crossorigin="anonymous">
+        <div class="result-card-overlay">
+          <button title="Download" onclick="event.stopPropagation(); downloadImage('${imageUrl}', 'ai-image-${seed}.png')"><i class="fas fa-download"></i></button>
+          <button title="Variacao" onclick="event.stopPropagation(); startGeneration()"><i class="fas fa-copy"></i></button>
+          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+        </div>
+      `;
+      card.addEventListener('click', () => openLightbox(imageUrl, prompt, ratio));
+
+      if (loaded === qty) finishGen(success);
+    };
+
+    img.onerror = () => {
+      loaded++;
+      card.innerHTML = `
+        <div class="card-error-state">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>Erro</span>
+        </div>
+      `;
+      if (loaded === qty) finishGen(success);
+    };
+
+    // Start loading
+    img.src = imageUrl;
   }
-}
 
-async function generateSingleImage(prompt, width, height, seed, model) {
-  const encodedPrompt = encodeURIComponent(prompt);
-  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=${model}&nologo=true&enhance=true&nofeed=true`;
-
-  // Fetch the image as blob to ensure it loads completely
-  const response = await fetch(url, { mode: 'cors' });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  const blob = await response.blob();
-
-  if (blob.size < 1000) {
-    throw new Error('Image too small, likely an error');
-  }
-
-  // Create object URL from blob
-  const objectUrl = URL.createObjectURL(blob);
-  return objectUrl;
-}
-
-async function downloadImage(imgSrc, filename) {
-  try {
-    let blob;
-
-    if (imgSrc.startsWith('blob:')) {
-      // Already a blob URL, fetch it
-      const response = await fetch(imgSrc);
-      blob = await response.blob();
+  function finishGen(successCount) {
+    genBtn.disabled = false;
+    sendBtn.disabled = false;
+    genBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Gerar</span>';
+    if (successCount > 0) {
+      showToast(`${successCount} imagem(ns) gerada(s)!`, 'success');
     } else {
-      const response = await fetch(imgSrc, { mode: 'cors' });
-      blob = await response.blob();
+      showToast('Erro ao gerar. Tente novamente.', 'error');
     }
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-    showToast('Download iniciado!', 'success');
-  } catch (e) {
-    console.error('Download error:', e);
-    // Fallback: open in new tab
-    window.open(imgSrc, '_blank');
   }
+}
+
+function downloadImage(url, filename) {
+  // Use a canvas to bypass CORS for download
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    canvas.toBlob((blob) => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      showToast('Download iniciado!', 'success');
+    }, 'image/png');
+  };
+  img.onerror = () => {
+    window.open(url, '_blank');
+  };
+  img.src = url;
 }
 
 // === LIGHTBOX ===
