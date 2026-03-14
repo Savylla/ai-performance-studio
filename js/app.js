@@ -203,8 +203,10 @@ Prompt original: ${original}`
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      if (response.status === 403 || response.status === 401) {
-        throw new Error('API key invalida. Verifique sua chave do Gemini.');
+      if (response.status === 403 || response.status === 401 || response.status === 400) {
+        localStorage.removeItem('gemini_api_key');
+        openApiKeyModal();
+        throw new Error('API key invalida. Cole uma nova chave.');
       }
       throw new Error(errorData.error?.message || `Erro ${response.status}`);
     }
@@ -237,7 +239,7 @@ Prompt original: ${original}`
     console.error('Gemini API error:', error);
     showToast(error.message || 'Erro ao melhorar prompt', 'error');
 
-    if (error.message.includes('API key invalida')) {
+    if (error.message.toLowerCase().includes('api key') || error.message.toLowerCase().includes('invalid')) {
       localStorage.removeItem('gemini_api_key');
       openApiKeyModal();
     }
