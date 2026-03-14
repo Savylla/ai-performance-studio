@@ -184,18 +184,12 @@ async function enhancePrompt(textarea) {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Voce e um especialista em criar prompts para geracao de imagens com IA (Midjourney, Stable Diffusion, DALL-E, Flux).
-
-Melhore esse prompt mantendo a ideia original mas adicionando detalhes tecnicos de iluminacao, composicao, estilo artistico, qualidade e resolucao que vao gerar uma imagem muito superior.
-
-Responda APENAS com o prompt melhorado, sem explicacoes, sem aspas, sem prefixos. Apenas o texto do prompt melhorado.
-
-Prompt original: ${original}`
+              text: `Melhore esse prompt: ${original}`
             }]
           }],
           generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 500
+            temperature: 1.0,
+            maxOutputTokens: 800
           }
         })
       }
