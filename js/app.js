@@ -1,7 +1,11 @@
 // === AI Performance Studio - Main Application ===
 
-// Gemini API Key - configure aqui
-const GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
+// Gemini API Key
+const GEMINI_API_KEY = 'AIzaSyCLI31O6gFat1yixngH_sZmxMc6_EFhh4A';
+// Salva no localStorage automaticamente
+if (!localStorage.getItem('gemini_api_key')) {
+  localStorage.setItem('gemini_api_key', GEMINI_API_KEY);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
