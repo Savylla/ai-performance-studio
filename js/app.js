@@ -189,7 +189,7 @@ async function enhancePrompt(textarea) {
           }],
           generationConfig: {
             temperature: 1.0,
-            maxOutputTokens: 800
+            maxOutputTokens: 65536
           }
         })
       }
