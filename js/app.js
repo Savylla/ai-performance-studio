@@ -279,13 +279,13 @@ function initSettings() {
   });
 }
 
-// === GENERATION (Real AI Images via Pollinations.ai) ===
+// === GENERATION (Real AI Images via Pollinations.ai - 100% FREE) ===
 function initGeneration() {
   document.getElementById('generateBtn').addEventListener('click', startGeneration);
   document.getElementById('generateBtnMain').addEventListener('click', startGeneration);
 }
 
-function startGeneration() {
+async function startGeneration() {
   const prompt = document.getElementById('promptInput').value.trim();
   if (!prompt) {
     showToast('Escreva um prompt para gerar', 'error');
@@ -302,11 +302,11 @@ function startGeneration() {
   const seedToggle = document.getElementById('seedToggle');
   const baseSeed = seedToggle.classList.contains('locked') ? parseInt(seedToggle.dataset.seed) : null;
 
-  // Map model
+  // Map model to Pollinations model names
   const modelMap = {
     'flux': 'flux',
     'turbo': 'turbo',
-    'sdxl': 'flux'
+    'sdxl': 'flux-realism'
   };
   const pollinationsModel = modelMap[model] || 'flux';
 
@@ -322,79 +322,105 @@ function startGeneration() {
   sendBtn.disabled = true;
   genBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Gerando...</span>';
 
-  // Generate images
   const grid = document.getElementById('resultsMasonry');
-  let loaded = 0;
+  let successCount = 0;
 
+  // Generate images sequentially for reliability
   for (let i = 0; i < qty; i++) {
     const seed = baseSeed ? baseSeed + i : Math.floor(Math.random() * 999999999);
-    const encodedPrompt = encodeURIComponent(prompt);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=${pollinationsModel}&nologo=true&enhance=true`;
 
-    const img = new Image();
-    img.onload = () => {
-      loaded++;
-      // Create card
-      const card = document.createElement('div');
-      card.className = 'result-card';
-      card.innerHTML = `
-        <img src="${imageUrl}" alt="Generated">
-        <div class="result-card-overlay">
-          <button title="Download" onclick="event.stopPropagation(); downloadImage('${imageUrl}', 'ai-image-${seed}.png')"><i class="fas fa-download"></i></button>
-          <button title="Upscale" onclick="event.stopPropagation()"><i class="fas fa-expand"></i></button>
-          <button title="Variacao" onclick="event.stopPropagation(); generateVariation('${prompt.replace(/'/g, "\\'")}', ${width}, ${height})"><i class="fas fa-copy"></i></button>
-          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
-        </div>
-      `;
-      card.addEventListener('click', () => openLightbox(imageUrl, prompt, activeRatio?.dataset.ratio || '1:1'));
-      grid.insertBefore(card, grid.firstChild);
+    try {
+      const imageUrl = await generateSingleImage(prompt, width, height, seed, pollinationsModel);
 
-      if (loaded === qty) {
-        finishGeneration();
+      if (imageUrl) {
+        const safePrompt = prompt.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const card = document.createElement('div');
+        card.className = 'result-card';
+        card.innerHTML = `
+          <img src="${imageUrl}" alt="Generated" crossorigin="anonymous">
+          <div class="result-card-overlay">
+            <button title="Download" onclick="event.stopPropagation(); downloadImage(this.closest('.result-card').querySelector('img').src, 'ai-image-${seed}.png')"><i class="fas fa-download"></i></button>
+            <button title="Variacao" onclick="event.stopPropagation(); startGeneration()"><i class="fas fa-copy"></i></button>
+            <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+          </div>
+        `;
+        const ratio = activeRatio?.dataset.ratio || '1:1';
+        card.addEventListener('click', () => openLightbox(card.querySelector('img').src, prompt, ratio));
+        grid.insertBefore(card, grid.firstChild);
+        successCount++;
+
+        // Show results progressively
+        document.getElementById('displayLoading').style.display = 'none';
+        document.getElementById('displayResults').style.display = 'block';
       }
-    };
-
-    img.onerror = () => {
-      loaded++;
-      if (loaded === qty) finishGeneration();
-      showToast('Erro ao gerar uma imagem', 'error');
-    };
-
-    img.src = imageUrl;
+    } catch (error) {
+      console.error('Generation error:', error);
+    }
   }
-}
 
-function finishGeneration() {
-  document.getElementById('displayLoading').style.display = 'none';
-  document.getElementById('displayResults').style.display = 'block';
-
-  const genBtn = document.getElementById('generateBtnMain');
-  const sendBtn = document.getElementById('generateBtn');
+  // Finish
   genBtn.disabled = false;
   sendBtn.disabled = false;
   genBtn.innerHTML = '<i class="fas fa-bolt"></i> <span>Gerar</span>';
 
-  showToast('Imagens geradas com sucesso!', 'success');
+  if (successCount > 0) {
+    document.getElementById('displayLoading').style.display = 'none';
+    document.getElementById('displayResults').style.display = 'block';
+    showToast(`${successCount} imagem(ns) gerada(s)!`, 'success');
+  } else {
+    document.getElementById('displayLoading').style.display = 'none';
+    document.getElementById('displayEmpty').style.display = 'flex';
+    showToast('Erro ao gerar. Tente novamente.', 'error');
+  }
 }
 
-function generateVariation(prompt, w, h) {
-  document.getElementById('promptInput').value = prompt;
-  startGeneration();
+async function generateSingleImage(prompt, width, height, seed, model) {
+  const encodedPrompt = encodeURIComponent(prompt);
+  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=${model}&nologo=true&enhance=true&nofeed=true`;
+
+  // Fetch the image as blob to ensure it loads completely
+  const response = await fetch(url, { mode: 'cors' });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+
+  if (blob.size < 1000) {
+    throw new Error('Image too small, likely an error');
+  }
+
+  // Create object URL from blob
+  const objectUrl = URL.createObjectURL(blob);
+  return objectUrl;
 }
 
-async function downloadImage(url, filename) {
+async function downloadImage(imgSrc, filename) {
   try {
-    const response = await fetch(url);
-    const blob = await response.blob();
+    let blob;
+
+    if (imgSrc.startsWith('blob:')) {
+      // Already a blob URL, fetch it
+      const response = await fetch(imgSrc);
+      blob = await response.blob();
+    } else {
+      const response = await fetch(imgSrc, { mode: 'cors' });
+      blob = await response.blob();
+    }
+
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = filename;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
     showToast('Download iniciado!', 'success');
   } catch (e) {
+    console.error('Download error:', e);
     // Fallback: open in new tab
-    window.open(url, '_blank');
+    window.open(imgSrc, '_blank');
   }
 }
 
