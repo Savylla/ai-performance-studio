@@ -184,7 +184,7 @@ async function enhancePrompt(textarea) {
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Melhore esse prompt: ${original}`
+              text: `INSTRUCAO: Voce vai receber um prompt para geracao de imagem com IA. Sua unica tarefa e reescrever esse prompt de forma melhorada, mais detalhada e profissional. NAO escreva explicacoes, NAO escreva introducoes, NAO escreva "Aqui esta", NAO escreva nada alem do prompt melhorado. Retorne SOMENTE o texto do prompt melhorado, nada mais.\n\nPrompt para melhorar: ${original}`
             }]
           }],
           generationConfig: {
