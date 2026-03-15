@@ -31,7 +31,22 @@
     <header class="topbar">
       <div class="topbar-left">
         <div class="logo-mini">
-          <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+          <div class="logo-icon-custom">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="2" y="6" width="28" height="20" rx="2" stroke="white" stroke-width="1.5" fill="none"/>
+              <rect x="6" y="10" width="8" height="6" rx="1" stroke="white" stroke-width="1.2" fill="none"/>
+              <rect x="18" y="10" width="8" height="6" rx="1" stroke="white" stroke-width="1.2" fill="none"/>
+              <line x1="10" y1="19" x2="10" y2="23" stroke="white" stroke-width="1.2"/>
+              <line x1="16" y1="19" x2="16" y2="23" stroke="white" stroke-width="1.2"/>
+              <line x1="22" y1="19" x2="22" y2="23" stroke="white" stroke-width="1.2"/>
+              <line x1="7" y1="6" x2="7" y2="3" stroke="white" stroke-width="1.2"/>
+              <line x1="13" y1="6" x2="13" y2="3" stroke="white" stroke-width="1.2"/>
+              <line x1="19" y1="6" x2="19" y2="3" stroke="white" stroke-width="1.2"/>
+              <line x1="25" y1="6" x2="25" y2="3" stroke="white" stroke-width="1.2"/>
+              <circle cx="10" cy="13" r="1.5" fill="white"/>
+              <circle cx="22" cy="13" r="1.5" fill="white"/>
+            </svg>
+          </div>
           <span class="logo-text">AI Studio</span>
         </div>
       </div>
@@ -49,12 +64,13 @@
           <i class="fas fa-gear"></i> <span class="topbar-action-text">Configuracoes</span>
         </a>
         <button class="btn-icon" title="Configurar APIs" onclick="openApiKeyModal()"><i class="fas fa-key"></i></button>
-        <div class="credits-display-topbar" id="creditsDisplay" onclick="openApiKeyModal()">
-          <i class="fas fa-check-circle" style="color: var(--green);"></i>
-          <span>Configurar APIs</span>
-        </div>
         <div class="user-avatar" id="topbarAvatar" title="Clique para login">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" alt="Avatar" id="topbarAvatarImg">
+          <img src="" alt="Avatar" id="topbarAvatarImg" style="display:none;">
+          <svg class="avatar-default-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="17" stroke="#555" stroke-width="1.5" fill="none"/>
+            <circle cx="18" cy="14" r="5" stroke="#999" stroke-width="1.5" fill="none"/>
+            <path d="M6 30c0-6 5.5-10 12-10s12 4 12 10" stroke="#999" stroke-width="1.5" fill="none"/>
+          </svg>
         </div>
         <button class="btn-icon" id="logoutBtn" title="Sair" style="display:none;"><i class="fas fa-sign-out-alt"></i></button>
       </div>

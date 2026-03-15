@@ -351,6 +351,18 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 12px;
 }
 
+.logo-icon-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-icon-custom svg {
+  width: 32px;
+  height: 32px;
+}
+
 .logo-mini .logo-text {
   font-size: 1rem;
 }
@@ -436,18 +448,33 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   overflow: hidden;
-  border: 2px solid var(--border);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .user-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.user-avatar .avatar-default-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.user-avatar img[src]:not([src=""]) + .avatar-default-icon {
+  display: none;
+}
+
+.user-avatar img[src]:not([src=""]) {
+  display: block !important;
 }
 
 /* Empty State */

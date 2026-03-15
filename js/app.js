@@ -1750,14 +1750,16 @@ function updateApiKeyStatus() {
     Pexels: !!getApiKey('pexels_api_key')
   };
   const display = document.getElementById('creditsDisplay');
-  const connected = Object.entries(providers).filter(([,v]) => v).map(([k]) => k);
-  if (connected.length > 0) {
-    const label = connected.length <= 2 ? connected.join(' + ') : `${connected.length} APIs`;
-    display.innerHTML = `<i class="fas fa-check-circle" style="color: var(--green);"></i> <span>${label} conectado</span>`;
-  } else {
-    display.innerHTML = '<i class="fas fa-key"></i> <span>Configurar APIs</span>';
+  if (display) {
+    const connected = Object.entries(providers).filter(([,v]) => v).map(([k]) => k);
+    if (connected.length > 0) {
+      const label = connected.length <= 2 ? connected.join(' + ') : `${connected.length} APIs`;
+      display.innerHTML = `<i class="fas fa-check-circle" style="color: var(--green);"></i> <span>${label} conectado</span>`;
+    } else {
+      display.innerHTML = '<i class="fas fa-key"></i> <span>Configurar APIs</span>';
+    }
+    display.onclick = openApiKeyModal;
   }
-  display.onclick = openApiKeyModal;
 }
 
 // === TOAST ===
@@ -2209,6 +2211,9 @@ function updateUserUI(user) {
   // Topbar avatar
   const topAvatar = document.getElementById('topbarAvatarImg');
   topAvatar.src = user.picture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.email;
+  topAvatar.style.display = 'block';
+  const defaultIcon = document.querySelector('.avatar-default-icon');
+  if (defaultIcon) defaultIcon.style.display = 'none';
   document.getElementById('topbarAvatar').title = user.name;
   // Show logout button
   const logoutBtn = document.getElementById('logoutBtn');
@@ -2219,7 +2224,11 @@ function updateUserUI(user) {
 
 function googleLogout() {
   localStorage.removeItem('google_user');
-  document.getElementById('topbarAvatarImg').src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=user';
+  const topAvatarImg = document.getElementById('topbarAvatarImg');
+  topAvatarImg.src = '';
+  topAvatarImg.style.display = 'none';
+  const defaultIcon = document.querySelector('.avatar-default-icon');
+  if (defaultIcon) defaultIcon.style.display = '';
   document.getElementById('topbarAvatar').title = 'Clique para login';
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.style.display = 'none';
