@@ -360,41 +360,59 @@ function initImageSettings() {
 }
 
 // === GEMINI API CALLS ===
+const GEMINI_TEXT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+
 async function callGemini(prompt) {
   const apiKey = getApiKey('gemini_api_key');
   if (!apiKey) { openApiKeyModal(); return null; }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 1.0, maxOutputTokens: 65536 }
-      })
-    }
-  );
+  for (const model of GEMINI_TEXT_FALLBACK_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 1.0, maxOutputTokens: 65536 }
+          })
+        }
+      );
 
-  if (!response.ok) {
-    if ([400, 401, 403].includes(response.status)) {
-      setApiKey('gemini_api_key', '');
-      openApiKeyModal();
-      throw new Error('API key invalida. Cole uma nova chave.');
-    }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Erro ${response.status}`);
-  }
+      if (!response.ok) {
+        if ([400, 401, 403].includes(response.status)) {
+          setApiKey('gemini_api_key', '');
+          openApiKeyModal();
+          throw new Error('API key invalida. Cole uma nova chave.');
+        }
+        const errorData = await response.json().catch(() => ({}));
+        const errMsg = errorData.error?.message || '';
+        // If quota exceeded, try next model
+        if (response.status === 429 || errMsg.toLowerCase().includes('quota')) {
+          console.warn(`Quota exceeded for ${model}, trying next...`);
+          continue;
+        }
+        throw new Error(errMsg || `Erro ${response.status}`);
+      }
 
-  const data = await response.json();
-  let text = '';
-  const candidate = data.candidates?.[0];
-  if (candidate?.content?.parts) {
-    for (const part of candidate.content.parts) {
-      if (part.text) text = part.text.trim();
+      const data = await response.json();
+      let text = '';
+      const candidate = data.candidates?.[0];
+      if (candidate?.content?.parts) {
+        for (const part of candidate.content.parts) {
+          if (part.text) text = part.text.trim();
+        }
+      }
+      return text;
+    } catch (err) {
+      // If it's an auth error, don't retry
+      if (err.message.includes('invalida')) throw err;
+      console.warn(`callGemini failed with ${model}:`, err.message);
+      continue;
     }
   }
-  return text;
+  throw new Error('Todos os modelos Gemini estao com quota esgotada. Tente novamente mais tarde.');
 }
 
 // === ENHANCE PROMPT (BILINGUAL) ===
