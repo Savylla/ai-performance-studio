@@ -479,15 +479,12 @@ async function callGemini(prompt) {
 
 // === ENHANCE PROMPT (BILINGUAL) ===
 async function enhancePromptBilingual(original) {
-  const apiKey = getApiKey('gemini_api_key');
-  if (!apiKey) { openApiKeyModal(); return; }
-
   const enhanceBtn = document.getElementById('enhanceBtn');
   enhanceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   enhanceBtn.disabled = true;
 
   try {
-    const result = await callGemini(
+    const result = await pollinationsText(
       `INSTRUCAO: Voce vai receber um prompt para geracao de imagem com IA. Faca o seguinte:
 
 1. Melhore o prompt tornando-o mais detalhado e profissional para geracao de imagem.
@@ -501,7 +498,8 @@ FORMATO OBRIGATORIO (siga exatamente):
 
 NAO escreva explicacoes, NAO escreva introducoes, NAO escreva nada fora do formato acima.
 
-Prompt original: ${original}`
+Prompt original: ${original}`,
+      'openai'
     );
 
     if (!result) throw new Error('Resposta vazia');
@@ -522,7 +520,7 @@ Prompt original: ${original}`
     document.getElementById('promptInput').value = enText;
     showToast('Prompt melhorado em PT e EN!', 'success');
   } catch (error) {
-    console.error('Gemini error:', error);
+    console.error('Enhance error:', error);
     showToast(error.message || 'Erro ao melhorar prompt', 'error');
   } finally {
     enhanceBtn.innerHTML = '<i class="fas fa-magic"></i>';
@@ -537,8 +535,9 @@ async function syncPTtoEN() {
   syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo PT→EN...';
   syncStatus.className = 'bilingual-sync syncing';
   try {
-    const enText = await callGemini(
-      `INSTRUCAO: Traduza o texto abaixo para ingles. Este e um prompt para geracao de imagem com IA. Retorne SOMENTE a traducao, nada mais.\n\nTexto: ${ptText}`
+    const enText = await pollinationsText(
+      `INSTRUCAO: Traduza o texto abaixo para ingles. Este e um prompt para geracao de imagem com IA. Retorne SOMENTE a traducao, nada mais.\n\nTexto: ${ptText}`,
+      'openai'
     );
     if (enText) {
       document.getElementById('promptEN').value = enText;
@@ -561,8 +560,9 @@ async function syncENtoPT() {
   syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo EN→PT...';
   syncStatus.className = 'bilingual-sync syncing';
   try {
-    const ptText = await callGemini(
-      `INSTRUCAO: Traduza o texto abaixo para portugues brasileiro. Este e um prompt para geracao de imagem com IA. Retorne SOMENTE a traducao, nada mais.\n\nTexto: ${enText}`
+    const ptText = await pollinationsText(
+      `INSTRUCAO: Traduza o texto abaixo para portugues brasileiro. Este e um prompt para geracao de imagem com IA. Retorne SOMENTE a traducao, nada mais.\n\nTexto: ${enText}`,
+      'openai'
     );
     if (ptText) {
       document.getElementById('promptPT').value = ptText;
