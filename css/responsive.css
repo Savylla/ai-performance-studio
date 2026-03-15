@@ -1,22 +1,11 @@
 /* === RESPONSIVE === */
 
 @media (max-width: 900px) {
-  .sidebar {
-    transform: translateX(-100%);
+  .sidebar.sidebar-minimal {
+    display: none;
   }
 
-  .sidebar.open {
-    transform: translateX(0);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .sidebar-close { display: flex; }
-
-  .main-content { margin-left: 0; }
-
-  .menu-toggle { display: flex; }
-
-  .topbar-left { display: flex; }
+  .main-content { margin-left: 0 !important; }
 
   .topbar-nav {
     overflow-x: auto;
