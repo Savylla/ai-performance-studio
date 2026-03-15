@@ -167,6 +167,7 @@ function switchTab(tab) {
   }
   // Load gallery when switching to gallery tab
   if (tab === 'gallery') renderGallery();
+  if (tab === 'history') renderHistory();
 }
 
 function showTTSProviders() {
@@ -821,11 +822,13 @@ async function startImageGeneration() {
         <div class="result-card-provider">${provider}</div>
       `;
       card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
-      // Save to gallery
+      // Save to gallery + history
       saveImageToGallery(imgSrc, prompt, provider);
+      saveToHistory({ type: 'image', prompt, provider, status: 'success', detail: ratio });
     } else {
       card.classList.remove('loading');
       card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle"></i><span>Erro - tente novamente</span></div>`;
+      saveToHistory({ type: 'image', prompt, provider, status: 'error', detail: 'Falha na geracao' });
     }
 
     if (i < qty - 1) await delay(1500);
@@ -882,8 +885,9 @@ async function startMoodboardGeneration() {
       success++;
       const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
       addImageToBoard(imgSrc, 'AI Generated (' + provider + ')', null);
-      // Save to gallery
+      // Save to gallery + history
       saveImageToGallery(imgSrc, prompt, provider);
+      saveToHistory({ type: 'moodboard', prompt, provider, status: 'success', detail: 'Imagem gerada' });
     }
 
     if (i < qty - 1) await delay(1500);
@@ -1136,8 +1140,10 @@ async function startVideoGeneration() {
     showToast('Video gerado!', 'success');
     // Save to gallery
     saveVideoToGallery(videoUrl, prompt, `Pollinations ${model}`);
+    saveToHistory({ type: 'video', prompt, provider: `Pollinations ${model}`, status: 'success' });
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
+    saveToHistory({ type: 'video', prompt, provider: `Pollinations ${model}`, status: 'error', detail: e.message });
   } finally {
     setButtonLoading('generateBtnMain', false, 'Gerar');
   }
@@ -1181,6 +1187,7 @@ async function generateVideoHuggingFace(prompt) {
     showToast('Video gerado!', 'success');
     // Save to gallery
     saveVideoToGallery(blob, prompt, 'HuggingFace AnimateDiff');
+    saveToHistory({ type: 'video', prompt, provider: 'HuggingFace AnimateDiff', status: 'success' });
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
   }
@@ -1314,6 +1321,7 @@ async function pollinationsTTS(text) {
   showToast('Audio gerado com Pollinations!', 'success');
   // Save to gallery
   saveAudioToGallery(blob, text, 'Pollinations TTS');
+  saveToHistory({ type: 'audio', prompt: text, provider: 'Pollinations TTS', status: 'success' });
 }
 
 // --- HuggingFace TTS ---
@@ -1365,6 +1373,7 @@ async function huggingFaceTTS(text, model) {
   showToast(`Audio gerado com ${model.split('/')[1]}!`, 'success');
   // Save to gallery
   saveAudioToGallery(blob, text, `HuggingFace ${model.split('/')[1]}`);
+  saveToHistory({ type: 'audio', prompt: text, provider: `HuggingFace ${model.split('/')[1]}`, status: 'success' });
 }
 
 // --- Transcription ---
@@ -1703,9 +1712,11 @@ async function startTextGeneration() {
       showToast('Texto gerado!', 'success');
       // Save to gallery
       saveTextToGallery(result, prompt, providerName);
+      saveToHistory({ type: 'text', prompt, provider: providerName, status: 'success' });
     }
   } catch (e) {
     showToast('Erro: ' + e.message, 'error');
+    saveToHistory({ type: 'text', prompt, provider: providerName || 'unknown', status: 'error', detail: e.message });
   } finally {
     setButtonLoading('generateBtnMain', false, 'Gerar');
   }
@@ -2674,8 +2685,9 @@ function googleLogout() {
 
 let galleryDB = null;
 const GALLERY_DB_NAME = 'AIStudioGallery';
-const GALLERY_DB_VERSION = 1;
+const GALLERY_DB_VERSION = 2;
 const GALLERY_STORE = 'items';
+const HISTORY_STORE = 'history';
 
 function openGalleryDB() {
   return new Promise((resolve, reject) => {
@@ -2687,6 +2699,11 @@ function openGalleryDB() {
         const store = db.createObjectStore(GALLERY_STORE, { keyPath: 'id', autoIncrement: true });
         store.createIndex('type', 'type', { unique: false });
         store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(HISTORY_STORE)) {
+        const hStore = db.createObjectStore(HISTORY_STORE, { keyPath: 'id', autoIncrement: true });
+        hStore.createIndex('type', 'type', { unique: false });
+        hStore.createIndex('timestamp', 'timestamp', { unique: false });
       }
     };
     req.onsuccess = (e) => { galleryDB = e.target.result; resolve(galleryDB); };
@@ -3080,8 +3097,197 @@ function addGalleryItemToBoard(item) {
   }
 }
 
-// Init gallery on load
+// =============================================
+// === HISTORY - Generation Log System ===
+// =============================================
+
+async function saveToHistory(entry) {
+  // entry: { type, prompt, provider, status, detail, thumbnail (optional blob) }
+  try {
+    const db = await openGalleryDB();
+    const tx = db.transaction(HISTORY_STORE, 'readwrite');
+    entry.timestamp = Date.now();
+    tx.objectStore(HISTORY_STORE).add(entry);
+  } catch (e) { console.warn('History save failed:', e); }
+}
+
+async function getHistoryItems(type) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HISTORY_STORE, 'readonly');
+    const store = tx.objectStore(HISTORY_STORE);
+    let req;
+    if (type && type !== 'all') {
+      req = store.index('type').getAll(type);
+    } else {
+      req = store.getAll();
+    }
+    req.onsuccess = () => resolve(req.result.sort((a, b) => b.timestamp - a.timestamp));
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function deleteHistoryItem(id) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HISTORY_STORE, 'readwrite');
+    tx.objectStore(HISTORY_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function clearHistory(type) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(HISTORY_STORE, 'readwrite');
+    const store = tx.objectStore(HISTORY_STORE);
+    if (!type || type === 'all') {
+      store.clear();
+    } else {
+      const req = store.index('type').openCursor(type);
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { cursor.delete(); cursor.continue(); }
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// History UI
+let historyCurrentFilter = 'all';
+
+function initHistory() {
+  document.querySelectorAll('.history-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.history-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      historyCurrentFilter = btn.dataset.filter;
+      renderHistory();
+    });
+  });
+
+  document.getElementById('historyClearBtn')?.addEventListener('click', async () => {
+    if (!confirm('Limpar todo o historico? Esta acao nao pode ser desfeita.')) return;
+    await clearHistory(historyCurrentFilter);
+    renderHistory();
+    showToast('Historico limpo', 'success');
+  });
+}
+
+async function renderHistory() {
+  const list = document.getElementById('historyList');
+  const empty = document.getElementById('historyEmpty');
+  const countEl = document.getElementById('historyCount');
+  if (!list) return;
+
+  try {
+    const items = await getHistoryItems(historyCurrentFilter);
+    countEl.textContent = `${items.length} ${items.length === 1 ? 'registro' : 'registros'}`;
+
+    if (items.length === 0) {
+      list.style.display = 'none';
+      empty.style.display = '';
+      return;
+    }
+
+    list.style.display = '';
+    empty.style.display = 'none';
+    list.innerHTML = '';
+
+    const typeIcons = {
+      image: 'fa-image', video: 'fa-video', audio: 'fa-headphones',
+      text: 'fa-font', moodboard: 'fa-palette'
+    };
+    const typeLabels = {
+      image: 'Imagem', video: 'Video', audio: 'Audio',
+      text: 'Texto', moodboard: 'Moodboard'
+    };
+
+    let lastDate = '';
+
+    items.forEach(item => {
+      const d = new Date(item.timestamp);
+      const dateStr = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+
+      // Date separator
+      if (dateStr !== lastDate) {
+        lastDate = dateStr;
+        const sep = document.createElement('div');
+        sep.className = 'history-date-separator';
+        sep.innerHTML = `<i class="fas fa-calendar-day"></i> ${dateStr}`;
+        list.appendChild(sep);
+      }
+
+      const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const promptSnippet = (item.prompt || '').substring(0, 80) + ((item.prompt || '').length > 80 ? '...' : '');
+
+      const el = document.createElement('div');
+      el.className = 'history-item';
+
+      let thumbHTML = '';
+      if (item.thumbnail instanceof Blob) {
+        thumbHTML = `<img src="${URL.createObjectURL(item.thumbnail)}" alt="">`;
+      } else {
+        thumbHTML = `<i class="fas ${typeIcons[item.type] || 'fa-file'}" style="color:var(--text-muted);"></i>`;
+      }
+
+      el.innerHTML = `
+        <div class="history-item-icon type-${item.type}">
+          <i class="fas ${typeIcons[item.type] || 'fa-file'}"></i>
+        </div>
+        <div class="history-item-body">
+          <div class="history-item-prompt">${promptSnippet || 'Sem prompt'}</div>
+          <div class="history-item-meta">
+            <span><i class="fas fa-tag"></i> ${typeLabels[item.type] || item.type}</span>
+            <span><i class="fas fa-robot"></i> ${item.provider || ''}</span>
+            <span><i class="fas fa-clock"></i> ${timeStr}</span>
+            ${item.detail ? `<span><i class="fas fa-info-circle"></i> ${item.detail}</span>` : ''}
+          </div>
+        </div>
+        <div class="history-item-thumb">${thumbHTML}</div>
+        <div class="history-item-actions">
+          <button class="history-item-action" title="Reutilizar prompt"><i class="fas fa-redo"></i></button>
+          <button class="history-item-action btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>
+        </div>
+      `;
+
+      // Reuse prompt
+      el.querySelector('.history-item-action:not(.btn-delete)').addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.getElementById('promptInput').value = item.prompt || '';
+        const tabMap = { image: 'image', video: 'video', audio: 'audio', text: 'text', moodboard: 'moodboard' };
+        switchTab(tabMap[item.type] || 'image');
+        showToast('Prompt carregado!', 'success');
+      });
+
+      // Delete
+      el.querySelector('.btn-delete').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await deleteHistoryItem(item.id);
+        el.remove();
+        const remaining = list.querySelectorAll('.history-item').length;
+        countEl.textContent = `${remaining} ${remaining === 1 ? 'registro' : 'registros'}`;
+        if (remaining === 0) {
+          list.style.display = 'none';
+          empty.style.display = '';
+          // Remove date separators
+          list.querySelectorAll('.history-date-separator').forEach(s => s.remove());
+        }
+      });
+
+      list.appendChild(el);
+    });
+  } catch (e) {
+    console.error('History render error:', e);
+  }
+}
+
+// Init gallery + history on load
 document.addEventListener('DOMContentLoaded', () => {
   openGalleryDB().catch(e => console.warn('IndexedDB init:', e));
   initGallery();
+  initHistory();
 });

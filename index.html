@@ -299,13 +299,35 @@
 
     <!-- HISTORY Tab -->
     <div class="tab-content" id="tabHistory">
-      <div class="display-empty">
-        <div class="empty-illustration">
-          <div class="empty-glow"></div>
-          <i class="fas fa-clock-rotate-left"></i>
+      <div class="history-workspace">
+        <!-- History Toolbar -->
+        <div class="history-toolbar">
+          <div class="history-filters">
+            <button class="history-filter active" data-filter="all"><i class="fas fa-clock-rotate-left"></i> Todos</button>
+            <button class="history-filter" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
+            <button class="history-filter" data-filter="video"><i class="fas fa-video"></i> Videos</button>
+            <button class="history-filter" data-filter="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="history-filter" data-filter="text"><i class="fas fa-font"></i> Textos</button>
+            <button class="history-filter" data-filter="moodboard"><i class="fas fa-palette"></i> Moodboard</button>
+          </div>
+          <div class="history-actions">
+            <span class="history-count" id="historyCount">0 registros</span>
+            <button class="gallery-action-btn gallery-delete-all" id="historyClearBtn" title="Limpar historico">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
         </div>
-        <h3>Historico</h3>
-        <p>Seu historico de geracoes aparecerá aqui</p>
+        <!-- History List -->
+        <div class="history-list" id="historyList"></div>
+        <!-- History Empty -->
+        <div class="history-empty" id="historyEmpty">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-clock-rotate-left"></i>
+          </div>
+          <h3>Historico vazio</h3>
+          <p>Suas geracoes aparecerão aqui automaticamente</p>
+        </div>
       </div>
     </div>
 
