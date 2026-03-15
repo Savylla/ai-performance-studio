@@ -2204,6 +2204,22 @@ function initMoodboard() {
     document.getElementById('moodboardFontPanel').style.display = 'none';
   });
 
+  // Files Panel
+  document.getElementById('moodboardFilesBtn').addEventListener('click', () => {
+    togglePanel('moodboardFilesPanel');
+    renderMoodboardFiles();
+  });
+  document.getElementById('moodboardCloseFiles').addEventListener('click', () => {
+    document.getElementById('moodboardFilesPanel').style.display = 'none';
+  });
+  document.querySelectorAll('.mb-file-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mb-file-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMoodboardFiles(btn.dataset.type);
+    });
+  });
+
   // Note
   document.getElementById('moodboardNoteBtn').addEventListener('click', addNoteToBoard);
 
@@ -2220,7 +2236,7 @@ function initMoodboard() {
 }
 
 function togglePanel(panelId) {
-  const panels = ['moodboardSearchResults', 'moodboardPalettePanel', 'moodboardFontPanel'];
+  const panels = ['moodboardSearchResults', 'moodboardPalettePanel', 'moodboardFontPanel', 'moodboardFilesPanel'];
   panels.forEach(id => {
     const el = document.getElementById(id);
     if (id === panelId) {
@@ -2355,6 +2371,25 @@ function renderMoodboard() {
     } else if (item.type === 'note') {
       el.innerHTML = `
         <div class="moodboard-note-content"><i class="fas fa-sticky-note"></i> ${item.text}</div>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+      `;
+    } else if (item.type === 'video') {
+      el.innerHTML = `
+        <video controls style="width:100%; border-radius: var(--radius-sm);">
+          <source src="${item.url}" type="video/mp4">
+        </video>
+        <div class="moodboard-item-info">
+          <span><i class="fas fa-video"></i> ${item.provider || 'Video'}</span>
+        </div>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+      `;
+    } else if (item.type === 'audio') {
+      el.innerHTML = `
+        <div style="padding:12px; text-align:center;">
+          <i class="fas fa-volume-up" style="font-size:1.5rem; color:var(--green); margin-bottom:8px;"></i>
+          <audio controls src="${item.url}" style="width:100%;"></audio>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${item.provider || 'Audio'}</div>
+        </div>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
     } else if (item.type === 'font') {
@@ -2931,6 +2966,82 @@ function copyGalleryText(btn) {
   const textEl = document.querySelector('.preview-text-content');
   if (textEl) {
     navigator.clipboard.writeText(textEl.textContent).then(() => showToast('Texto copiado!', 'success'));
+  }
+}
+
+// === MOODBOARD FILES PANEL ===
+async function renderMoodboardFiles(filterType) {
+  const type = filterType || document.querySelector('.mb-file-filter.active')?.dataset.type || 'all';
+  const grid = document.getElementById('moodboardFilesGrid');
+  const empty = document.getElementById('moodboardFilesEmpty');
+  if (!grid) return;
+
+  try {
+    const items = await getGalleryItems(type);
+    if (items.length === 0) {
+      grid.style.display = 'none';
+      empty.style.display = '';
+      return;
+    }
+    grid.style.display = '';
+    empty.style.display = 'none';
+    grid.innerHTML = '';
+
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'mb-file-card';
+
+      const typeLabels = { image: 'IMG', video: 'VID', audio: 'AUD', text: 'TXT' };
+      let thumbHTML = '';
+
+      if (item.type === 'image' && item.data instanceof Blob) {
+        const url = URL.createObjectURL(item.data);
+        thumbHTML = `<img src="${url}" alt="" loading="lazy">`;
+      } else if (item.type === 'video') {
+        thumbHTML = `<i class="fas fa-play-circle mb-file-icon"></i>`;
+      } else if (item.type === 'audio') {
+        thumbHTML = `<i class="fas fa-volume-up mb-file-icon"></i>`;
+      } else if (item.type === 'text') {
+        const preview = (typeof item.data === 'string' ? item.data : '').substring(0, 80);
+        thumbHTML = `<div class="mb-file-text-preview">${preview}</div>`;
+      }
+
+      card.innerHTML = `
+        ${thumbHTML}
+        <span class="mb-file-card-badge type-${item.type}">${typeLabels[item.type]}</span>
+        <div class="mb-file-add-icon"><i class="fas fa-plus"></i></div>
+      `;
+
+      card.addEventListener('click', () => addGalleryItemToBoard(item));
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    console.error('Moodboard files error:', e);
+  }
+}
+
+function addGalleryItemToBoard(item) {
+  if (item.type === 'image' && item.data instanceof Blob) {
+    const url = URL.createObjectURL(item.data);
+    addImageToBoard(url, item.provider || 'Galeria', null);
+  } else if (item.type === 'video') {
+    let url = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
+    moodboardItems.push({ type: 'video', url, provider: item.provider || '', id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Video adicionado ao board!', 'success');
+  } else if (item.type === 'audio' && item.data instanceof Blob) {
+    const url = URL.createObjectURL(item.data);
+    moodboardItems.push({ type: 'audio', url, provider: item.provider || '', id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Audio adicionado ao board!', 'success');
+  } else if (item.type === 'text') {
+    const text = typeof item.data === 'string' ? item.data.substring(0, 200) : '';
+    moodboardItems.push({ type: 'note', text: `[${item.provider}] ${text}`, id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Texto adicionado como nota!', 'success');
   }
 }
 

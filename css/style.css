@@ -1874,12 +1874,122 @@ h1, h2, h3, h4, h5, h6 {
 /* Search Results Panel */
 .moodboard-search-results,
 .moodboard-palette-panel,
-.moodboard-font-panel {
+.moodboard-font-panel,
+.moodboard-files-panel {
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
   flex-shrink: 0;
   max-height: 280px;
   overflow-y: auto;
+}
+
+.moodboard-files-filters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.mb-file-filter {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mb-file-filter:hover { border-color: var(--accent); color: var(--text-primary); }
+.mb-file-filter.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.moodboard-files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px;
+  padding: 8px 12px;
+}
+
+.mb-file-card {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--transition);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mb-file-card:hover {
+  border-color: var(--accent);
+  transform: scale(1.03);
+}
+
+.mb-file-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mb-file-card .mb-file-icon {
+  font-size: 1.4rem;
+  color: var(--text-muted);
+}
+
+.mb-file-card .mb-file-text-preview {
+  padding: 6px;
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.mb-file-card-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  font-size: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.mb-file-card-badge.type-image { background: var(--accent); color: #fff; }
+.mb-file-card-badge.type-video { background: var(--blue); color: #fff; }
+.mb-file-card-badge.type-audio { background: var(--green); color: #fff; }
+.mb-file-card-badge.type-text { background: var(--accent-pink); color: #fff; }
+
+.mb-file-card .mb-file-add-icon {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(173, 57, 251, 0.5);
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.mb-file-card:hover .mb-file-add-icon { display: flex; }
+
+.moodboard-files-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .moodboard-results-header {

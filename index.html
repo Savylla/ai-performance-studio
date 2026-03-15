@@ -177,6 +177,7 @@
             </div>
           </div>
           <div class="moodboard-toolbar-right">
+            <button class="moodboard-tool-btn" id="moodboardFilesBtn" title="Meus Arquivos"><i class="fas fa-folder-open"></i> Arquivos</button>
             <button class="moodboard-tool-btn" id="moodboardPaletteBtn" title="Gerar paleta de cores"><i class="fas fa-swatchbook"></i> Paleta</button>
             <button class="moodboard-tool-btn" id="moodboardFontBtn" title="Adicionar tipografia"><i class="fas fa-font"></i> Fontes</button>
             <button class="moodboard-tool-btn" id="moodboardNoteBtn" title="Adicionar nota"><i class="fas fa-sticky-note"></i> Nota</button>
@@ -217,6 +218,25 @@
             <button class="moodboard-close-results" id="moodboardCloseFont"><i class="fas fa-times"></i></button>
           </div>
           <div class="moodboard-font-grid" id="moodboardFontGrid"></div>
+        </div>
+
+        <!-- Files Panel (hidden by default) -->
+        <div class="moodboard-files-panel" id="moodboardFilesPanel" style="display:none;">
+          <div class="moodboard-results-header">
+            <span>Meus Arquivos</span>
+            <button class="moodboard-close-results" id="moodboardCloseFiles"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="moodboard-files-filters">
+            <button class="mb-file-filter active" data-type="all">Todos</button>
+            <button class="mb-file-filter" data-type="image"><i class="fas fa-image"></i> Imagens</button>
+            <button class="mb-file-filter" data-type="video"><i class="fas fa-video"></i> Videos</button>
+            <button class="mb-file-filter" data-type="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="mb-file-filter" data-type="text"><i class="fas fa-font"></i> Textos</button>
+          </div>
+          <div class="moodboard-files-grid" id="moodboardFilesGrid"></div>
+          <div class="moodboard-files-empty" id="moodboardFilesEmpty" style="display:none;">
+            <p>Nenhum arquivo. Gere conteudo nas outras abas e ele aparecerá aqui.</p>
+          </div>
         </div>
 
         <!-- The Board -->
