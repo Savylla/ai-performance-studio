@@ -792,6 +792,17 @@ h1, h2, h3, h4, h5, h6 {
   color: #fff;
 }
 
+.lang-btn.enhance-more-btn {
+  color: var(--accent);
+  font-size: 0.78rem;
+  padding: 4px 8px;
+}
+
+.lang-btn.enhance-more-btn:hover {
+  color: var(--accent-hover);
+  background: var(--accent-subtle);
+}
+
 /* Bilingual Area */
 .bilingual-area {
   border-bottom: 1px solid var(--border);
