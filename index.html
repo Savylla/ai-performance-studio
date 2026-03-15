@@ -172,7 +172,7 @@
           <div class="moodboard-toolbar-left">
             <div class="moodboard-search-wrap">
               <i class="fas fa-search"></i>
-              <input type="text" id="moodboardSearch" placeholder="Buscar imagens (Pexels)..." />
+              <input type="text" id="moodboardSearch" placeholder="Buscar..." />
               <button class="moodboard-search-btn" id="moodboardSearchBtn"><i class="fas fa-arrow-right"></i></button>
             </div>
           </div>
@@ -183,6 +183,20 @@
             <button class="moodboard-tool-btn" id="moodboardNoteBtn" title="Adicionar nota"><i class="fas fa-sticky-note"></i> Nota</button>
             <button class="moodboard-tool-btn moodboard-clear-btn" id="moodboardClearBtn" title="Limpar board"><i class="fas fa-trash"></i></button>
           </div>
+        </div>
+        <!-- Source Selector -->
+        <div class="moodboard-sources" id="moodboardSources">
+          <span class="moodboard-sources-label"><i class="fas fa-globe"></i> Buscar em:</span>
+          <button class="mb-source active" data-source="pexels" title="Pexels (Imagens)"><i class="fas fa-image"></i> Pexels</button>
+          <button class="mb-source" data-source="pixabay" title="Pixabay (Imagens)"><i class="fas fa-image"></i> Pixabay</button>
+          <button class="mb-source" data-source="unsplash" title="Unsplash (Imagens)"><i class="fas fa-image"></i> Unsplash</button>
+          <button class="mb-source" data-source="openverse" title="Openverse (Imagens CC)"><i class="fas fa-image"></i> Openverse</button>
+          <span class="mb-source-divider">|</span>
+          <button class="mb-source" data-source="pexels-video" title="Pexels (Videos)"><i class="fas fa-video"></i> Pexels</button>
+          <button class="mb-source" data-source="pixabay-video" title="Pixabay (Videos)"><i class="fas fa-video"></i> Pixabay</button>
+          <span class="mb-source-divider">|</span>
+          <button class="mb-source" data-source="freesound" title="Freesound (Audio)"><i class="fas fa-headphones"></i> Freesound</button>
+          <button class="mb-source" data-source="openverse-audio" title="Openverse (Audio CC)"><i class="fas fa-headphones"></i> Openverse</button>
         </div>
 
         <!-- Search Results Panel (hidden by default) -->

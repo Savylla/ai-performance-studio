@@ -6,7 +6,8 @@ let syncTimeout = null;
 // === USER-SCOPED API KEY STORAGE ===
 const API_KEY_NAMES = [
   'gemini_api_key', 'openrouter_api_key', 'groq_api_key',
-  'together_api_key', 'huggingface_api_key', 'pexels_api_key'
+  'together_api_key', 'huggingface_api_key', 'pexels_api_key',
+  'pixabay_api_key', 'unsplash_api_key', 'freesound_api_key'
 ];
 
 function getUserId() {
@@ -2088,7 +2089,7 @@ function initApiKeyModal() {
         </div>
 
         <div class="setting-group">
-          <label><i class="fas fa-camera" style="color: #05a081;"></i> Pexels API Key <span style="color:var(--text-muted);">(Moodboard - busca de imagens)</span></label>
+          <label><i class="fas fa-camera" style="color: #05a081;"></i> Pexels API Key <span style="color:var(--text-muted);">(Moodboard - imagens + videos)</span></label>
           <div style="display: flex; gap: 6px;">
             <input type="password" class="input-field" id="pexelsKeyInput" placeholder="Cole sua API key do Pexels...">
             <button class="btn-tiny" id="togglePexelsKey"><i class="fas fa-eye"></i></button>
@@ -2096,10 +2097,37 @@ function initApiKeyModal() {
           <a href="https://www.pexels.com/api/new/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
         </div>
 
+        <div class="setting-group">
+          <label><i class="fas fa-image" style="color: #4ecb71;"></i> Pixabay API Key <span style="color:var(--text-muted);">(Moodboard - imagens + videos)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="pixabayKeyInput" placeholder="Cole sua API key do Pixabay...">
+            <button class="btn-tiny" id="togglePixabayKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://pixabay.com/api/docs/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
+        <div class="setting-group">
+          <label><i class="fas fa-camera-retro" style="color: #111;background:#fff;padding:2px 4px;border-radius:3px;"></i> Unsplash API Key <span style="color:var(--text-muted);">(Moodboard - imagens)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="unsplashKeyInput" placeholder="Cole sua Access Key do Unsplash...">
+            <button class="btn-tiny" id="toggleUnsplashKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://unsplash.com/developers" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
+        <div class="setting-group">
+          <label><i class="fas fa-music" style="color: #f59e0b;"></i> Freesound API Key <span style="color:var(--text-muted);">(Moodboard - audio/SFX)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="freesoundKeyInput" placeholder="Cole sua API key do Freesound...">
+            <button class="btn-tiny" id="toggleFreesoundKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://freesound.org/apiv2/apply/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
           <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
           Suas chaves ficam salvas apenas no seu navegador.
-          <br><strong>Pollinations.ai</strong> (imagem, video, audio, texto) funciona sem nenhuma key.
+          <br><strong>Pollinations.ai</strong> e <strong>Openverse</strong> funcionam sem nenhuma key.
         </div>
       </div>
       <div class="modal-footer">
@@ -2121,7 +2149,10 @@ function initApiKeyModal() {
       groq_api_key: document.getElementById('groqKeyInput').value.trim(),
       together_api_key: document.getElementById('togetherKeyInput').value.trim(),
       huggingface_api_key: document.getElementById('huggingfaceKeyInput').value.trim(),
-      pexels_api_key: document.getElementById('pexelsKeyInput').value.trim()
+      pexels_api_key: document.getElementById('pexelsKeyInput').value.trim(),
+      pixabay_api_key: document.getElementById('pixabayKeyInput').value.trim(),
+      unsplash_api_key: document.getElementById('unsplashKeyInput').value.trim(),
+      freesound_api_key: document.getElementById('freesoundKeyInput').value.trim()
     };
     for (const [k, v] of Object.entries(keys)) {
       setApiKey(k, v);
@@ -2132,7 +2163,7 @@ function initApiKeyModal() {
   });
 
   // Toggle visibility
-  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface', 'Pexels'].forEach(name => {
+  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface', 'Pexels', 'Pixabay', 'Unsplash', 'Freesound'].forEach(name => {
     document.getElementById(`toggle${name}Key`).addEventListener('click', () => {
       const input = document.getElementById(`${name.toLowerCase()}KeyInput`);
       input.type = input.type === 'password' ? 'text' : 'password';
@@ -2150,6 +2181,9 @@ function openApiKeyModal() {
   document.getElementById('togetherKeyInput').value = getApiKey('together_api_key') || '';
   document.getElementById('huggingfaceKeyInput').value = getApiKey('huggingface_api_key') || '';
   document.getElementById('pexelsKeyInput').value = getApiKey('pexels_api_key') || '';
+  document.getElementById('pixabayKeyInput').value = getApiKey('pixabay_api_key') || '';
+  document.getElementById('unsplashKeyInput').value = getApiKey('unsplash_api_key') || '';
+  document.getElementById('freesoundKeyInput').value = getApiKey('freesound_api_key') || '';
   modal.classList.add('open');
 }
 
@@ -2201,8 +2235,9 @@ function showToast(message, type = 'success') {
 
 // === MOODBOARD ===
 let moodboardItems = [];
-let pexelsPage = 1;
-let pexelsQuery = '';
+let mbSearchPage = 1;
+let mbSearchQuery = '';
+let currentMBSource = 'pexels';
 
 const GOOGLE_FONTS_TOP = [
   'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Raleway', 'Inter',
@@ -2217,17 +2252,37 @@ function initMoodboard() {
   if (saved) { try { moodboardItems = JSON.parse(saved); } catch(e) {} }
   renderMoodboard();
 
+  // Source selector
+  document.querySelectorAll('.mb-source').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mb-source').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMBSource = btn.dataset.source;
+      const placeholders = {
+        'pexels': 'Buscar imagens (Pexels)...',
+        'pixabay': 'Buscar imagens (Pixabay)...',
+        'unsplash': 'Buscar imagens (Unsplash)...',
+        'openverse': 'Buscar imagens (Openverse)...',
+        'pexels-video': 'Buscar videos (Pexels)...',
+        'pixabay-video': 'Buscar videos (Pixabay)...',
+        'freesound': 'Buscar sons (Freesound)...',
+        'openverse-audio': 'Buscar audio (Openverse)...'
+      };
+      document.getElementById('moodboardSearch').placeholder = placeholders[currentMBSource] || 'Buscar...';
+    });
+  });
+
   // Search
-  document.getElementById('moodboardSearchBtn').addEventListener('click', searchPexels);
+  document.getElementById('moodboardSearchBtn').addEventListener('click', () => moodboardSearch());
   document.getElementById('moodboardSearch').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') searchPexels();
+    if (e.key === 'Enter') moodboardSearch();
   });
   document.getElementById('moodboardCloseResults').addEventListener('click', () => {
     document.getElementById('moodboardSearchResults').style.display = 'none';
   });
   document.getElementById('moodboardLoadMore').addEventListener('click', () => {
-    pexelsPage++;
-    searchPexels(true);
+    mbSearchPage++;
+    moodboardSearch(true);
   });
 
   // Palette
@@ -2294,47 +2349,230 @@ function togglePanel(panelId) {
 }
 
 // --- Pexels Search ---
-async function searchPexels(append = false) {
-  const key = getApiKey('pexels_api_key');
-  if (!key) { showToast('Configure sua Pexels API Key em Configuracoes', 'error'); return; }
-
+async function moodboardSearch(append = false) {
   const query = document.getElementById('moodboardSearch').value.trim();
   if (!query) { showToast('Digite algo para buscar', 'error'); return; }
+  if (!append) { mbSearchPage = 1; mbSearchQuery = query; }
 
-  if (!append) { pexelsPage = 1; pexelsQuery = query; }
-
+  togglePanel('moodboardSearchResults');
   document.getElementById('moodboardSearchResults').style.display = '';
-  document.getElementById('moodboardPalettePanel').style.display = 'none';
-  document.getElementById('moodboardFontPanel').style.display = 'none';
   const grid = document.getElementById('moodboardResultsGrid');
   if (!append) grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Buscando...</div>';
 
+  const src = currentMBSource;
   try {
-    const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(pexelsQuery)}&per_page=20&page=${pexelsPage}`, {
-      headers: { Authorization: key }
-    });
-    if (!res.ok) throw new Error('Erro na API Pexels: ' + res.status);
-    const data = await res.json();
-
-    if (!append) grid.innerHTML = '';
-    document.getElementById('moodboardResultsTitle').textContent = `"${pexelsQuery}" — ${data.total_results} resultados`;
-
-    data.photos.forEach(photo => {
-      const card = document.createElement('div');
-      card.className = 'moodboard-result-card';
-      card.innerHTML = `<img src="${photo.src.medium}" alt="${photo.alt || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${photo.photographer}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
-      card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        addImageToBoard(photo.src.large, photo.photographer, photo.avg_color);
-      });
-      grid.appendChild(card);
-    });
-
-    document.getElementById('moodboardLoadMore').style.display = data.next_page ? '' : 'none';
-  } catch(e) {
+    if (src === 'pexels') await searchPexelsImages(append);
+    else if (src === 'pixabay') await searchPixabayImages(append);
+    else if (src === 'unsplash') await searchUnsplashImages(append);
+    else if (src === 'openverse') await searchOpenverseImages(append);
+    else if (src === 'pexels-video') await searchPexelsVideos(append);
+    else if (src === 'pixabay-video') await searchPixabayVideos(append);
+    else if (src === 'freesound') await searchFreesound(append);
+    else if (src === 'openverse-audio') await searchOpenverseAudio(append);
+  } catch (e) {
     if (!append) grid.innerHTML = '';
     showToast(e.message, 'error');
   }
+}
+
+// --- Pexels Images ---
+async function searchPexelsImages(append) {
+  const key = getApiKey('pexels_api_key');
+  if (!key) { showToast('Configure sua Pexels API Key em Configuracoes', 'error'); return; }
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(mbSearchQuery)}&per_page=20&page=${mbSearchPage}`, { headers: { Authorization: key } });
+  if (!res.ok) throw new Error('Erro Pexels: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Pexels: "${mbSearchQuery}" — ${data.total_results} resultados`;
+  data.photos.forEach(photo => {
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card';
+    card.innerHTML = `<img src="${photo.src.medium}" alt="${photo.alt || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${photo.photographer}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(photo.src.large, photo.photographer, photo.avg_color); });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.next_page ? '' : 'none';
+}
+
+// --- Pixabay Images ---
+async function searchPixabayImages(append) {
+  const key = getApiKey('pixabay_api_key');
+  if (!key) { showToast('Configure sua Pixabay API Key em Configuracoes', 'error'); return; }
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://pixabay.com/api/?key=${key}&q=${encodeURIComponent(mbSearchQuery)}&image_type=photo&per_page=20&page=${mbSearchPage}`);
+  if (!res.ok) throw new Error('Erro Pixabay: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Pixabay: "${mbSearchQuery}" — ${data.totalHits} resultados`;
+  data.hits.forEach(img => {
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card';
+    card.innerHTML = `<img src="${img.webformatURL}" alt="${img.tags}" loading="lazy"><div class="moodboard-result-overlay"><span>${img.user}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(img.largeImageURL, img.user, null); });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.hits.length === 20 ? '' : 'none';
+}
+
+// --- Unsplash Images ---
+async function searchUnsplashImages(append) {
+  const key = getApiKey('unsplash_api_key');
+  if (!key) { showToast('Configure sua Unsplash API Key em Configuracoes', 'error'); return; }
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(mbSearchQuery)}&per_page=20&page=${mbSearchPage}&client_id=${key}`);
+  if (!res.ok) throw new Error('Erro Unsplash: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Unsplash: "${mbSearchQuery}" — ${data.total} resultados`;
+  data.results.forEach(photo => {
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card';
+    card.innerHTML = `<img src="${photo.urls.small}" alt="${photo.alt_description || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${photo.user.name}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(photo.urls.regular, photo.user.name, photo.color); });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.total_pages > mbSearchPage ? '' : 'none';
+}
+
+// --- Openverse Images (no key needed) ---
+async function searchOpenverseImages(append) {
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://api.openverse.org/v1/images/?q=${encodeURIComponent(mbSearchQuery)}&page_size=20&page=${mbSearchPage}`);
+  if (!res.ok) throw new Error('Erro Openverse: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Openverse: "${mbSearchQuery}" — ${data.result_count} resultados`;
+  data.results.forEach(img => {
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card';
+    card.innerHTML = `<img src="${img.thumbnail || img.url}" alt="${img.title || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${img.creator || 'CC'}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(img.url, img.creator || 'Creative Commons', null); });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.page_count > mbSearchPage ? '' : 'none';
+}
+
+// --- Pexels Videos ---
+async function searchPexelsVideos(append) {
+  const key = getApiKey('pexels_api_key');
+  if (!key) { showToast('Configure sua Pexels API Key em Configuracoes', 'error'); return; }
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://api.pexels.com/videos/search?query=${encodeURIComponent(mbSearchQuery)}&per_page=15&page=${mbSearchPage}`, { headers: { Authorization: key } });
+  if (!res.ok) throw new Error('Erro Pexels Videos: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Pexels Videos: "${mbSearchQuery}" — ${data.total_results} resultados`;
+  data.videos.forEach(video => {
+    const thumb = video.image;
+    const videoFile = video.video_files.find(f => f.quality === 'sd') || video.video_files[0];
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card';
+    card.innerHTML = `<div style="position:relative;"><img src="${thumb}" alt="" loading="lazy"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-play-circle" style="font-size:2rem;color:rgba(255,255,255,0.85);"></i></div></div><div class="moodboard-result-overlay"><span>${video.user.name}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      moodboardItems.push({ type: 'video', url: videoFile.link, provider: video.user.name, id: Date.now() });
+      saveMoodboard(); renderMoodboard();
+      showToast('Video adicionado ao board!', 'success');
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.total_results > mbSearchPage * 15 ? '' : 'none';
+}
+
+// --- Pixabay Videos ---
+async function searchPixabayVideos(append) {
+  const key = getApiKey('pixabay_api_key');
+  if (!key) { showToast('Configure sua Pixabay API Key em Configuracoes', 'error'); return; }
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://pixabay.com/api/videos/?key=${key}&q=${encodeURIComponent(mbSearchQuery)}&per_page=15&page=${mbSearchPage}`);
+  if (!res.ok) throw new Error('Erro Pixabay Videos: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Pixabay Videos: "${mbSearchQuery}" — ${data.totalHits} resultados`;
+  data.hits.forEach(video => {
+    const thumb = `https://i.vimeocdn.com/video/${video.picture_id}_295x166.jpg`;
+    const videoUrl = video.videos.small?.url || video.videos.medium?.url || video.videos.tiny?.url;
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card';
+    card.innerHTML = `<div style="position:relative;"><img src="${thumb}" alt="${video.tags}" loading="lazy" onerror="this.style.display='none'"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><i class="fas fa-play-circle" style="font-size:2rem;color:rgba(255,255,255,0.85);"></i></div></div><div class="moodboard-result-overlay"><span>${video.user}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      moodboardItems.push({ type: 'video', url: videoUrl, provider: video.user, id: Date.now() });
+      saveMoodboard(); renderMoodboard();
+      showToast('Video adicionado ao board!', 'success');
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.hits.length === 15 ? '' : 'none';
+}
+
+// --- Freesound Audio ---
+async function searchFreesound(append) {
+  const key = getApiKey('freesound_api_key');
+  if (!key) { showToast('Configure sua Freesound API Key em Configuracoes', 'error'); return; }
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://freesound.org/apiv2/search/text/?query=${encodeURIComponent(mbSearchQuery)}&token=${key}&fields=id,name,previews,duration,tags,username&page_size=20&page=${mbSearchPage}`);
+  if (!res.ok) throw new Error('Erro Freesound: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Freesound: "${mbSearchQuery}" — ${data.count} resultados`;
+  data.results.forEach(sound => {
+    const preview = sound.previews?.['preview-lq-mp3'] || sound.previews?.['preview-hq-mp3'] || '';
+    const dur = Math.round(sound.duration);
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card moodboard-result-audio';
+    card.innerHTML = `
+      <div class="mb-audio-result">
+        <div class="mb-audio-info">
+          <i class="fas fa-music" style="color:var(--green);"></i>
+          <div><strong>${sound.name}</strong><br><span style="font-size:0.65rem;color:var(--text-muted);">${sound.username} · ${dur}s</span></div>
+        </div>
+        <audio controls preload="none" src="${preview}" style="width:100%;height:28px;margin-top:4px;"></audio>
+        <button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button>
+      </div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      moodboardItems.push({ type: 'audio', url: preview, provider: `Freesound · ${sound.username}`, id: Date.now() });
+      saveMoodboard(); renderMoodboard();
+      showToast('Audio adicionado ao board!', 'success');
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.next ? '' : 'none';
+}
+
+// --- Openverse Audio (no key needed) ---
+async function searchOpenverseAudio(append) {
+  const grid = document.getElementById('moodboardResultsGrid');
+  const res = await fetch(`https://api.openverse.org/v1/audio/?q=${encodeURIComponent(mbSearchQuery)}&page_size=20&page=${mbSearchPage}`);
+  if (!res.ok) throw new Error('Erro Openverse Audio: ' + res.status);
+  const data = await res.json();
+  if (!append) grid.innerHTML = '';
+  document.getElementById('moodboardResultsTitle').textContent = `Openverse Audio: "${mbSearchQuery}" — ${data.result_count} resultados`;
+  data.results.forEach(audio => {
+    const preview = audio.url || '';
+    const dur = audio.duration ? Math.round(audio.duration / 1000) : '?';
+    const card = document.createElement('div');
+    card.className = 'moodboard-result-card moodboard-result-audio';
+    card.innerHTML = `
+      <div class="mb-audio-result">
+        <div class="mb-audio-info">
+          <i class="fas fa-headphones" style="color:var(--blue);"></i>
+          <div><strong>${audio.title || 'Audio'}</strong><br><span style="font-size:0.65rem;color:var(--text-muted);">${audio.creator || 'CC'} · ${dur}s</span></div>
+        </div>
+        ${preview ? `<audio controls preload="none" src="${preview}" style="width:100%;height:28px;margin-top:4px;"></audio>` : ''}
+        <button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button>
+      </div>`;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      moodboardItems.push({ type: 'audio', url: preview, provider: `Openverse · ${audio.creator || 'CC'}`, id: Date.now() });
+      saveMoodboard(); renderMoodboard();
+      showToast('Audio adicionado ao board!', 'success');
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('moodboardLoadMore').style.display = data.page_count > mbSearchPage ? '' : 'none';
 }
 
 // --- Board Items ---

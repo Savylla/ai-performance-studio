@@ -1814,6 +1814,56 @@ h1, h2, h3, h4, h5, h6 {
 .moodboard-toolbar-left { flex: 1; min-width: 0; }
 .moodboard-toolbar-right { display: flex; gap: 6px; flex-shrink: 0; }
 
+.moodboard-sources {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.moodboard-sources::-webkit-scrollbar { height: 3px; }
+.moodboard-sources::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.moodboard-sources-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.mb-source {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mb-source:hover { border-color: var(--accent); color: var(--text-primary); }
+.mb-source.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.mb-source-divider {
+  color: var(--border-light);
+  font-size: 0.8rem;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
 .moodboard-search-wrap {
   display: flex;
   align-items: center;
@@ -2052,6 +2102,41 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .moodboard-result-card:hover .moodboard-result-overlay { opacity: 1; }
+
+.moodboard-result-audio {
+  aspect-ratio: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 0;
+}
+
+.mb-audio-result {
+  padding: 8px 10px;
+  position: relative;
+}
+
+.mb-audio-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-primary);
+}
+
+.mb-audio-info strong {
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+  display: block;
+}
+
+.moodboard-result-audio .moodboard-add-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
 
 .moodboard-result-overlay span {
   color: #fff;
