@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initKeyboardShortcuts();
   initApiKeyModal();
   initMoodboard();
+  initGoogleAuth();
 });
 
 // === TAB MANAGEMENT ===
@@ -2027,4 +2028,155 @@ function renderFontPanel() {
     card.querySelector('.moodboard-add-btn').addEventListener('click', () => addFontToBoard(fontName));
     grid.appendChild(card);
   });
+}
+
+// === GOOGLE AUTH ===
+const GOOGLE_CLIENT_ID = localStorage.getItem('google_client_id') || '';
+
+function initGoogleAuth() {
+  // Check if user is already logged in
+  const savedUser = localStorage.getItem('google_user');
+  if (savedUser) {
+    try {
+      const user = JSON.parse(savedUser);
+      updateUserUI(user);
+    } catch(e) {}
+  }
+
+  // Login button
+  document.getElementById('googleLoginBtn').addEventListener('click', () => {
+    const clientId = GOOGLE_CLIENT_ID || localStorage.getItem('google_client_id');
+    if (!clientId) {
+      showGoogleClientIdPrompt();
+      return;
+    }
+    startGoogleLogin(clientId);
+  });
+
+  // Topbar avatar click
+  document.getElementById('topbarAvatar').addEventListener('click', () => {
+    const savedUser = localStorage.getItem('google_user');
+    if (savedUser) {
+      // Already logged in - show user menu
+      const user = JSON.parse(savedUser);
+      if (confirm(`Logado como ${user.name}\n${user.email}\n\nDeseja sair?`)) {
+        googleLogout();
+      }
+    } else {
+      // Not logged in - trigger login
+      document.getElementById('googleLoginBtn').click();
+    }
+  });
+
+  // Logout button
+  document.getElementById('logoutBtn').addEventListener('click', googleLogout);
+}
+
+function showGoogleClientIdPrompt() {
+  const clientId = prompt(
+    'Para login com Google, voce precisa de um Client ID.\n\n' +
+    'Siga estes passos:\n' +
+    '1. Acesse console.cloud.google.com\n' +
+    '2. Crie um projeto\n' +
+    '3. Va em APIs & Services > Credentials\n' +
+    '4. Crie OAuth 2.0 Client ID (tipo: Web application)\n' +
+    '5. Adicione sua URL em Authorized JavaScript origins\n' +
+    '6. Copie o Client ID e cole aqui:\n',
+    ''
+  );
+  if (clientId && clientId.includes('.apps.googleusercontent.com')) {
+    localStorage.setItem('google_client_id', clientId);
+    showToast('Client ID salvo! Clique em Entrar novamente.', 'success');
+  } else if (clientId) {
+    showToast('Client ID invalido. Deve terminar com .apps.googleusercontent.com', 'error');
+  }
+}
+
+function startGoogleLogin(clientId) {
+  try {
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleCredential,
+      auto_select: false
+    });
+    google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        // Fallback: use the One Tap or popup
+        google.accounts.id.renderButton(
+          document.createElement('div'),
+          { theme: 'filled_black', size: 'large' }
+        );
+        // Try the popup approach
+        google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'profile email',
+          callback: (response) => {
+            if (response.access_token) {
+              fetchGoogleUserInfo(response.access_token);
+            }
+          }
+        }).requestAccessToken();
+      }
+    });
+  } catch(e) {
+    showToast('Erro ao iniciar login Google: ' + e.message, 'error');
+  }
+}
+
+function handleGoogleCredential(response) {
+  // Decode JWT token
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  const user = {
+    name: payload.name,
+    email: payload.email,
+    picture: payload.picture,
+    sub: payload.sub
+  };
+  localStorage.setItem('google_user', JSON.stringify(user));
+  updateUserUI(user);
+  showToast(`Bem-vindo, ${user.name}!`, 'success');
+}
+
+async function fetchGoogleUserInfo(accessToken) {
+  try {
+    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const data = await res.json();
+    const user = {
+      name: data.name,
+      email: data.email,
+      picture: data.picture,
+      sub: data.sub
+    };
+    localStorage.setItem('google_user', JSON.stringify(user));
+    updateUserUI(user);
+    showToast(`Bem-vindo, ${user.name}!`, 'success');
+  } catch(e) {
+    showToast('Erro ao obter dados do usuario', 'error');
+  }
+}
+
+function updateUserUI(user) {
+  // Sidebar
+  document.getElementById('sidebarUser').style.display = 'flex';
+  document.getElementById('sidebarLogin').style.display = 'none';
+  document.getElementById('sidebarUserAvatar').src = user.picture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.email;
+  document.getElementById('sidebarUserName').textContent = user.name;
+  document.getElementById('sidebarUserEmail').textContent = user.email;
+
+  // Topbar avatar
+  const topAvatar = document.getElementById('topbarAvatarImg');
+  topAvatar.src = user.picture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.email;
+  document.getElementById('topbarAvatar').title = user.name;
+}
+
+function googleLogout() {
+  localStorage.removeItem('google_user');
+  // Reset UI
+  document.getElementById('sidebarUser').style.display = 'none';
+  document.getElementById('sidebarLogin').style.display = '';
+  document.getElementById('topbarAvatarImg').src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=user';
+  document.getElementById('topbarAvatar').title = 'Clique para login';
+  showToast('Voce saiu da conta', 'success');
 }
