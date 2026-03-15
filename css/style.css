@@ -309,6 +309,11 @@ h1, h2, h3, h4, h5, h6 {
   overflow: hidden;
 }
 
+.main-content.main-full {
+  margin-left: 0;
+  width: 100%;
+}
+
 /* === TOP BAR === */
 .topbar {
   height: 52px;
@@ -379,6 +384,36 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   gap: 8px;
 }
+
+.topbar-action-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: color var(--transition);
+  white-space: nowrap;
+}
+
+.topbar-action-link:hover { color: var(--text-primary); }
+
+.credits-display-topbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 500;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition);
+}
+
+.credits-display-topbar:hover { background: rgba(173, 57, 251, 0.15); }
 
 .btn-icon {
   width: 34px;

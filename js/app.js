@@ -161,6 +161,8 @@ function initSidebar() {
   const sidebar = document.getElementById('sidebar');
   const menuToggle = document.getElementById('menuToggle');
   const sidebarClose = document.getElementById('sidebarClose');
+  if (!menuToggle || !sidebarClose) return; // No sidebar in full layout
+
   const overlay = document.createElement('div');
   overlay.className = 'sidebar-overlay';
   document.body.appendChild(overlay);
@@ -2158,25 +2160,20 @@ async function fetchGoogleUserInfo(accessToken) {
 }
 
 function updateUserUI(user) {
-  // Sidebar
-  document.getElementById('sidebarUser').style.display = 'flex';
-  document.getElementById('sidebarLogin').style.display = 'none';
-  document.getElementById('sidebarUserAvatar').src = user.picture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.email;
-  document.getElementById('sidebarUserName').textContent = user.name;
-  document.getElementById('sidebarUserEmail').textContent = user.email;
-
   // Topbar avatar
   const topAvatar = document.getElementById('topbarAvatarImg');
   topAvatar.src = user.picture || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user.email;
   document.getElementById('topbarAvatar').title = user.name;
+  // Show logout button
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.style.display = '';
 }
 
 function googleLogout() {
   localStorage.removeItem('google_user');
-  // Reset UI
-  document.getElementById('sidebarUser').style.display = 'none';
-  document.getElementById('sidebarLogin').style.display = '';
   document.getElementById('topbarAvatarImg').src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=user';
   document.getElementById('topbarAvatar').title = 'Clique para login';
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.style.display = 'none';
   showToast('Voce saiu da conta', 'success');
 }

@@ -1,17 +1,15 @@
 /* === RESPONSIVE === */
 
+/* Topbar nav always scrollable */
+.topbar-nav {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.topbar-nav::-webkit-scrollbar { display: none; }
+
 @media (max-width: 900px) {
-  .sidebar.sidebar-minimal {
-    display: none;
-  }
-
-  .main-content { margin-left: 0 !important; }
-
-  .topbar-nav {
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .topbar-nav::-webkit-scrollbar { display: none; }
+  .topbar-action-text { display: none; }
+  .credits-display-topbar span { display: none; }
 }
 
 @media (max-width: 768px) {
@@ -21,11 +19,6 @@
 
   .provider-pills {
     gap: 3px;
-  }
-
-  .provider-pill {
-    padding: 4px 8px;
-    font-size: 0.68rem;
   }
 
   .provider-group-btn {
@@ -52,9 +45,7 @@
     padding: 6px 10px;
     font-size: 0.75rem;
   }
-}
 
-@media (max-width: 768px) {
   .moodboard-toolbar {
     flex-direction: column;
     gap: 8px;
@@ -77,18 +68,22 @@
   .moodboard-font-grid {
     grid-template-columns: 1fr;
   }
+
+  .topbar-action-link { display: none; }
 }
 
 @media (max-width: 640px) {
   html { font-size: 13px; }
 
-  .topbar { padding: 0 12px; }
+  .topbar { padding: 0 10px; gap: 8px; }
+
+  .topbar-left .logo-text { display: none; }
 
   .topbar-nav { gap: 2px; }
 
   .topbar-link {
-    padding: 5px 10px;
-    font-size: 0.75rem;
+    padding: 5px 8px;
+    font-size: 0.72rem;
   }
 
   .topbar-link i { display: none; }
@@ -97,7 +92,7 @@
 
   .settings-row { gap: 6px; }
 
-  .settings-row-bottom { gap: 4px; }
+  .settings-row-bottom { gap: 4px; flex-wrap: wrap; justify-content: center; }
 
   .ratio-pill { padding: 4px 8px; font-size: 0.7rem; }
 
@@ -120,21 +115,27 @@
     max-width: 140px;
     font-size: 0.72rem;
   }
+
+  .credits-display-topbar { display: none; }
+
+  .topbar-actions { gap: 4px; }
+
+  .btn-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 @media (max-width: 380px) {
   .ratio-group { display: none; }
 
-  .topbar-nav { display: none; }
+  .topbar-link span { display: none; }
+  .topbar-link i { display: inline; }
+  .topbar-link { padding: 6px 10px; font-size: 0.8rem; }
 }
-
-/* Sidebar overlay */
-.sidebar-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 90;
-}
-
-.sidebar-overlay.open { display: block; }
