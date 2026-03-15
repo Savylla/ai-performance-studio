@@ -261,9 +261,51 @@ function initPrompt() {
   document.getElementById('promptPT').addEventListener('input', () => {
     clearTimeout(syncTimeout);
     const syncStatus = document.getElementById('syncStatus');
-    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
+    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando PT...';
     syncStatus.className = 'bilingual-sync';
+    // Also update prompt field if PT is active
+    if (document.getElementById('langPT').classList.contains('active')) {
+      document.getElementById('promptInput').value = document.getElementById('promptPT').value;
+    }
     syncTimeout = setTimeout(() => syncPTtoEN(), 1500);
+  });
+
+  // EN textarea edit -> auto sync to PT (make EN editable)
+  document.getElementById('promptEN').addEventListener('input', () => {
+    clearTimeout(syncTimeout);
+    const syncStatus = document.getElementById('syncStatus');
+    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando EN...';
+    syncStatus.className = 'bilingual-sync';
+    // Also update prompt field if EN is active
+    if (document.getElementById('langEN').classList.contains('active')) {
+      document.getElementById('promptInput').value = document.getElementById('promptEN').value;
+    }
+    syncTimeout = setTimeout(() => syncENtoPT(), 1500);
+  });
+
+  // Prompt field edit -> sync to active language field + translate to other
+  let promptSyncTimeout;
+  document.getElementById('promptInput').addEventListener('input', () => {
+    const biArea = document.getElementById('bilingualArea');
+    if (biArea.style.display === 'none') return; // Only sync if bilingual area is visible
+    clearTimeout(promptSyncTimeout);
+    const isPT = document.getElementById('langPT').classList.contains('active');
+    const promptText = document.getElementById('promptInput').value;
+    if (isPT) {
+      document.getElementById('promptPT').value = promptText;
+      clearTimeout(syncTimeout);
+      const syncStatus = document.getElementById('syncStatus');
+      syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
+      syncStatus.className = 'bilingual-sync';
+      promptSyncTimeout = setTimeout(() => syncPTtoEN(), 1500);
+    } else {
+      document.getElementById('promptEN').value = promptText;
+      clearTimeout(syncTimeout);
+      const syncStatus = document.getElementById('syncStatus');
+      syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
+      syncStatus.className = 'bilingual-sync';
+      promptSyncTimeout = setTimeout(() => syncENtoPT(), 1500);
+    }
   });
 
   // Use English button - collapse instead of hide
@@ -492,7 +534,7 @@ async function syncPTtoEN() {
   const ptText = document.getElementById('promptPT').value.trim();
   if (!ptText) return;
   const syncStatus = document.getElementById('syncStatus');
-  syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+  syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo PT→EN...';
   syncStatus.className = 'bilingual-sync syncing';
   try {
     const enText = await callGemini(
@@ -500,7 +542,32 @@ async function syncPTtoEN() {
     );
     if (enText) {
       document.getElementById('promptEN').value = enText;
-      document.getElementById('promptInput').value = enText;
+      // Update prompt field based on active language
+      const isEN = document.getElementById('langEN').classList.contains('active');
+      document.getElementById('promptInput').value = isEN ? enText : ptText;
+      syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
+      syncStatus.className = 'bilingual-sync';
+    }
+  } catch (error) {
+    syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro';
+    syncStatus.className = 'bilingual-sync';
+  }
+}
+
+async function syncENtoPT() {
+  const enText = document.getElementById('promptEN').value.trim();
+  if (!enText) return;
+  const syncStatus = document.getElementById('syncStatus');
+  syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo EN→PT...';
+  syncStatus.className = 'bilingual-sync syncing';
+  try {
+    const ptText = await callGemini(
+      `INSTRUCAO: Traduza o texto abaixo para portugues brasileiro. Este e um prompt para geracao de imagem com IA. Retorne SOMENTE a traducao, nada mais.\n\nTexto: ${enText}`
+    );
+    if (ptText) {
+      document.getElementById('promptPT').value = ptText;
+      const isPT = document.getElementById('langPT').classList.contains('active');
+      document.getElementById('promptInput').value = isPT ? ptText : enText;
       syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
       syncStatus.className = 'bilingual-sync';
     }
