@@ -4,22 +4,15 @@ let currentTab = 'image';
 let syncTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  const dbg = document.createElement('div');
-  dbg.id = 'debugPanel';
-  dbg.style.cssText = 'position:fixed;top:8px;right:8px;z-index:2147483647;background:#111;border:1px solid #c8ff00;color:#c8ff00;padding:8px 12px;border-radius:8px;font-size:11px;font-family:monospace;max-width:300px;white-space:pre-wrap;pointer-events:none;';
-  document.documentElement.appendChild(dbg);
-  const dlog = (msg) => { dbg.textContent += msg + '\n'; console.log(msg); };
-
-  try { initTabs(); dlog('1.initTabs OK'); } catch(e) { dlog('1.initTabs FAIL: ' + e.message); }
-  try { initSidebar(); dlog('2.initSidebar OK'); } catch(e) { dlog('2.initSidebar FAIL: ' + e.message); }
-  try { initPrompt(); dlog('3.initPrompt OK'); } catch(e) { dlog('3.initPrompt FAIL: ' + e.message); }
-  try { initImageSettings(); dlog('4.initImageSettings OK'); } catch(e) { dlog('4.initImageSettings FAIL: ' + e.message); }
-  try { initAudio(); dlog('5.initAudio OK'); } catch(e) { dlog('5.initAudio FAIL: ' + e.message); }
-  try { initProviderPills(); dlog('6.initProviderPills OK, groups:' + document.querySelectorAll('.provider-group').length); } catch(e) { dlog('6.initProviderPills FAIL: ' + e.message); }
-  try { initLightbox(); dlog('7.initLightbox OK'); } catch(e) { dlog('7.initLightbox FAIL: ' + e.message); }
-  try { initKeyboardShortcuts(); dlog('8.initKeyboard OK'); } catch(e) { dlog('8.initKeyboard FAIL: ' + e.message); }
-  try { initApiKeyModal(); dlog('9.initApiKeyModal OK'); } catch(e) { dlog('9.initApiKeyModal FAIL: ' + e.message); }
-  dlog('INIT DONE');
+  initTabs();
+  initSidebar();
+  initPrompt();
+  initImageSettings();
+  initAudio();
+  initProviderPills();
+  initLightbox();
+  initKeyboardShortcuts();
+  initApiKeyModal();
 });
 
 // === TAB MANAGEMENT ===
@@ -262,15 +255,10 @@ function initProviderPillsIn(group) {
 
     groupBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const dbg = document.getElementById('debugPanel');
-      if (dbg) dbg.textContent = 'CLICK: ' + groupBtn.textContent.trim() + '\n';
       const wasOpen = provGroup.classList.contains('open');
       closeDropdownPopup();
       if (!wasOpen) {
         showDropdownPopup(groupBtn, provGroup, group);
-        if (dbg) dbg.textContent += 'showDropdownPopup called\n';
-      } else {
-        if (dbg) dbg.textContent += 'was open, closed\n';
       }
       // Activate this group
       group.querySelectorAll('.provider-group-btn').forEach(b => b.classList.remove('active'));
@@ -1484,23 +1472,20 @@ let activePopup = null;
 let activePopupGroup = null;
 
 function showDropdownPopup(btn, provGroup, group) {
-  const dbg = document.getElementById('debugPanel');
   closeDropdownPopup();
   const dropdown = provGroup.querySelector('.provider-dropdown');
-  if (!dropdown) { if (dbg) dbg.textContent += 'NO DROPDOWN FOUND\n'; return; }
+  if (!dropdown) return;
 
   // Create popup element appended to documentElement (html) to escape all clipping
   const popup = document.createElement('div');
   popup.className = 'dropdown-popup';
   popup.innerHTML = dropdown.innerHTML;
   document.documentElement.appendChild(popup);
-  if (dbg) dbg.textContent += 'popup items: ' + popup.querySelectorAll('.provider-drop-item').length + '\n';
 
   // Force critical inline styles so no CSS can hide/clip it
   const rect = btn.getBoundingClientRect();
   const popH = popup.offsetHeight;
   const popW = popup.offsetWidth;
-  if (dbg) dbg.textContent += 'pos: top=' + Math.round(rect.top) + ' popH=' + popH + ' popW=' + popW + '\n';
   let top = rect.top - popH - 8;
   let left = rect.left + (rect.width / 2) - (popW / 2);
   if (top < 4) top = rect.bottom + 8;
