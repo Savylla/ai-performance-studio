@@ -165,6 +165,8 @@ function switchTab(tab) {
     };
     genMain.querySelector('span').textContent = genTexts[tab] || 'Gerar';
   }
+  // Load gallery when switching to gallery tab
+  if (tab === 'gallery') renderGallery();
 }
 
 function showTTSProviders() {
@@ -784,6 +786,8 @@ async function startImageGeneration() {
         <div class="result-card-provider">${provider}</div>
       `;
       card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
+      // Save to gallery
+      saveImageToGallery(imgSrc, prompt, provider);
     } else {
       card.classList.remove('loading');
       card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle"></i><span>Erro - tente novamente</span></div>`;
@@ -843,6 +847,8 @@ async function startMoodboardGeneration() {
       success++;
       const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
       addImageToBoard(imgSrc, 'AI Generated (' + provider + ')', null);
+      // Save to gallery
+      saveImageToGallery(imgSrc, prompt, provider);
     }
 
     if (i < qty - 1) await delay(1500);
@@ -1093,6 +1099,8 @@ async function startVideoGeneration() {
     `;
     videoGrid.insertBefore(card, videoGrid.firstChild);
     showToast('Video gerado!', 'success');
+    // Save to gallery
+    saveVideoToGallery(videoUrl, prompt, `Pollinations ${model}`);
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
   } finally {
@@ -1136,6 +1144,8 @@ async function generateVideoHuggingFace(prompt) {
     `;
     videoGrid.insertBefore(card, videoGrid.firstChild);
     showToast('Video gerado!', 'success');
+    // Save to gallery
+    saveVideoToGallery(blob, prompt, 'HuggingFace AnimateDiff');
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
   }
@@ -1267,6 +1277,8 @@ async function pollinationsTTS(text) {
   playerArea.appendChild(downloadBtn);
   player.play();
   showToast('Audio gerado com Pollinations!', 'success');
+  // Save to gallery
+  saveAudioToGallery(blob, text, 'Pollinations TTS');
 }
 
 // --- HuggingFace TTS ---
@@ -1316,6 +1328,8 @@ async function huggingFaceTTS(text, model) {
   playerArea.appendChild(downloadBtn);
   player.play();
   showToast(`Audio gerado com ${model.split('/')[1]}!`, 'success');
+  // Save to gallery
+  saveAudioToGallery(blob, text, `HuggingFace ${model.split('/')[1]}`);
 }
 
 // --- Transcription ---
@@ -1652,6 +1666,8 @@ async function startTextGeneration() {
       document.getElementById('textProviderUsed').textContent = providerName;
       document.getElementById('textResultContent').textContent = result;
       showToast('Texto gerado!', 'success');
+      // Save to gallery
+      saveTextToGallery(result, prompt, providerName);
     }
   } catch (e) {
     showToast('Erro: ' + e.message, 'error');
@@ -2581,3 +2597,345 @@ function googleLogout() {
   updateApiKeyStatus();
   showToast('Voce saiu da conta', 'success');
 }
+
+// =============================================
+// === GALLERY - IndexedDB Storage System ===
+// =============================================
+
+let galleryDB = null;
+const GALLERY_DB_NAME = 'AIStudioGallery';
+const GALLERY_DB_VERSION = 1;
+const GALLERY_STORE = 'items';
+
+function openGalleryDB() {
+  return new Promise((resolve, reject) => {
+    if (galleryDB) { resolve(galleryDB); return; }
+    const req = indexedDB.open(GALLERY_DB_NAME, GALLERY_DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(GALLERY_STORE)) {
+        const store = db.createObjectStore(GALLERY_STORE, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('type', 'type', { unique: false });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+    req.onsuccess = (e) => { galleryDB = e.target.result; resolve(galleryDB); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function saveToGallery(item) {
+  // item: { type: 'image'|'video'|'audio'|'text', prompt, provider, data, mimeType, timestamp }
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readwrite');
+    const store = tx.objectStore(GALLERY_STORE);
+    item.timestamp = item.timestamp || Date.now();
+    const req = store.add(item);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function getGalleryItems(type) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readonly');
+    const store = tx.objectStore(GALLERY_STORE);
+    let req;
+    if (type && type !== 'all') {
+      const idx = store.index('type');
+      req = idx.getAll(type);
+    } else {
+      req = store.getAll();
+    }
+    req.onsuccess = () => {
+      const items = req.result.sort((a, b) => b.timestamp - a.timestamp);
+      resolve(items);
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function deleteGalleryItem(id) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readwrite');
+    tx.objectStore(GALLERY_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function clearGallery(type) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(GALLERY_STORE, 'readwrite');
+    const store = tx.objectStore(GALLERY_STORE);
+    if (!type || type === 'all') {
+      store.clear();
+      tx.oncomplete = () => resolve();
+    } else {
+      const idx = store.index('type');
+      const req = idx.openCursor(type);
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) { cursor.delete(); cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve();
+    }
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+// Save helpers for each content type
+async function saveImageToGallery(blobOrUrl, prompt, provider) {
+  try {
+    let data;
+    if (blobOrUrl instanceof Blob) {
+      data = blobOrUrl;
+    } else {
+      const resp = await fetch(blobOrUrl);
+      data = await resp.blob();
+    }
+    await saveToGallery({ type: 'image', prompt, provider, data, mimeType: data.type });
+  } catch (e) { console.warn('Gallery save failed:', e); }
+}
+
+async function saveVideoToGallery(urlOrBlob, prompt, provider) {
+  try {
+    let data;
+    if (urlOrBlob instanceof Blob) {
+      data = urlOrBlob;
+    } else {
+      // For external URLs, save the URL string
+      await saveToGallery({ type: 'video', prompt, provider, data: urlOrBlob, mimeType: 'url' });
+      return;
+    }
+    await saveToGallery({ type: 'video', prompt, provider, data, mimeType: data.type });
+  } catch (e) { console.warn('Gallery save failed:', e); }
+}
+
+async function saveAudioToGallery(blob, prompt, provider) {
+  try {
+    await saveToGallery({ type: 'audio', prompt, provider, data: blob, mimeType: blob.type });
+  } catch (e) { console.warn('Gallery save failed:', e); }
+}
+
+async function saveTextToGallery(text, prompt, provider) {
+  try {
+    await saveToGallery({ type: 'text', prompt, provider, data: text, mimeType: 'text/plain' });
+  } catch (e) { console.warn('Gallery save failed:', e); }
+}
+
+// === GALLERY UI ===
+let galleryCurrentFilter = 'all';
+let galleryListView = false;
+
+function initGallery() {
+  // Filter buttons
+  document.querySelectorAll('.gallery-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.gallery-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      galleryCurrentFilter = btn.dataset.filter;
+      renderGallery();
+    });
+  });
+
+  // View toggle
+  document.getElementById('galleryViewToggle')?.addEventListener('click', () => {
+    galleryListView = !galleryListView;
+    const grid = document.getElementById('galleryGrid');
+    const icon = document.querySelector('#galleryViewToggle i');
+    if (galleryListView) {
+      grid.classList.add('list-view');
+      icon.className = 'fas fa-th-large';
+    } else {
+      grid.classList.remove('list-view');
+      icon.className = 'fas fa-grip-vertical';
+    }
+  });
+
+  // Clear button
+  document.getElementById('galleryClearBtn')?.addEventListener('click', async () => {
+    if (!confirm('Limpar toda a galeria? Esta acao nao pode ser desfeita.')) return;
+    await clearGallery(galleryCurrentFilter);
+    renderGallery();
+    showToast('Galeria limpa', 'success');
+  });
+
+  // Preview close
+  document.getElementById('galleryPreviewClose')?.addEventListener('click', closeGalleryPreview);
+  document.getElementById('galleryPreview')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeGalleryPreview();
+  });
+}
+
+async function renderGallery() {
+  const grid = document.getElementById('galleryGrid');
+  const empty = document.getElementById('galleryEmpty');
+  const countEl = document.getElementById('galleryCount');
+  if (!grid) return;
+
+  try {
+    const items = await getGalleryItems(galleryCurrentFilter);
+    countEl.textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
+
+    if (items.length === 0) {
+      grid.style.display = 'none';
+      empty.style.display = '';
+      return;
+    }
+
+    grid.style.display = '';
+    empty.style.display = 'none';
+    grid.innerHTML = '';
+
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'gallery-card';
+      card.dataset.id = item.id;
+
+      const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto' };
+      const timeStr = new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const promptSnippet = (item.prompt || '').substring(0, 60) + ((item.prompt || '').length > 60 ? '...' : '');
+
+      let thumbHTML = '';
+      if (item.type === 'image' && item.data instanceof Blob) {
+        const url = URL.createObjectURL(item.data);
+        thumbHTML = `<img src="${url}" alt="Image" loading="lazy">`;
+      } else if (item.type === 'video') {
+        thumbHTML = `<i class="fas fa-play-circle thumb-icon"></i>`;
+      } else if (item.type === 'audio') {
+        thumbHTML = `<i class="fas fa-volume-up thumb-icon"></i>`;
+      } else if (item.type === 'text') {
+        const preview = (typeof item.data === 'string' ? item.data : '').substring(0, 100);
+        thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${preview}</div>`;
+      }
+
+      card.innerHTML = `
+        <span class="gallery-card-badge type-${item.type}">${typeLabels[item.type]}</span>
+        <button class="gallery-card-delete" title="Excluir"><i class="fas fa-trash"></i></button>
+        <div class="gallery-card-thumb">${thumbHTML}</div>
+        <div class="gallery-card-info">
+          <div class="gallery-card-prompt">${promptSnippet || 'Sem prompt'}</div>
+          <div class="gallery-card-meta">
+            <span>${item.provider || ''}</span>
+            <span>${timeStr}</span>
+          </div>
+        </div>
+      `;
+
+      // Delete button
+      card.querySelector('.gallery-card-delete').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await deleteGalleryItem(item.id);
+        card.remove();
+        const remaining = grid.querySelectorAll('.gallery-card').length;
+        countEl.textContent = `${remaining} ${remaining === 1 ? 'item' : 'itens'}`;
+        if (remaining === 0) { grid.style.display = 'none'; empty.style.display = ''; }
+        showToast('Item excluido', 'success');
+      });
+
+      // Open preview
+      card.addEventListener('click', () => openGalleryPreview(item));
+
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    console.error('Gallery render error:', e);
+  }
+}
+
+function openGalleryPreview(item) {
+  const overlay = document.getElementById('galleryPreview');
+  const mediaEl = document.getElementById('galleryPreviewMedia');
+  const infoEl = document.getElementById('galleryPreviewInfo');
+
+  let mediaHTML = '';
+  if (item.type === 'image' && item.data instanceof Blob) {
+    const url = URL.createObjectURL(item.data);
+    mediaHTML = `<img src="${url}" alt="Preview">`;
+  } else if (item.type === 'video') {
+    let src;
+    if (item.data instanceof Blob) {
+      src = URL.createObjectURL(item.data);
+    } else {
+      src = item.data; // URL string
+    }
+    mediaHTML = `<video controls autoplay style="max-width:100%;max-height:70vh;border-radius:var(--radius-md);"><source src="${src}" type="video/mp4"></video>`;
+  } else if (item.type === 'audio' && item.data instanceof Blob) {
+    const url = URL.createObjectURL(item.data);
+    mediaHTML = `<audio controls autoplay src="${url}" style="width:100%;min-width:300px;"></audio>`;
+  } else if (item.type === 'text') {
+    const escaped = (typeof item.data === 'string' ? item.data : '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    mediaHTML = `<div class="preview-text-content">${escaped}</div>`;
+  }
+
+  const timeStr = new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  mediaEl.innerHTML = mediaHTML;
+  infoEl.innerHTML = `
+    <div class="preview-prompt">${item.prompt || ''}</div>
+    <div class="preview-meta">
+      <span><i class="fas fa-robot"></i> ${item.provider || ''}</span>
+      <span><i class="fas fa-clock"></i> ${timeStr}</span>
+    </div>
+    <div class="preview-actions">
+      ${item.type !== 'text' ? `<button class="preview-action-btn" onclick="downloadGalleryItem(${item.id})"><i class="fas fa-download"></i> Download</button>` : `<button class="preview-action-btn" onclick="copyGalleryText(this)"><i class="fas fa-copy"></i> Copiar</button>`}
+      <button class="preview-action-btn btn-delete" onclick="deleteAndClosePreview(${item.id})"><i class="fas fa-trash"></i> Excluir</button>
+    </div>
+  `;
+
+  overlay.style.display = 'flex';
+}
+
+function closeGalleryPreview() {
+  const overlay = document.getElementById('galleryPreview');
+  overlay.style.display = 'none';
+  document.getElementById('galleryPreviewMedia').innerHTML = '';
+}
+
+async function deleteAndClosePreview(id) {
+  await deleteGalleryItem(id);
+  closeGalleryPreview();
+  renderGallery();
+  showToast('Item excluido', 'success');
+}
+
+async function downloadGalleryItem(id) {
+  const db = await openGalleryDB();
+  const tx = db.transaction(GALLERY_STORE, 'readonly');
+  const req = tx.objectStore(GALLERY_STORE).get(id);
+  req.onsuccess = () => {
+    const item = req.result;
+    if (!item) return;
+    let url, ext;
+    if (item.data instanceof Blob) {
+      url = URL.createObjectURL(item.data);
+      ext = item.type === 'image' ? 'png' : item.type === 'video' ? 'mp4' : 'mp3';
+    } else if (typeof item.data === 'string' && item.mimeType === 'url') {
+      url = item.data;
+      ext = 'mp4';
+    } else return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ai-${item.type}-${item.id}.${ext}`;
+    a.click();
+    showToast('Download iniciado!', 'success');
+  };
+}
+
+function copyGalleryText(btn) {
+  const textEl = document.querySelector('.preview-text-content');
+  if (textEl) {
+    navigator.clipboard.writeText(textEl.textContent).then(() => showToast('Texto copiado!', 'success'));
+  }
+}
+
+// Init gallery on load
+document.addEventListener('DOMContentLoaded', () => {
+  openGalleryDB().catch(e => console.warn('IndexedDB init:', e));
+  initGallery();
+});

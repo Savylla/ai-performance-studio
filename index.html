@@ -235,13 +235,45 @@
 
     <!-- GALLERY Tab -->
     <div class="tab-content" id="tabGallery">
-      <div class="display-empty">
-        <div class="empty-illustration">
-          <div class="empty-glow"></div>
-          <i class="fas fa-th-large"></i>
+      <div class="gallery-workspace">
+        <!-- Gallery Toolbar -->
+        <div class="gallery-toolbar">
+          <div class="gallery-filters">
+            <button class="gallery-filter active" data-filter="all"><i class="fas fa-th-large"></i> Todos</button>
+            <button class="gallery-filter" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
+            <button class="gallery-filter" data-filter="video"><i class="fas fa-video"></i> Videos</button>
+            <button class="gallery-filter" data-filter="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="gallery-filter" data-filter="text"><i class="fas fa-font"></i> Textos</button>
+          </div>
+          <div class="gallery-actions">
+            <span class="gallery-count" id="galleryCount">0 itens</span>
+            <button class="gallery-action-btn" id="galleryViewToggle" title="Alternar visualizacao">
+              <i class="fas fa-grip-vertical"></i>
+            </button>
+            <button class="gallery-action-btn gallery-delete-all" id="galleryClearBtn" title="Limpar galeria">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
         </div>
-        <h3>Galeria</h3>
-        <p>Suas imagens geradas aparecerão aqui</p>
+        <!-- Gallery Grid -->
+        <div class="gallery-grid" id="galleryGrid"></div>
+        <!-- Gallery Empty State -->
+        <div class="gallery-empty" id="galleryEmpty">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-th-large"></i>
+          </div>
+          <h3>Galeria vazia</h3>
+          <p>Gere imagens, videos, audios ou textos e eles aparecerão aqui automaticamente</p>
+        </div>
+      </div>
+      <!-- Gallery Preview Modal -->
+      <div class="gallery-preview-overlay" id="galleryPreview" style="display:none;">
+        <div class="gallery-preview-content">
+          <button class="gallery-preview-close" id="galleryPreviewClose"><i class="fas fa-times"></i></button>
+          <div class="gallery-preview-media" id="galleryPreviewMedia"></div>
+          <div class="gallery-preview-info" id="galleryPreviewInfo"></div>
+        </div>
       </div>
     </div>
 
