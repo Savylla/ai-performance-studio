@@ -77,15 +77,15 @@
   padding: 8px 18px;
   border: none;
   border-radius: var(--radius-md);
-  background: var(--accent);
-  color: #000;
+  background: var(--accent-gradient);
+  color: #fff;
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;
   transition: all var(--transition);
 }
 
-.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:hover { filter: brightness(1.15); }
 
 .btn-secondary {
   padding: 8px 18px;
