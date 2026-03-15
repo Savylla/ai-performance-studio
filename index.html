@@ -346,31 +346,6 @@
             </div>
           </div>
         </div>
-        <div class="settings-row-bottom">
-          <div class="setting-inline ratio-group">
-            <button class="ratio-pill" data-ratio="3:4" data-w="768" data-h="1024">3:4</button>
-            <button class="ratio-pill" data-ratio="9:16" data-w="576" data-h="1024">9:16</button>
-            <button class="ratio-pill active" data-ratio="1:1" data-w="1024" data-h="1024">1:1</button>
-            <button class="ratio-pill" data-ratio="16:9" data-w="1024" data-h="576">16:9</button>
-            <button class="ratio-pill" data-ratio="4:3" data-w="1024" data-h="768">4:3</button>
-          </div>
-          <div class="setting-inline ref-upload-group">
-            <button class="ref-upload-btn" id="refUploadBtn" title="Adicionar arquivos de referencia">
-              <i class="fas fa-paperclip"></i>
-              <span class="ref-upload-count" id="refUploadCount" style="display:none;">0</span>
-            </button>
-            <input type="file" id="refFileInput" multiple accept="*/*" style="display:none;">
-          </div>
-          <div class="setting-inline qty-group">
-            <button class="qty-pill active" data-qty="1">1</button>
-            <button class="qty-pill" data-qty="2">2</button>
-            <button class="qty-pill" data-qty="4">4</button>
-          </div>
-          <button class="generate-main" id="generateBtnMain">
-            <i class="fas fa-bolt"></i>
-            <span>Gerar</span>
-          </button>
-        </div>
       </div>
 
       <!-- VIDEO Settings -->
@@ -393,10 +368,6 @@
             </div>
           </div>
         </div>
-        <button class="generate-main" id="generateVideoBtn">
-          <i class="fas fa-bolt"></i>
-          <span>Gerar Video</span>
-        </button>
       </div>
 
       <!-- AUDIO Settings -->
@@ -429,10 +400,6 @@
             <option value="default">Voz Padrao</option>
           </select>
         </div>
-        <button class="generate-main" id="generateAudioBtn">
-          <i class="fas fa-play"></i>
-          <span>Falar</span>
-        </button>
         <button class="generate-main record-btn" id="recordBtn" style="display:none;">
           <i class="fas fa-microphone"></i>
           <span>Gravar</span>
@@ -500,9 +467,36 @@
             </div>
           </div>
         </div>
-        <button class="generate-main" id="generateTextBtn">
+      </div>
+
+      <!-- MOODBOARD Settings -->
+      <div class="settings-row tab-settings" id="settingsMoodboard">
+      </div>
+
+      <!-- Shared Bottom Row (ratio, ref upload, qty, generate) - visible for all generation tabs -->
+      <div class="settings-row-bottom" id="sharedBottomRow">
+        <div class="setting-inline ratio-group">
+          <button class="ratio-pill" data-ratio="3:4" data-w="768" data-h="1024">3:4</button>
+          <button class="ratio-pill" data-ratio="9:16" data-w="576" data-h="1024">9:16</button>
+          <button class="ratio-pill active" data-ratio="1:1" data-w="1024" data-h="1024">1:1</button>
+          <button class="ratio-pill" data-ratio="16:9" data-w="1024" data-h="576">16:9</button>
+          <button class="ratio-pill" data-ratio="4:3" data-w="1024" data-h="768">4:3</button>
+        </div>
+        <div class="setting-inline ref-upload-group">
+          <button class="ref-upload-btn" id="refUploadBtn" title="Adicionar arquivos de referencia">
+            <i class="fas fa-paperclip"></i>
+            <span class="ref-upload-count" id="refUploadCount" style="display:none;">0</span>
+          </button>
+          <input type="file" id="refFileInput" multiple accept="*/*" style="display:none;">
+        </div>
+        <div class="setting-inline qty-group">
+          <button class="qty-pill active" data-qty="1">1</button>
+          <button class="qty-pill" data-qty="2">2</button>
+          <button class="qty-pill" data-qty="4">4</button>
+        </div>
+        <button class="generate-main" id="generateBtnMain">
           <i class="fas fa-bolt"></i>
-          <span>Gerar Texto</span>
+          <span>Gerar</span>
         </button>
       </div>
     </div>

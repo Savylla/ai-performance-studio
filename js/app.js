@@ -86,13 +86,13 @@ function initTabs() {
       const target = btn.dataset.audiotab;
       if (target === 'tts') {
         document.getElementById('audioTTS').classList.add('active');
-        document.getElementById('generateAudioBtn').style.display = '';
+        document.getElementById('generateBtnMain').style.display = '';
         document.getElementById('recordBtn').style.display = 'none';
         document.getElementById('audioProviders').querySelector('.provider-label').textContent = 'TTS:';
         showTTSProviders();
       } else {
         document.getElementById('audioTranscribe').classList.add('active');
-        document.getElementById('generateAudioBtn').style.display = 'none';
+        document.getElementById('generateBtnMain').style.display = 'none';
         document.getElementById('recordBtn').style.display = '';
         document.getElementById('audioProviders').querySelector('.provider-label').textContent = 'STT:';
         showSTTProviders();
@@ -120,7 +120,8 @@ function switchTab(tab) {
     image: 'Descreva a imagem que voce quer criar...',
     video: 'Descreva o video que voce quer criar...',
     audio: 'Digite o texto para converter em audio...',
-    text: 'Digite seu prompt para gerar texto...'
+    text: 'Digite seu prompt para gerar texto...',
+    moodboard: 'Descreva o que voce quer criar para o moodboard...'
   };
   document.getElementById('promptInput').placeholder = placeholders[tab] || placeholders.image;
   // Show/hide enhance & lang buttons based on tab
@@ -135,10 +136,20 @@ function switchTab(tab) {
   }
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
-  if (['moodboard', 'gallery', 'history'].includes(tab)) {
+  if (['gallery', 'history'].includes(tab)) {
     bottomBar.style.display = 'none';
   } else {
     bottomBar.style.display = '';
+  }
+  // Show/hide shared bottom row for generation tabs
+  const sharedRow = document.getElementById('sharedBottomRow');
+  if (sharedRow) {
+    sharedRow.style.display = ['gallery', 'history'].includes(tab) ? 'none' : '';
+  }
+  // Re-show generate button (may have been hidden by audio transcription mode)
+  const genMain = document.getElementById('generateBtnMain');
+  if (genMain && tab !== 'audio') {
+    genMain.style.display = '';
   }
 }
 
@@ -332,9 +343,6 @@ function initPrompt() {
   // Generate button (top send button in prompt row)
   document.getElementById('generateBtn').addEventListener('click', handleGenerate);
   document.getElementById('generateBtnMain').addEventListener('click', handleGenerate);
-  document.getElementById('generateVideoBtn')?.addEventListener('click', handleGenerate);
-  document.getElementById('generateAudioBtn')?.addEventListener('click', handleGenerate);
-  document.getElementById('generateTextBtn')?.addEventListener('click', handleGenerate);
   document.getElementById('recordBtn')?.addEventListener('click', startTranscription);
 }
 
@@ -957,18 +965,18 @@ async function startVideoGeneration() {
   if (!prompt) { showToast('Escreva um prompt para o video', 'error'); return; }
 
   const provider = getActiveProvider('videoProviders');
-  setButtonLoading('generateVideoBtn', true, 'Gerando...');
+  setButtonLoading('generateBtnMain', true, 'Gerando...');
 
   // HuggingFace video
   if (provider === 'hf-video') {
     if (!getApiKey('huggingface_api_key')) {
       openApiKeyModal();
       showToast('Configure sua API key do HuggingFace primeiro', 'error');
-      setButtonLoading('generateVideoBtn', false, 'Gerar Video');
+      setButtonLoading('generateBtnMain', false, 'Gerar');
       return;
     }
     await generateVideoHuggingFace(prompt);
-    setButtonLoading('generateVideoBtn', false, 'Gerar Video');
+    setButtonLoading('generateBtnMain', false, 'Gerar');
     return;
   }
 
@@ -999,7 +1007,7 @@ async function startVideoGeneration() {
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
   } finally {
-    setButtonLoading('generateVideoBtn', false, 'Gerar Video');
+    setButtonLoading('generateBtnMain', false, 'Gerar');
   }
 }
 
@@ -1093,7 +1101,7 @@ async function startTTS() {
   if (!text) { showToast('Digite texto para converter em audio', 'error'); return; }
 
   const provider = getActiveProvider('audioProviders');
-  setButtonLoading('generateAudioBtn', true, 'Gerando...');
+  setButtonLoading('generateBtnMain', true, 'Gerando...');
 
   try {
     if (provider === 'browser-tts') {
@@ -1108,7 +1116,7 @@ async function startTTS() {
   } catch (e) {
     showToast('Erro TTS: ' + e.message, 'error');
   } finally {
-    setButtonLoading('generateAudioBtn', false, 'Falar');
+    setButtonLoading('generateBtnMain', false, 'Gerar');
   }
 }
 
@@ -1519,7 +1527,7 @@ async function startTextGeneration() {
   if (!prompt) { showToast('Digite um prompt para gerar texto', 'error'); return; }
 
   const provider = getActiveProvider('textProviders');
-  setButtonLoading('generateTextBtn', true, 'Gerando...');
+  setButtonLoading('generateBtnMain', true, 'Gerando...');
 
   try {
     let result = '';
@@ -1559,7 +1567,7 @@ async function startTextGeneration() {
   } catch (e) {
     showToast('Erro: ' + e.message, 'error');
   } finally {
-    setButtonLoading('generateTextBtn', false, 'Gerar Texto');
+    setButtonLoading('generateBtnMain', false, 'Gerar');
   }
 }
 
