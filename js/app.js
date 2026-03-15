@@ -121,13 +121,13 @@ function switchTab(tab) {
     video: 'Descreva o video que voce quer criar...',
     audio: 'Digite o texto para converter em audio...',
     text: 'Digite seu prompt para gerar texto...',
-    moodboard: 'Descreva o que voce quer criar para o moodboard...'
+    moodboard: 'Descreva a imagem que voce quer criar...'
   };
   document.getElementById('promptInput').placeholder = placeholders[tab] || placeholders.image;
   // Show/hide enhance & lang buttons based on tab
   const langBtns = document.getElementById('langButtons');
   const enhanceBtn = document.getElementById('enhanceBtn');
-  if (tab === 'image') {
+  if (tab === 'image' || tab === 'moodboard') {
     langBtns.style.display = '';
     enhanceBtn.style.display = '';
   } else {
@@ -352,6 +352,7 @@ function handleGenerate() {
     case 'video': startVideoGeneration(); break;
     case 'audio': startTTS(); break;
     case 'text': startTextGeneration(); break;
+    case 'moodboard': startMoodboardGeneration(); break;
   }
 }
 
@@ -761,6 +762,62 @@ async function startImageGeneration() {
 
   setButtonLoading('generateBtnMain', false, 'Gerar');
   if (success > 0) showToast(`${success} imagem(ns) gerada(s)!`, 'success');
+  else showToast('Erro ao gerar. Tente outro provedor.', 'error');
+}
+
+// --- Moodboard Image Generation ---
+async function startMoodboardGeneration() {
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) { showToast('Escreva um prompt para gerar', 'error'); return; }
+
+  const provider = getActiveProvider('moodboardProviders');
+  const activeRatio = document.querySelector('.ratio-pill.active');
+  const ratio = activeRatio?.dataset.ratio || '1:1';
+  const w = parseInt(activeRatio?.dataset.w || 1024);
+  const h = parseInt(activeRatio?.dataset.h || 1024);
+  const qty = parseInt(document.querySelector('.qty-pill.active')?.dataset.qty || 1);
+  const seed = document.getElementById('seedToggle').dataset.seed;
+
+  // Check API keys
+  if (provider.startsWith('gemini') || provider === 'nano-banana-pro-preview') {
+    if (!getApiKey('gemini_api_key')) { openApiKeyModal(); showToast('Configure sua API key do Gemini primeiro', 'error'); return; }
+  }
+  if (provider.startsWith('together-')) {
+    if (!getApiKey('together_api_key')) { openApiKeyModal(); showToast('Configure sua API key do Together AI primeiro', 'error'); return; }
+  }
+  if (provider.startsWith('hf-')) {
+    if (!getApiKey('huggingface_api_key')) { openApiKeyModal(); showToast('Configure sua API key do HuggingFace primeiro', 'error'); return; }
+  }
+
+  setButtonLoading('generateBtnMain', true, 'Gerando...');
+  let success = 0;
+
+  for (let i = 0; i < qty; i++) {
+    let imageResult = null;
+
+    if (provider.startsWith('pollinations')) {
+      imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('together-')) {
+      imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('hf-')) {
+      imageResult = await generateWithHuggingFace(prompt, provider, w, h);
+    } else if (provider === 'gemini-auto') {
+      imageResult = await generateWithGemini(prompt, ratio, i, null);
+    } else {
+      imageResult = await generateWithGemini(prompt, ratio, i, provider);
+    }
+
+    if (imageResult) {
+      success++;
+      const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
+      addImageToBoard(imgSrc, 'AI Generated (' + provider + ')', null);
+    }
+
+    if (i < qty - 1) await delay(1500);
+  }
+
+  setButtonLoading('generateBtnMain', false, 'Gerar');
+  if (success > 0) showToast(`${success} imagem(ns) adicionada(s) ao moodboard!`, 'success');
   else showToast('Erro ao gerar. Tente outro provedor.', 'error');
 }
 
