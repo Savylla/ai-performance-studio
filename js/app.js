@@ -252,7 +252,7 @@ function initPrompt() {
     syncTimeout = setTimeout(() => syncPTtoEN(), 1500);
   });
 
-  // Use English button
+  // Use English button - collapse instead of hide
   document.getElementById('useEnglishBtn').addEventListener('click', () => {
     const enText = document.getElementById('promptEN').value.trim();
     if (enText) {
@@ -261,11 +261,17 @@ function initPrompt() {
       document.getElementById('promptInput').style.height = document.getElementById('promptInput').scrollHeight + 'px';
       showToast('Prompt EN aplicado!', 'success');
     }
+    // Collapse the bilingual area
+    document.getElementById('bilingualArea').classList.add('collapsed');
   });
 
   document.getElementById('closeBilingualBtn').addEventListener('click', () => {
     document.getElementById('bilingualArea').style.display = 'none';
+    document.getElementById('bilingualArea').classList.remove('collapsed');
   });
+
+  // Drag handle for bilingual area - swipe/drag to resize or collapse/expand
+  initBilingualDrag();
 
   // Generate button (top send button in prompt row)
   document.getElementById('generateBtn').addEventListener('click', handleGenerate);
@@ -453,7 +459,9 @@ Prompt original: ${original}`
 
     document.getElementById('promptPT').value = ptText;
     document.getElementById('promptEN').value = enText;
-    document.getElementById('bilingualArea').style.display = 'block';
+    const biArea = document.getElementById('bilingualArea');
+    biArea.style.display = 'block';
+    biArea.classList.remove('collapsed');
     document.getElementById('syncStatus').innerHTML = '<i class="fas fa-check"></i> Sincronizado';
     document.getElementById('promptInput').value = enText;
     showToast('Prompt melhorado em PT e EN!', 'success');
@@ -1617,6 +1625,81 @@ function closeDropdownPopup() {
 
 // Close popup when clicking anywhere
 document.addEventListener('click', () => closeDropdownPopup());
+
+// === BILINGUAL DRAG/SWIPE ===
+function initBilingualDrag() {
+  const handle = document.getElementById('bilingualDragHandle');
+  const area = document.getElementById('bilingualArea');
+  const collapsible = document.getElementById('bilingualCollapsible');
+  if (!handle || !area || !collapsible) return;
+
+  let startY = 0;
+  let startHeight = 0;
+  let isDragging = false;
+
+  function onStart(e) {
+    isDragging = true;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    // If collapsed, use 0 as start height
+    if (area.classList.contains('collapsed')) {
+      startHeight = 0;
+    } else {
+      startHeight = collapsible.scrollHeight;
+    }
+    collapsible.style.transition = 'none';
+    collapsible.style.overflow = 'hidden';
+    document.body.style.userSelect = 'none';
+  }
+
+  function onMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+    const deltaY = startY - currentY; // positive = dragging up (expand), negative = dragging down (collapse)
+    let newHeight = startHeight + deltaY;
+    newHeight = Math.max(0, Math.min(newHeight, 400));
+    collapsible.style.maxHeight = newHeight + 'px';
+    collapsible.style.opacity = newHeight < 30 ? '0' : '1';
+  }
+
+  function onEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    document.body.style.userSelect = '';
+    collapsible.style.transition = '';
+
+    const currentHeight = parseInt(collapsible.style.maxHeight) || 0;
+
+    if (currentHeight < 50) {
+      // Collapse
+      area.classList.add('collapsed');
+      collapsible.style.maxHeight = '';
+      collapsible.style.opacity = '';
+    } else {
+      // Expand
+      area.classList.remove('collapsed');
+      collapsible.style.maxHeight = '';
+      collapsible.style.opacity = '';
+      collapsible.style.overflow = '';
+    }
+  }
+
+  // Click on handle to toggle
+  handle.addEventListener('click', (e) => {
+    if (isDragging) return;
+    area.classList.toggle('collapsed');
+  });
+
+  // Mouse events
+  handle.addEventListener('mousedown', onStart);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onEnd);
+
+  // Touch events
+  handle.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd);
+}
 
 function initKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {

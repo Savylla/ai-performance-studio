@@ -795,9 +795,56 @@ h1, h2, h3, h4, h5, h6 {
 /* Bilingual Area */
 .bilingual-area {
   border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
   margin-bottom: 2px;
   animation: slide-up 300ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.bilingual-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0 2px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.bilingual-drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle-bar {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-light);
+  transition: background var(--transition);
+}
+
+.bilingual-drag-handle:hover .drag-handle-bar {
+  background: var(--text-muted);
+}
+
+.bilingual-collapsible {
+  padding-bottom: 10px;
+  transition: max-height 300ms ease, opacity 200ms ease;
+  overflow: hidden;
+}
+
+.bilingual-area.collapsed .bilingual-collapsible {
+  max-height: 0 !important;
+  opacity: 0;
+  padding-bottom: 0;
+}
+
+.bilingual-area.collapsed {
+  padding-bottom: 0;
+}
+
+.bilingual-area.collapsed .bilingual-drag-handle {
+  padding: 8px 0;
 }
 
 @keyframes slide-up {

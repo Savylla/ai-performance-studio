@@ -252,25 +252,30 @@
     <div class="bottom-bar">
       <!-- Bilingual Area (for image enhance) -->
       <div class="bilingual-area" id="bilingualArea" style="display: none;">
-        <div class="bilingual-container">
-          <div class="bilingual-panel">
-            <div class="bilingual-header">
-              <span class="bilingual-label">PT Portugues</span>
-              <span class="bilingual-hint">Edite aqui — o ingles atualiza automaticamente</span>
-            </div>
-            <textarea id="promptPT" class="bilingual-textarea" placeholder="Prompt em portugues..." rows="3"></textarea>
-          </div>
-          <div class="bilingual-panel">
-            <div class="bilingual-header">
-              <span class="bilingual-label en-label">EN English</span>
-              <span class="bilingual-sync" id="syncStatus"></span>
-            </div>
-            <textarea id="promptEN" class="bilingual-textarea" placeholder="Prompt in English..." rows="3" readonly></textarea>
-          </div>
+        <div class="bilingual-drag-handle" id="bilingualDragHandle">
+          <div class="drag-handle-bar"></div>
         </div>
-        <div class="bilingual-actions">
-          <button class="bilingual-use-btn" id="useEnglishBtn"><i class="fas fa-check"></i> Usar prompt EN para gerar</button>
-          <button class="bilingual-close-btn" id="closeBilingualBtn"><i class="fas fa-times"></i> Fechar</button>
+        <div class="bilingual-collapsible" id="bilingualCollapsible">
+          <div class="bilingual-container">
+            <div class="bilingual-panel">
+              <div class="bilingual-header">
+                <span class="bilingual-label">PT Portugues</span>
+                <span class="bilingual-hint">Edite aqui — o ingles atualiza automaticamente</span>
+              </div>
+              <textarea id="promptPT" class="bilingual-textarea" placeholder="Prompt em portugues..." rows="3"></textarea>
+            </div>
+            <div class="bilingual-panel">
+              <div class="bilingual-header">
+                <span class="bilingual-label en-label">EN English</span>
+                <span class="bilingual-sync" id="syncStatus"></span>
+              </div>
+              <textarea id="promptEN" class="bilingual-textarea" placeholder="Prompt in English..." rows="3" readonly></textarea>
+            </div>
+          </div>
+          <div class="bilingual-actions">
+            <button class="bilingual-use-btn" id="useEnglishBtn"><i class="fas fa-check"></i> Usar prompt EN para gerar</button>
+            <button class="bilingual-close-btn" id="closeBilingualBtn"><i class="fas fa-times"></i> Fechar</button>
+          </div>
         </div>
       </div>
 
