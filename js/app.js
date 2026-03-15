@@ -510,6 +510,11 @@ function initRefUpload() {
           data: ev.target.result // base64 data URL
         });
         updateRefUploadUI();
+
+        // If on Moodboard tab, also add file to the board
+        if (currentTab === 'moodboard') {
+          addRefFileToMoodboard(file, ev.target.result);
+        }
       };
       reader.readAsDataURL(file);
     });
@@ -539,6 +544,36 @@ function clearRefFiles() {
 
 function getReferenceFiles() {
   return referenceFiles;
+}
+
+function addRefFileToMoodboard(file, dataUrl) {
+  if (file.type.startsWith('image/')) {
+    addImageToBoard(dataUrl, file.name, null);
+  } else if (file.type.startsWith('video/')) {
+    moodboardItems.push({ type: 'video', url: dataUrl, provider: file.name, id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Video adicionado ao board!', 'success');
+  } else if (file.type.startsWith('audio/')) {
+    moodboardItems.push({ type: 'audio', url: dataUrl, provider: file.name, id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Audio adicionado ao board!', 'success');
+  } else if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+    // Read as text and add as note
+    const text = atob(dataUrl.split(',')[1]);
+    const snippet = text.substring(0, 200);
+    moodboardItems.push({ type: 'note', text: `[${file.name}] ${snippet}`, id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Texto adicionado como nota!', 'success');
+  } else {
+    // Generic file - add as note with filename
+    moodboardItems.push({ type: 'note', text: `Arquivo: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, id: Date.now() });
+    saveMoodboard();
+    renderMoodboard();
+    showToast('Arquivo adicionado ao board!', 'success');
+  }
 }
 
 // === GEMINI API CALLS ===
