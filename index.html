@@ -44,6 +44,10 @@
 
       <div class="nav-section">
         <span class="nav-section-title">Ferramentas</span>
+        <a href="#" class="nav-item" data-tab="moodboard">
+          <i class="fas fa-palette"></i><span>Moodboard</span>
+          <span class="nav-badge">Novo</span>
+        </a>
         <a href="#" class="nav-item" data-tab="gallery">
           <i class="fas fa-th-large"></i><span>Galeria</span>
         </a>
@@ -190,6 +194,75 @@
             <button class="btn-copy-text" onclick="copyTextResult()"><i class="fas fa-copy"></i> Copiar</button>
           </div>
           <div class="text-result-content" id="textResultContent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MOODBOARD Tab -->
+    <div class="tab-content" id="tabMoodboard">
+      <div class="moodboard-workspace">
+        <!-- Moodboard Toolbar -->
+        <div class="moodboard-toolbar">
+          <div class="moodboard-toolbar-left">
+            <div class="moodboard-search-wrap">
+              <i class="fas fa-search"></i>
+              <input type="text" id="moodboardSearch" placeholder="Buscar imagens (Pexels)..." />
+              <button class="moodboard-search-btn" id="moodboardSearchBtn"><i class="fas fa-arrow-right"></i></button>
+            </div>
+          </div>
+          <div class="moodboard-toolbar-right">
+            <button class="moodboard-tool-btn" id="moodboardPaletteBtn" title="Gerar paleta de cores"><i class="fas fa-swatchbook"></i> Paleta</button>
+            <button class="moodboard-tool-btn" id="moodboardFontBtn" title="Adicionar tipografia"><i class="fas fa-font"></i> Fontes</button>
+            <button class="moodboard-tool-btn" id="moodboardNoteBtn" title="Adicionar nota"><i class="fas fa-sticky-note"></i> Nota</button>
+            <button class="moodboard-tool-btn moodboard-clear-btn" id="moodboardClearBtn" title="Limpar board"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+
+        <!-- Search Results Panel (hidden by default) -->
+        <div class="moodboard-search-results" id="moodboardSearchResults" style="display:none;">
+          <div class="moodboard-results-header">
+            <span id="moodboardResultsTitle">Resultados</span>
+            <button class="moodboard-close-results" id="moodboardCloseResults"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="moodboard-results-grid" id="moodboardResultsGrid"></div>
+          <button class="moodboard-load-more" id="moodboardLoadMore" style="display:none;">Carregar mais</button>
+        </div>
+
+        <!-- Palette Panel (hidden by default) -->
+        <div class="moodboard-palette-panel" id="moodboardPalettePanel" style="display:none;">
+          <div class="moodboard-results-header">
+            <span>Paleta de Cores</span>
+            <button class="moodboard-close-results" id="moodboardClosePalette"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="moodboard-palette-content">
+            <div class="moodboard-palette-colors" id="moodboardPaletteColors"></div>
+            <div class="moodboard-palette-actions">
+              <input type="color" id="moodboardColorSeed" value="#c8ff00" title="Cor base">
+              <button class="moodboard-tool-btn" id="moodboardGenPalette"><i class="fas fa-dice"></i> Gerar</button>
+              <button class="moodboard-tool-btn" id="moodboardAddPalette"><i class="fas fa-plus"></i> Adicionar ao Board</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Font Panel (hidden by default) -->
+        <div class="moodboard-font-panel" id="moodboardFontPanel" style="display:none;">
+          <div class="moodboard-results-header">
+            <span>Tipografia</span>
+            <button class="moodboard-close-results" id="moodboardCloseFont"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="moodboard-font-grid" id="moodboardFontGrid"></div>
+        </div>
+
+        <!-- The Board -->
+        <div class="moodboard-board" id="moodboardBoard">
+          <div class="moodboard-empty" id="moodboardEmpty">
+            <div class="empty-illustration">
+              <div class="empty-glow"></div>
+              <i class="fas fa-palette"></i>
+            </div>
+            <h3>Seu Moodboard</h3>
+            <p>Busque imagens, gere paletas de cores e adicione fontes para criar seu moodboard</p>
+          </div>
         </div>
       </div>
     </div>

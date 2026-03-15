@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initLightbox();
   initKeyboardShortcuts();
   initApiKeyModal();
+  initMoodboard();
 });
 
 // === TAB MANAGEMENT ===
@@ -90,6 +91,13 @@ function switchTab(tab) {
   } else {
     langBtns.style.display = 'none';
     enhanceBtn.style.display = 'none';
+  }
+  // Hide bottom bar for non-generation tabs
+  const bottomBar = document.querySelector('.bottom-bar');
+  if (['moodboard', 'gallery', 'history'].includes(tab)) {
+    bottomBar.style.display = 'none';
+  } else {
+    bottomBar.style.display = '';
   }
 }
 
@@ -1618,6 +1626,15 @@ function initApiKeyModal() {
           <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
         </div>
 
+        <div class="setting-group">
+          <label><i class="fas fa-camera" style="color: #05a081;"></i> Pexels API Key <span style="color:var(--text-muted);">(Moodboard - busca de imagens)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="pexelsKeyInput" placeholder="Cole sua API key do Pexels...">
+            <button class="btn-tiny" id="togglePexelsKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://www.pexels.com/api/new/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
           <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
           Suas chaves ficam salvas apenas no seu navegador.
@@ -1638,7 +1655,8 @@ function initApiKeyModal() {
       openrouter_api_key: document.getElementById('openrouterKeyInput').value.trim(),
       groq_api_key: document.getElementById('groqKeyInput').value.trim(),
       together_api_key: document.getElementById('togetherKeyInput').value.trim(),
-      huggingface_api_key: document.getElementById('huggingfaceKeyInput').value.trim()
+      huggingface_api_key: document.getElementById('huggingfaceKeyInput').value.trim(),
+      pexels_api_key: document.getElementById('pexelsKeyInput').value.trim()
     };
     for (const [k, v] of Object.entries(keys)) {
       if (v) localStorage.setItem(k, v);
@@ -1649,7 +1667,7 @@ function initApiKeyModal() {
   });
 
   // Toggle visibility
-  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface'].forEach(name => {
+  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface', 'Pexels'].forEach(name => {
     document.getElementById(`toggle${name}Key`).addEventListener('click', () => {
       const input = document.getElementById(`${name.toLowerCase()}KeyInput`);
       input.type = input.type === 'password' ? 'text' : 'password';
@@ -1666,6 +1684,7 @@ function openApiKeyModal() {
   document.getElementById('groqKeyInput').value = localStorage.getItem('groq_api_key') || '';
   document.getElementById('togetherKeyInput').value = localStorage.getItem('together_api_key') || '';
   document.getElementById('huggingfaceKeyInput').value = localStorage.getItem('huggingface_api_key') || '';
+  document.getElementById('pexelsKeyInput').value = localStorage.getItem('pexels_api_key') || '';
   modal.classList.add('open');
 }
 
@@ -1680,7 +1699,8 @@ function updateApiKeyStatus() {
     OpenRouter: !!localStorage.getItem('openrouter_api_key'),
     Groq: !!localStorage.getItem('groq_api_key'),
     Together: !!localStorage.getItem('together_api_key'),
-    HuggingFace: !!localStorage.getItem('huggingface_api_key')
+    HuggingFace: !!localStorage.getItem('huggingface_api_key'),
+    Pexels: !!localStorage.getItem('pexels_api_key')
   };
   const display = document.getElementById('creditsDisplay');
   const connected = Object.entries(providers).filter(([,v]) => v).map(([k]) => k);
@@ -1710,4 +1730,301 @@ function showToast(message, type = 'success') {
     toast.classList.add('toast-exit');
     setTimeout(() => toast.remove(), 300);
   }, 3000);
+}
+
+// === MOODBOARD ===
+let moodboardItems = [];
+let pexelsPage = 1;
+let pexelsQuery = '';
+
+const GOOGLE_FONTS_TOP = [
+  'Roboto', 'Open Sans', 'Lato', 'Montserrat', 'Poppins', 'Raleway', 'Inter',
+  'Playfair Display', 'Merriweather', 'Oswald', 'Nunito', 'Bebas Neue',
+  'Dancing Script', 'Pacifico', 'Lobster', 'Caveat', 'Satisfy', 'Great Vibes',
+  'Space Grotesk', 'DM Sans', 'Outfit', 'Sora', 'Urbanist', 'Archivo Black'
+];
+
+function initMoodboard() {
+  // Load saved board
+  const saved = localStorage.getItem('moodboard_items');
+  if (saved) { try { moodboardItems = JSON.parse(saved); } catch(e) {} }
+  renderMoodboard();
+
+  // Search
+  document.getElementById('moodboardSearchBtn').addEventListener('click', searchPexels);
+  document.getElementById('moodboardSearch').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') searchPexels();
+  });
+  document.getElementById('moodboardCloseResults').addEventListener('click', () => {
+    document.getElementById('moodboardSearchResults').style.display = 'none';
+  });
+  document.getElementById('moodboardLoadMore').addEventListener('click', () => {
+    pexelsPage++;
+    searchPexels(true);
+  });
+
+  // Palette
+  document.getElementById('moodboardPaletteBtn').addEventListener('click', () => {
+    togglePanel('moodboardPalettePanel');
+    generatePalette();
+  });
+  document.getElementById('moodboardClosePalette').addEventListener('click', () => {
+    document.getElementById('moodboardPalettePanel').style.display = 'none';
+  });
+  document.getElementById('moodboardGenPalette').addEventListener('click', generatePalette);
+  document.getElementById('moodboardAddPalette').addEventListener('click', addPaletteToBoard);
+
+  // Fonts
+  document.getElementById('moodboardFontBtn').addEventListener('click', () => {
+    togglePanel('moodboardFontPanel');
+    renderFontPanel();
+  });
+  document.getElementById('moodboardCloseFont').addEventListener('click', () => {
+    document.getElementById('moodboardFontPanel').style.display = 'none';
+  });
+
+  // Note
+  document.getElementById('moodboardNoteBtn').addEventListener('click', addNoteToBoard);
+
+  // Clear
+  document.getElementById('moodboardClearBtn').addEventListener('click', () => {
+    if (moodboardItems.length === 0) return;
+    if (confirm('Limpar todo o moodboard?')) {
+      moodboardItems = [];
+      saveMoodboard();
+      renderMoodboard();
+      showToast('Moodboard limpo', 'success');
+    }
+  });
+}
+
+function togglePanel(panelId) {
+  const panels = ['moodboardSearchResults', 'moodboardPalettePanel', 'moodboardFontPanel'];
+  panels.forEach(id => {
+    const el = document.getElementById(id);
+    if (id === panelId) {
+      el.style.display = el.style.display === 'none' ? '' : 'none';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+// --- Pexels Search ---
+async function searchPexels(append = false) {
+  const key = localStorage.getItem('pexels_api_key');
+  if (!key) { showToast('Configure sua Pexels API Key em Configuracoes', 'error'); return; }
+
+  const query = document.getElementById('moodboardSearch').value.trim();
+  if (!query) { showToast('Digite algo para buscar', 'error'); return; }
+
+  if (!append) { pexelsPage = 1; pexelsQuery = query; }
+
+  document.getElementById('moodboardSearchResults').style.display = '';
+  document.getElementById('moodboardPalettePanel').style.display = 'none';
+  document.getElementById('moodboardFontPanel').style.display = 'none';
+  const grid = document.getElementById('moodboardResultsGrid');
+  if (!append) grid.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);">Buscando...</div>';
+
+  try {
+    const res = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(pexelsQuery)}&per_page=20&page=${pexelsPage}`, {
+      headers: { Authorization: key }
+    });
+    if (!res.ok) throw new Error('Erro na API Pexels: ' + res.status);
+    const data = await res.json();
+
+    if (!append) grid.innerHTML = '';
+    document.getElementById('moodboardResultsTitle').textContent = `"${pexelsQuery}" — ${data.total_results} resultados`;
+
+    data.photos.forEach(photo => {
+      const card = document.createElement('div');
+      card.className = 'moodboard-result-card';
+      card.innerHTML = `<img src="${photo.src.medium}" alt="${photo.alt || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${photo.photographer}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+      card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addImageToBoard(photo.src.large, photo.photographer, photo.avg_color);
+      });
+      grid.appendChild(card);
+    });
+
+    document.getElementById('moodboardLoadMore').style.display = data.next_page ? '' : 'none';
+  } catch(e) {
+    if (!append) grid.innerHTML = '';
+    showToast(e.message, 'error');
+  }
+}
+
+// --- Board Items ---
+function addImageToBoard(url, photographer, avgColor) {
+  moodboardItems.push({ type: 'image', url, photographer, avgColor, id: Date.now() });
+  saveMoodboard();
+  renderMoodboard();
+  showToast('Imagem adicionada ao board!', 'success');
+}
+
+function addNoteToBoard() {
+  const text = prompt('Digite sua nota:');
+  if (!text) return;
+  moodboardItems.push({ type: 'note', text, id: Date.now() });
+  saveMoodboard();
+  renderMoodboard();
+}
+
+function addPaletteToBoard() {
+  const colors = [];
+  document.querySelectorAll('#moodboardPaletteColors .moodboard-color-swatch').forEach(el => {
+    colors.push(el.dataset.color);
+  });
+  if (colors.length === 0) return;
+  moodboardItems.push({ type: 'palette', colors, id: Date.now() });
+  saveMoodboard();
+  renderMoodboard();
+  showToast('Paleta adicionada ao board!', 'success');
+}
+
+function addFontToBoard(fontName) {
+  moodboardItems.push({ type: 'font', fontName, id: Date.now() });
+  saveMoodboard();
+  renderMoodboard();
+  showToast(`Fonte "${fontName}" adicionada!`, 'success');
+}
+
+function removeFromBoard(id) {
+  moodboardItems = moodboardItems.filter(i => i.id !== id);
+  saveMoodboard();
+  renderMoodboard();
+}
+
+function saveMoodboard() {
+  localStorage.setItem('moodboard_items', JSON.stringify(moodboardItems));
+}
+
+function renderMoodboard() {
+  const board = document.getElementById('moodboardBoard');
+  const empty = document.getElementById('moodboardEmpty');
+
+  // Remove all items except empty state
+  board.querySelectorAll('.moodboard-item').forEach(el => el.remove());
+
+  if (moodboardItems.length === 0) {
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  moodboardItems.forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'moodboard-item moodboard-item-' + item.type;
+
+    if (item.type === 'image') {
+      el.innerHTML = `
+        <img src="${item.url}" alt="" loading="lazy">
+        <div class="moodboard-item-info">
+          <span><i class="fas fa-camera"></i> ${item.photographer}</span>
+        </div>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+      `;
+    } else if (item.type === 'palette') {
+      el.innerHTML = `
+        <div class="moodboard-palette-strip">
+          ${item.colors.map(c => `<div class="moodboard-palette-cell" style="background:${c};" title="${c}"><span>${c}</span></div>`).join('')}
+        </div>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+      `;
+    } else if (item.type === 'note') {
+      el.innerHTML = `
+        <div class="moodboard-note-content"><i class="fas fa-sticky-note"></i> ${item.text}</div>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+      `;
+    } else if (item.type === 'font') {
+      // Load the font
+      const link = document.createElement('link');
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(item.fontName)}&display=swap`;
+      link.rel = 'stylesheet';
+      document.head.appendChild(link);
+      el.innerHTML = `
+        <div class="moodboard-font-preview" style="font-family:'${item.fontName}',sans-serif;">
+          <span class="moodboard-font-name">${item.fontName}</span>
+          <span class="moodboard-font-sample">The quick brown fox jumps over the lazy dog</span>
+          <span class="moodboard-font-sample-pt">A raposa marrom rapida salta sobre o cao preguicoso</span>
+        </div>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+      `;
+    }
+
+    el.querySelector('.moodboard-item-remove').addEventListener('click', () => removeFromBoard(item.id));
+    board.appendChild(el);
+  });
+}
+
+// --- Color Palette ---
+async function generatePalette() {
+  const seedHex = document.getElementById('moodboardColorSeed').value.replace('#', '');
+  const container = document.getElementById('moodboardPaletteColors');
+  container.innerHTML = '<div style="text-align:center;padding:10px;color:var(--text-muted);">Gerando...</div>';
+
+  try {
+    // Use The Color API for scheme generation
+    const res = await fetch(`https://www.thecolorapi.com/scheme?hex=${seedHex}&mode=analogic&count=5&format=json`);
+    if (!res.ok) throw new Error('Erro na Color API');
+    const data = await res.json();
+
+    container.innerHTML = '';
+    data.colors.forEach(c => {
+      const swatch = document.createElement('div');
+      swatch.className = 'moodboard-color-swatch';
+      swatch.dataset.color = c.hex.value;
+      swatch.style.background = c.hex.value;
+      swatch.innerHTML = `<span>${c.hex.value}</span><span class="color-name">${c.name.value}</span>`;
+      swatch.title = `${c.name.value} (${c.hex.value})`;
+      swatch.addEventListener('click', () => {
+        navigator.clipboard.writeText(c.hex.value).then(() => showToast(`Copiado: ${c.hex.value}`, 'success'));
+      });
+      container.appendChild(swatch);
+    });
+  } catch(e) {
+    // Fallback: generate random palette locally
+    container.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const hue = (parseInt(seedHex.slice(0,2), 16) + i * 60) % 360;
+      const hex = hslToHex(hue, 70, 50 + i * 5);
+      const swatch = document.createElement('div');
+      swatch.className = 'moodboard-color-swatch';
+      swatch.dataset.color = hex;
+      swatch.style.background = hex;
+      swatch.innerHTML = `<span>${hex}</span>`;
+      container.appendChild(swatch);
+    }
+  }
+}
+
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1); };
+  return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+}
+
+// --- Fonts ---
+function renderFontPanel() {
+  const grid = document.getElementById('moodboardFontGrid');
+  grid.innerHTML = '';
+
+  // Load fonts
+  const link = document.createElement('link');
+  link.href = `https://fonts.googleapis.com/css2?${GOOGLE_FONTS_TOP.map(f => `family=${encodeURIComponent(f)}`).join('&')}&display=swap`;
+  link.rel = 'stylesheet';
+  document.head.appendChild(link);
+
+  GOOGLE_FONTS_TOP.forEach(fontName => {
+    const card = document.createElement('div');
+    card.className = 'moodboard-font-card';
+    card.innerHTML = `
+      <span class="moodboard-fc-name">${fontName}</span>
+      <span class="moodboard-fc-sample" style="font-family:'${fontName}',sans-serif;">Aa Bb Cc 123</span>
+      <button class="moodboard-add-btn" title="Adicionar"><i class="fas fa-plus"></i></button>
+    `;
+    card.querySelector('.moodboard-add-btn').addEventListener('click', () => addFontToBoard(fontName));
+    grid.appendChild(card);
+  });
 }
