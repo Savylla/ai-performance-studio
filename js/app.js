@@ -4,15 +4,22 @@ let currentTab = 'image';
 let syncTimeout = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  initTabs();
-  initSidebar();
-  initPrompt();
-  initImageSettings();
-  initAudio();
-  initProviderPills();
-  initLightbox();
-  initKeyboardShortcuts();
-  initApiKeyModal();
+  const dbg = document.createElement('div');
+  dbg.id = 'debugPanel';
+  dbg.style.cssText = 'position:fixed;top:8px;right:8px;z-index:2147483647;background:#111;border:1px solid #c8ff00;color:#c8ff00;padding:8px 12px;border-radius:8px;font-size:11px;font-family:monospace;max-width:300px;white-space:pre-wrap;pointer-events:none;';
+  document.documentElement.appendChild(dbg);
+  const dlog = (msg) => { dbg.textContent += msg + '\n'; console.log(msg); };
+
+  try { initTabs(); dlog('1.initTabs OK'); } catch(e) { dlog('1.initTabs FAIL: ' + e.message); }
+  try { initSidebar(); dlog('2.initSidebar OK'); } catch(e) { dlog('2.initSidebar FAIL: ' + e.message); }
+  try { initPrompt(); dlog('3.initPrompt OK'); } catch(e) { dlog('3.initPrompt FAIL: ' + e.message); }
+  try { initImageSettings(); dlog('4.initImageSettings OK'); } catch(e) { dlog('4.initImageSettings FAIL: ' + e.message); }
+  try { initAudio(); dlog('5.initAudio OK'); } catch(e) { dlog('5.initAudio FAIL: ' + e.message); }
+  try { initProviderPills(); dlog('6.initProviderPills OK, groups:' + document.querySelectorAll('.provider-group').length); } catch(e) { dlog('6.initProviderPills FAIL: ' + e.message); }
+  try { initLightbox(); dlog('7.initLightbox OK'); } catch(e) { dlog('7.initLightbox FAIL: ' + e.message); }
+  try { initKeyboardShortcuts(); dlog('8.initKeyboard OK'); } catch(e) { dlog('8.initKeyboard FAIL: ' + e.message); }
+  try { initApiKeyModal(); dlog('9.initApiKeyModal OK'); } catch(e) { dlog('9.initApiKeyModal FAIL: ' + e.message); }
+  dlog('INIT DONE');
 });
 
 // === TAB MANAGEMENT ===
@@ -96,13 +103,25 @@ function switchTab(tab) {
 function showTTSProviders() {
   const pills = document.getElementById('audioProviders');
   pills.innerHTML = `
-    <span class="provider-label">TTS:</span>
-    <button class="provider-pill active" data-provider="browser-tts" title="Nativo do navegador, gratis ilimitado">
-      <span class="dot free"></span> Browser Nativo
-    </button>
-    <button class="provider-pill" data-provider="pollinations-tts" title="Gratis, sem API key - vozes premium">
-      <span class="dot free"></span> Pollinations TTS
-    </button>
+    <div class="provider-group">
+      <button class="provider-group-btn active" data-default="browser-tts"><span class="dot free"></span> Browser <i class="fas fa-chevron-down"></i></button>
+      <div class="provider-dropdown">
+        <button class="provider-drop-item active" data-provider="browser-tts"><span class="dot free"></span> Nativo TTS</button>
+      </div>
+    </div>
+    <div class="provider-group">
+      <button class="provider-group-btn" data-default="pollinations-tts"><span class="dot free"></span> Pollinations <i class="fas fa-chevron-down"></i></button>
+      <div class="provider-dropdown">
+        <button class="provider-drop-item" data-provider="pollinations-tts"><span class="dot free"></span> TTS Premium</button>
+      </div>
+    </div>
+    <div class="provider-group">
+      <button class="provider-group-btn" data-default="hf-tts-speecht5"><span class="dot key"></span> HuggingFace <i class="fas fa-chevron-down"></i></button>
+      <div class="provider-dropdown">
+        <button class="provider-drop-item" data-provider="hf-tts-speecht5"><span class="dot key"></span> SpeechT5</button>
+        <button class="provider-drop-item" data-provider="hf-tts-bark"><span class="dot key"></span> Bark</button>
+      </div>
+    </div>
   `;
   document.getElementById('voiceSelector').style.display = '';
   initProviderPillsIn(pills);
@@ -112,13 +131,24 @@ function showTTSProviders() {
 function showSTTProviders() {
   const pills = document.getElementById('audioProviders');
   pills.innerHTML = `
-    <span class="provider-label">STT:</span>
-    <button class="provider-pill active" data-provider="browser-stt" title="Nativo do navegador, gratis ilimitado">
-      <span class="dot free"></span> Browser Nativo
-    </button>
-    <button class="provider-pill" data-provider="pollinations-stt" title="Gratis, sem API key">
-      <span class="dot free"></span> Pollinations STT
-    </button>
+    <div class="provider-group">
+      <button class="provider-group-btn active" data-default="browser-stt"><span class="dot free"></span> Browser <i class="fas fa-chevron-down"></i></button>
+      <div class="provider-dropdown">
+        <button class="provider-drop-item active" data-provider="browser-stt"><span class="dot free"></span> Nativo STT</button>
+      </div>
+    </div>
+    <div class="provider-group">
+      <button class="provider-group-btn" data-default="pollinations-stt"><span class="dot free"></span> Pollinations <i class="fas fa-chevron-down"></i></button>
+      <div class="provider-dropdown">
+        <button class="provider-drop-item" data-provider="pollinations-stt"><span class="dot free"></span> STT</button>
+      </div>
+    </div>
+    <div class="provider-group">
+      <button class="provider-group-btn" data-default="hf-stt-whisper"><span class="dot key"></span> HuggingFace <i class="fas fa-chevron-down"></i></button>
+      <div class="provider-dropdown">
+        <button class="provider-drop-item" data-provider="hf-stt-whisper"><span class="dot key"></span> Whisper</button>
+      </div>
+    </div>
   `;
   document.getElementById('voiceSelector').style.display = 'none';
   initProviderPillsIn(pills);
@@ -211,24 +241,57 @@ function handleGenerate() {
   }
 }
 
-// === PROVIDER PILLS ===
+// === PROVIDER PILLS & DROPDOWN GROUPS ===
 function initProviderPills() {
   document.querySelectorAll('.provider-pills').forEach(group => initProviderPillsIn(group));
 }
 
 function initProviderPillsIn(group) {
+  // Old flat pills (legacy support for dynamic audio pills)
   group.querySelectorAll('.provider-pill').forEach(pill => {
     pill.addEventListener('click', () => {
       group.querySelectorAll('.provider-pill').forEach(p => p.classList.remove('active'));
       pill.classList.add('active');
-      // Update voice selector for audio tab
+      if (group.id === 'audioProviders') updateVoiceSelect();
+    });
+  });
+
+  // New dropdown group system
+  group.querySelectorAll('.provider-group').forEach(provGroup => {
+    const groupBtn = provGroup.querySelector('.provider-group-btn');
+
+    groupBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dbg = document.getElementById('debugPanel');
+      if (dbg) dbg.textContent = 'CLICK: ' + groupBtn.textContent.trim() + '\n';
+      const wasOpen = provGroup.classList.contains('open');
+      closeDropdownPopup();
+      if (!wasOpen) {
+        showDropdownPopup(groupBtn, provGroup, group);
+        if (dbg) dbg.textContent += 'showDropdownPopup called\n';
+      } else {
+        if (dbg) dbg.textContent += 'was open, closed\n';
+      }
+      // Activate this group
+      group.querySelectorAll('.provider-group-btn').forEach(b => b.classList.remove('active'));
+      groupBtn.classList.add('active');
       if (group.id === 'audioProviders') updateVoiceSelect();
     });
   });
 }
 
 function getActiveProvider(groupId) {
-  return document.querySelector(`#${groupId} .provider-pill.active`)?.dataset.provider || '';
+  const container = document.getElementById(groupId);
+  // Check new dropdown system first
+  const activeGroup = container?.querySelector('.provider-group-btn.active');
+  if (activeGroup) {
+    // Find the active item within that group's dropdown
+    const group = activeGroup.closest('.provider-group');
+    const activeItem = group?.querySelector('.provider-drop-item.active');
+    return activeItem?.dataset.provider || activeGroup.dataset.default || '';
+  }
+  // Fallback to old flat pills
+  return container?.querySelector('.provider-pill.active')?.dataset.provider || '';
 }
 
 // === IMAGE SETTINGS ===
@@ -263,7 +326,7 @@ async function callGemini(prompt) {
   if (!apiKey) { openApiKeyModal(); return null; }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -390,11 +453,25 @@ async function startImageGeneration() {
   const qty = parseInt(document.querySelector('.qty-pill.active')?.dataset.qty || 1);
   const seed = document.getElementById('seedToggle').dataset.seed;
 
-  // Check if Gemini key needed
+  // Check if API key is needed
   if (provider.startsWith('gemini') || provider === 'nano-banana-pro-preview') {
     if (!localStorage.getItem('gemini_api_key')) {
       openApiKeyModal();
       showToast('Configure sua API key do Gemini primeiro', 'error');
+      return;
+    }
+  }
+  if (provider.startsWith('together-')) {
+    if (!localStorage.getItem('together_api_key')) {
+      openApiKeyModal();
+      showToast('Configure sua API key do Together AI primeiro', 'error');
+      return;
+    }
+  }
+  if (provider.startsWith('hf-')) {
+    if (!localStorage.getItem('huggingface_api_key')) {
+      openApiKeyModal();
+      showToast('Configure sua API key do HuggingFace primeiro', 'error');
       return;
     }
   }
@@ -420,6 +497,10 @@ async function startImageGeneration() {
 
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('together-')) {
+      imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('hf-')) {
+      imageResult = await generateWithHuggingFace(prompt, provider, w, h);
     } else if (provider === 'gemini-auto') {
       imageResult = await generateWithGemini(prompt, ratio, i, null);
     } else {
@@ -456,6 +537,10 @@ async function startImageGeneration() {
 async function generateWithPollinations(prompt, provider, w, h, seed, variation) {
   const modelMap = {
     'pollinations-flux': 'flux',
+    'pollinations-flux-realism': 'flux-realism',
+    'pollinations-flux-anime': 'flux-anime',
+    'pollinations-flux-3d': 'flux-3d',
+    'pollinations-flux-cablyai': 'flux-cablyai',
     'pollinations-turbo': 'turbo',
     'pollinations-sd': 'stable-diffusion'
   };
@@ -525,19 +610,152 @@ async function generateWithGemini(prompt, ratio, variation, specificModel) {
   return null;
 }
 
+// --- Together AI Image ---
+const TOGETHER_IMAGE_MODELS = {
+  'together-flux-schnell': 'black-forest-labs/FLUX.1-schnell-Free',
+  'together-flux-dev': 'black-forest-labs/FLUX.1-dev'
+};
+
+async function generateWithTogether(prompt, provider, w, h, seed, variation) {
+  const apiKey = localStorage.getItem('together_api_key');
+  if (!apiKey) return null;
+  const model = TOGETHER_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-schnell-Free';
+  const steps = model.includes('schnell') ? 4 : 20;
+
+  try {
+    const response = await fetch('https://api.together.xyz/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model,
+        prompt: prompt,
+        width: w,
+        height: h,
+        steps: steps,
+        n: 1,
+        seed: seed ? parseInt(seed) + variation : undefined,
+        response_format: 'b64_json'
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const b64 = data.data?.[0]?.b64_json;
+    if (b64) return { base64: b64, mimeType: 'image/png' };
+    return null;
+  } catch (e) {
+    console.warn('Together AI error:', e);
+    return null;
+  }
+}
+
+// --- HuggingFace Image ---
+const HF_IMAGE_MODELS = {
+  'hf-flux-dev': 'black-forest-labs/FLUX.1-dev',
+  'hf-sdxl': 'stabilityai/stable-diffusion-xl-base-1.0',
+  'hf-sd35': 'stabilityai/stable-diffusion-3.5-large',
+  'hf-openjourney': 'prompthero/openjourney-v4',
+  'hf-realistic-vision': 'SG161222/Realistic_Vision_V5.1_noVAE',
+  'hf-sd15': 'runwayml/stable-diffusion-v1-5'
+};
+
+async function generateWithHuggingFace(prompt, provider, w, h) {
+  const apiKey = localStorage.getItem('huggingface_api_key');
+  if (!apiKey) return null;
+  const model = HF_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-dev';
+
+  try {
+    const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: { width: w, height: h }
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    return { url };
+  } catch (e) {
+    console.warn('HuggingFace error:', e);
+    return null;
+  }
+}
+
+// --- Groq Text ---
+async function groqText(prompt, apiKey, model) {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model || 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8
+    })
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${response.status}`);
+  }
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
 // =============================================
 // === VIDEO GENERATION ===
 // =============================================
+const POLLINATIONS_VIDEO_MODELS = {
+  'pollinations-video-seedance': 'seedance',
+  'pollinations-video-hunyuan': 'hunyuan',
+  'pollinations-video-wan': 'wan-2.1'
+};
+
 async function startVideoGeneration() {
   const prompt = document.getElementById('promptInput').value.trim();
   if (!prompt) { showToast('Escreva um prompt para o video', 'error'); return; }
 
+  const provider = getActiveProvider('videoProviders');
   setButtonLoading('generateVideoBtn', true, 'Gerando...');
-  showToast('Gerando video com Pollinations... isso pode levar alguns minutos', 'success');
+
+  // HuggingFace video
+  if (provider === 'hf-video') {
+    if (!localStorage.getItem('huggingface_api_key')) {
+      openApiKeyModal();
+      showToast('Configure sua API key do HuggingFace primeiro', 'error');
+      setButtonLoading('generateVideoBtn', false, 'Gerar Video');
+      return;
+    }
+    await generateVideoHuggingFace(prompt);
+    setButtonLoading('generateVideoBtn', false, 'Gerar Video');
+    return;
+  }
+
+  // Pollinations video
+  const model = POLLINATIONS_VIDEO_MODELS[provider] || 'seedance';
+  showToast(`Gerando video com ${model}... isso pode levar alguns minutos`, 'success');
 
   try {
     const encodedPrompt = encodeURIComponent(prompt);
-    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=seedance`;
+    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}`;
 
     const videoContainer = document.getElementById('videoResults');
     const videoGrid = document.getElementById('videoMasonry');
@@ -551,7 +769,7 @@ async function startVideoGeneration() {
         <source src="${videoUrl}" type="video/mp4">
         Seu navegador nao suporta video.
       </video>
-      <div class="result-card-provider">Pollinations Seedance</div>
+      <div class="result-card-provider">Pollinations ${model}</div>
     `;
     videoGrid.insertBefore(card, videoGrid.firstChild);
     showToast('Video gerado!', 'success');
@@ -559,6 +777,47 @@ async function startVideoGeneration() {
     showToast('Erro ao gerar video: ' + e.message, 'error');
   } finally {
     setButtonLoading('generateVideoBtn', false, 'Gerar Video');
+  }
+}
+
+async function generateVideoHuggingFace(prompt) {
+  const apiKey = localStorage.getItem('huggingface_api_key');
+  showToast('Gerando video com AnimateDiff... pode demorar', 'success');
+  try {
+    const response = await fetch('https://api-inference.huggingface.co/models/ByteDance/AnimateDiff-Lightning', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ inputs: prompt })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const videoUrl = URL.createObjectURL(blob);
+
+    const videoContainer = document.getElementById('videoResults');
+    const videoGrid = document.getElementById('videoMasonry');
+    document.querySelector('#tabVideo .display-empty').style.display = 'none';
+    videoContainer.style.display = 'block';
+
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <video controls autoplay loop style="width:100%; border-radius: var(--radius-lg);">
+        <source src="${videoUrl}" type="video/mp4">
+      </video>
+      <div class="result-card-provider">HuggingFace AnimateDiff</div>
+    `;
+    videoGrid.insertBefore(card, videoGrid.firstChild);
+    showToast('Video gerado!', 'success');
+  } catch (e) {
+    showToast('Erro ao gerar video: ' + e.message, 'error');
   }
 }
 
@@ -601,6 +860,8 @@ function updateVoiceSelect() {
       opt.textContent = v.charAt(0).toUpperCase() + v.slice(1);
       select.appendChild(opt);
     });
+  } else if (provider.startsWith('hf-tts')) {
+    select.innerHTML = '<option value="default">Voz Padrao</option>';
   }
 }
 
@@ -616,6 +877,10 @@ async function startTTS() {
       await browserTTS(text);
     } else if (provider === 'pollinations-tts') {
       await pollinationsTTS(text);
+    } else if (provider === 'hf-tts-speecht5') {
+      await huggingFaceTTS(text, 'microsoft/speecht5_tts');
+    } else if (provider === 'hf-tts-bark') {
+      await huggingFaceTTS(text, 'suno/bark-small');
     }
   } catch (e) {
     showToast('Erro TTS: ' + e.message, 'error');
@@ -684,6 +949,55 @@ async function pollinationsTTS(text) {
   showToast('Audio gerado com Pollinations!', 'success');
 }
 
+// --- HuggingFace TTS ---
+async function huggingFaceTTS(text, model) {
+  const apiKey = localStorage.getItem('huggingface_api_key');
+  if (!apiKey) { openApiKeyModal(); throw new Error('Configure API key do HuggingFace'); }
+
+  showToast(`Gerando audio com ${model.split('/')[1]}...`, 'success');
+
+  const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({ inputs: text })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const audioUrl = URL.createObjectURL(blob);
+
+  const playerArea = document.getElementById('ttsPlayerArea');
+  playerArea.style.display = 'block';
+  document.querySelector('#audioTTS .audio-empty-state').style.display = 'none';
+
+  const player = document.getElementById('ttsAudioPlayer');
+  player.src = audioUrl;
+  player.style.display = 'block';
+
+  const downloadBtn = document.getElementById('ttsDownloadBtn');
+  downloadBtn.style.display = '';
+  downloadBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = audioUrl;
+    a.download = `tts-hf-${Date.now()}.wav`;
+    a.click();
+    showToast('Download iniciado!', 'success');
+  };
+
+  playerArea.innerHTML = '';
+  playerArea.appendChild(player);
+  playerArea.appendChild(downloadBtn);
+  player.play();
+  showToast(`Audio gerado com ${model.split('/')[1]}!`, 'success');
+}
+
 // --- Transcription ---
 function startTranscription() {
   const provider = getActiveProvider('audioProviders');
@@ -692,6 +1006,8 @@ function startTranscription() {
     browserSTT();
   } else if (provider === 'pollinations-stt') {
     pollinationsSTT();
+  } else if (provider === 'hf-stt-whisper') {
+    huggingFaceSTT();
   }
 }
 
@@ -839,6 +1155,82 @@ async function pollinationsSTT() {
   }
 }
 
+async function huggingFaceSTT() {
+  const apiKey = localStorage.getItem('huggingface_api_key');
+  if (!apiKey) { openApiKeyModal(); showToast('Configure API key do HuggingFace', 'error'); return; }
+
+  const recordBtn = document.getElementById('recordBtn');
+
+  if (isRecording) {
+    isRecording = false;
+    recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+    recordBtn.classList.remove('recording');
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    const chunks = [];
+
+    mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      showToast('Transcrevendo com Whisper...', 'success');
+
+      try {
+        const response = await fetch('https://api-inference.huggingface.co/models/openai/whisper-large-v3', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}` },
+          body: blob
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const text = data.text || 'Nenhum texto detectado';
+        document.getElementById('transcriptionResult').style.display = 'block';
+        document.querySelector('#audioTranscribe .audio-empty-state').style.display = 'none';
+        document.getElementById('transcriptionText').textContent = text;
+        showToast('Transcricao concluida com Whisper!', 'success');
+      } catch (e) {
+        showToast('Erro na transcricao: ' + e.message, 'error');
+      }
+    };
+
+    isRecording = true;
+    recordBtn.innerHTML = '<i class="fas fa-stop"></i> <span>Parar</span>';
+    recordBtn.classList.add('recording');
+    mediaRecorder.start();
+    showToast('Gravando... fale agora (max 30s)', 'success');
+
+    setTimeout(() => {
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+        recordBtn.classList.remove('recording');
+      }
+    }, 30000);
+
+    recordBtn.onclick = () => {
+      if (mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+        recordBtn.classList.remove('recording');
+      }
+    };
+  } catch (e) {
+    showToast('Erro ao acessar microfone: ' + e.message, 'error');
+  }
+}
+
 function copyTranscription() {
   const text = document.getElementById('transcriptionText').textContent;
   navigator.clipboard.writeText(text);
@@ -848,6 +1240,57 @@ function copyTranscription() {
 // =============================================
 // === TEXT GENERATION ===
 // =============================================
+// Gemini text models map
+const GEMINI_TEXT_MODELS = {
+  'gemini-text-2.5-pro': { model: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+  'gemini-text-2.5-flash': { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+  'gemini-text-2.0-flash': { model: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+  'gemini-text-2.0-flash-lite': { model: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite' },
+  'gemini-text-1.5-pro': { model: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+  'gemini-text-1.5-flash': { model: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
+};
+
+// Groq text models map
+const GROQ_TEXT_MODELS = {
+  'groq-text-llama33-70b': { model: 'llama-3.3-70b-versatile', name: 'Groq Llama 3.3 70B' },
+  'groq-text-llama31-8b': { model: 'llama-3.1-8b-instant', name: 'Groq Llama 3.1 8B' },
+  'groq-text-llama3-70b': { model: 'llama3-70b-8192', name: 'Groq Llama 3 70B' },
+  'groq-text-llama3-8b': { model: 'llama3-8b-8192', name: 'Groq Llama 3 8B' },
+  'groq-text-mixtral': { model: 'mixtral-8x7b-32768', name: 'Groq Mixtral 8x7B' },
+  'groq-text-gemma2': { model: 'gemma2-9b-it', name: 'Groq Gemma 2 9B' },
+  'groq-text-deepseek-r1': { model: 'deepseek-r1-distill-llama-70b', name: 'Groq DeepSeek R1 70B' },
+  'groq-text-qwen-qwq': { model: 'qwen-qwq-32b', name: 'Groq Qwen QwQ 32B' }
+};
+
+// Pollinations text models map
+const POLLINATIONS_TEXT_MODELS = {
+  'pollinations-text-openai': { model: 'openai', name: 'Pollinations GPT-4o Mini' },
+  'pollinations-text-mistral': { model: 'mistral', name: 'Pollinations Mistral' },
+  'pollinations-text-mistral-large': { model: 'mistral-large', name: 'Pollinations Mistral Large' },
+  'pollinations-text-llama': { model: 'llama', name: 'Pollinations Llama 3.3' },
+  'pollinations-text-deepseek': { model: 'deepseek', name: 'Pollinations DeepSeek V3' },
+  'pollinations-text-deepseek-r1': { model: 'deepseek-r1', name: 'Pollinations DeepSeek R1' },
+  'pollinations-text-qwen': { model: 'qwen', name: 'Pollinations Qwen 2.5' },
+  'pollinations-text-qwen-coder': { model: 'qwen-coder', name: 'Pollinations Qwen Coder' },
+  'pollinations-text-command-r-plus': { model: 'command-r-plus', name: 'Pollinations Command R+' },
+  'pollinations-text-phi': { model: 'phi', name: 'Pollinations Phi-4' },
+  'pollinations-text-searchgpt': { model: 'searchgpt', name: 'Pollinations SearchGPT' },
+  'pollinations-text-unity': { model: 'unity', name: 'Pollinations Unity' },
+  'pollinations-text-hormoz': { model: 'hormoz', name: 'Pollinations Hormoz' }
+};
+
+// OpenRouter free models map
+const OPENROUTER_TEXT_MODELS = {
+  'or-gemma2-9b': { model: 'google/gemma-2-9b-it:free', name: 'OpenRouter Gemma 2 9B' },
+  'or-llama32-3b': { model: 'meta-llama/llama-3.2-3b-instruct:free', name: 'OpenRouter Llama 3.2 3B' },
+  'or-phi3-mini': { model: 'microsoft/phi-3-mini-128k-instruct:free', name: 'OpenRouter Phi-3 Mini' },
+  'or-zephyr-7b': { model: 'huggingfaceh4/zephyr-7b-beta:free', name: 'OpenRouter Zephyr 7B' },
+  'or-mistral-7b': { model: 'mistralai/mistral-7b-instruct:free', name: 'OpenRouter Mistral 7B' },
+  'or-capybara-7b': { model: 'nousresearch/nous-capybara-7b:free', name: 'OpenRouter Capybara 7B' },
+  'or-toppy-m-7b': { model: 'undi95/toppy-m-7b:free', name: 'OpenRouter Toppy M 7B' },
+  'or-mythomist-7b': { model: 'gryphe/mythomist-7b:free', name: 'OpenRouter MythoMist 7B' }
+};
+
 async function startTextGeneration() {
   const prompt = document.getElementById('promptInput').value.trim();
   if (!prompt) { showToast('Digite um prompt para gerar texto', 'error'); return; }
@@ -859,21 +1302,27 @@ async function startTextGeneration() {
     let result = '';
     let providerName = '';
 
-    if (provider === 'gemini-text') {
+    if (GEMINI_TEXT_MODELS[provider]) {
       if (!localStorage.getItem('gemini_api_key')) { openApiKeyModal(); return; }
-      result = await callGemini(prompt);
-      providerName = 'Gemini 2.5 Pro';
-    } else if (provider === 'pollinations-text-openai') {
-      result = await pollinationsText(prompt, 'openai');
-      providerName = 'Pollinations (OpenAI)';
-    } else if (provider === 'pollinations-text-mistral') {
-      result = await pollinationsText(prompt, 'mistral');
-      providerName = 'Pollinations (Mistral)';
-    } else if (provider === 'openrouter-text') {
+      const cfg = GEMINI_TEXT_MODELS[provider];
+      result = await callGeminiModel(prompt, cfg.model);
+      providerName = cfg.name;
+    } else if (POLLINATIONS_TEXT_MODELS[provider]) {
+      const cfg = POLLINATIONS_TEXT_MODELS[provider];
+      result = await pollinationsText(prompt, cfg.model);
+      providerName = cfg.name;
+    } else if (GROQ_TEXT_MODELS[provider]) {
+      const key = localStorage.getItem('groq_api_key');
+      if (!key) { openApiKeyModal(); showToast('Configure sua API key do Groq', 'error'); return; }
+      const cfg = GROQ_TEXT_MODELS[provider];
+      result = await groqText(prompt, key, cfg.model);
+      providerName = cfg.name;
+    } else if (OPENROUTER_TEXT_MODELS[provider]) {
       const key = localStorage.getItem('openrouter_api_key');
       if (!key) { openApiKeyModal(); showToast('Configure sua API key do OpenRouter', 'error'); return; }
-      result = await openRouterText(prompt, key);
-      providerName = 'OpenRouter Free';
+      const cfg = OPENROUTER_TEXT_MODELS[provider];
+      result = await openRouterText(prompt, key, cfg.model);
+      providerName = cfg.name;
     }
 
     if (result) {
@@ -891,6 +1340,44 @@ async function startTextGeneration() {
   }
 }
 
+// Generic Gemini text call with model selector
+async function callGeminiModel(prompt, model) {
+  const apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) { openApiKeyModal(); return null; }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 1.0, maxOutputTokens: 65536 }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    if ([400, 401, 403].includes(response.status)) {
+      localStorage.removeItem('gemini_api_key');
+      openApiKeyModal();
+      throw new Error('API key invalida. Cole uma nova chave.');
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || `Erro ${response.status}`);
+  }
+
+  const data = await response.json();
+  let text = '';
+  const candidate = data.candidates?.[0];
+  if (candidate?.content?.parts) {
+    for (const part of candidate.content.parts) {
+      if (part.text) text = part.text.trim();
+    }
+  }
+  return text;
+}
+
 async function pollinationsText(prompt, model) {
   const response = await fetch('https://text.pollinations.ai/openai', {
     method: 'POST',
@@ -906,7 +1393,7 @@ async function pollinationsText(prompt, model) {
   return data.choices?.[0]?.message?.content || '';
 }
 
-async function openRouterText(prompt, apiKey) {
+async function openRouterText(prompt, apiKey, model) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -916,11 +1403,14 @@ async function openRouterText(prompt, apiKey) {
       'X-Title': 'AI Performance Studio'
     },
     body: JSON.stringify({
-      model: 'openrouter/auto',
+      model: model || 'openrouter/auto',
       messages: [{ role: 'user', content: prompt }]
     })
   });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${response.status}`);
+  }
   const data = await response.json();
   return data.choices?.[0]?.message?.content || '';
 }
@@ -989,6 +1479,91 @@ function closeLightbox() {
 }
 
 // === KEYBOARD SHORTCUTS ===
+// === DROPDOWN POPUP SYSTEM ===
+let activePopup = null;
+let activePopupGroup = null;
+
+function showDropdownPopup(btn, provGroup, group) {
+  const dbg = document.getElementById('debugPanel');
+  closeDropdownPopup();
+  const dropdown = provGroup.querySelector('.provider-dropdown');
+  if (!dropdown) { if (dbg) dbg.textContent += 'NO DROPDOWN FOUND\n'; return; }
+
+  // Create popup element appended to documentElement (html) to escape all clipping
+  const popup = document.createElement('div');
+  popup.className = 'dropdown-popup';
+  popup.innerHTML = dropdown.innerHTML;
+  document.documentElement.appendChild(popup);
+  if (dbg) dbg.textContent += 'popup items: ' + popup.querySelectorAll('.provider-drop-item').length + '\n';
+
+  // Force critical inline styles so no CSS can hide/clip it
+  const rect = btn.getBoundingClientRect();
+  const popH = popup.offsetHeight;
+  const popW = popup.offsetWidth;
+  if (dbg) dbg.textContent += 'pos: top=' + Math.round(rect.top) + ' popH=' + popH + ' popW=' + popW + '\n';
+  let top = rect.top - popH - 8;
+  let left = rect.left + (rect.width / 2) - (popW / 2);
+  if (top < 4) top = rect.bottom + 8;
+  if (left < 4) left = 4;
+  if (left + popW > window.innerWidth - 4) left = window.innerWidth - popW - 4;
+
+  popup.style.cssText = `
+    position: fixed !important;
+    top: ${top}px !important;
+    left: ${left}px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  `;
+
+  // Add click handlers to popup items
+  popup.querySelectorAll('.provider-drop-item').forEach(popItem => {
+    popItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const provider = popItem.dataset.provider;
+      // Update original dropdown active state
+      dropdown.querySelectorAll('.provider-drop-item').forEach(i => i.classList.remove('active'));
+      const origItem = dropdown.querySelector(`[data-provider="${provider}"]`);
+      if (origItem) origItem.classList.add('active');
+      // Update all groups
+      group.querySelectorAll('.provider-group-btn').forEach(b => b.classList.remove('active'));
+      group.querySelectorAll('.provider-drop-item').forEach(i => i.classList.remove('active'));
+      if (origItem) origItem.classList.add('active');
+      btn.classList.add('active');
+      btn.dataset.default = provider;
+      // Update button text
+      const dotClass = btn.querySelector('.dot')?.className || 'dot key';
+      const modelName = popItem.textContent.trim();
+      btn.innerHTML = `<span class="${dotClass}"></span> ${modelName} <i class="fas fa-chevron-down"></i>`;
+      closeDropdownPopup();
+      if (group.id === 'audioProviders') updateVoiceSelect();
+    });
+  });
+
+  activePopup = popup;
+  activePopupGroup = provGroup;
+  provGroup.classList.add('open');
+
+  // Prevent popup clicks from closing
+  popup.addEventListener('click', (e) => e.stopPropagation());
+}
+
+function closeDropdownPopup() {
+  // Remove any popup wherever it lives
+  document.querySelectorAll('.dropdown-popup').forEach(p => p.remove());
+  activePopup = null;
+  if (activePopupGroup) {
+    activePopupGroup.classList.remove('open');
+    activePopupGroup = null;
+  }
+}
+
+// Close popup when clicking anywhere
+document.addEventListener('click', () => closeDropdownPopup());
+
 function initKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleGenerate(); }
@@ -1031,6 +1606,33 @@ function initApiKeyModal() {
           <a href="https://openrouter.ai/keys" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
         </div>
 
+        <div class="setting-group">
+          <label><i class="fas fa-bolt" style="color: #f97316;"></i> Groq API Key <span style="color:var(--text-muted);">(Texto - ultra rapido)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="groqKeyInput" placeholder="Cole sua API key do Groq...">
+            <button class="btn-tiny" id="toggleGroqKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://console.groq.com/keys" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
+        <div class="setting-group">
+          <label><i class="fas fa-cubes" style="color: #06b6d4;"></i> Together AI API Key <span style="color:var(--text-muted);">(Imagem - FLUX Schnell)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="togetherKeyInput" placeholder="Cole sua API key do Together AI...">
+            <button class="btn-tiny" id="toggleTogetherKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://api.together.xyz/settings/api-keys" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
+        <div class="setting-group">
+          <label><i class="fas fa-face-smile" style="color: #fbbf24;"></i> HuggingFace API Key <span style="color:var(--text-muted);">(Imagem - FLUX.1-dev)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="huggingfaceKeyInput" placeholder="Cole sua API key do HuggingFace...">
+            <button class="btn-tiny" id="toggleHuggingfaceKey"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
+        </div>
+
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
           <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
           Suas chaves ficam salvas apenas no seu navegador.
@@ -1046,23 +1648,27 @@ function initApiKeyModal() {
   document.body.appendChild(modal);
 
   document.getElementById('saveApiKeysBtn').addEventListener('click', () => {
-    const geminiKey = document.getElementById('geminiKeyInput').value.trim();
-    const openrouterKey = document.getElementById('openrouterKeyInput').value.trim();
-    if (geminiKey) localStorage.setItem('gemini_api_key', geminiKey);
-    if (openrouterKey) localStorage.setItem('openrouter_api_key', openrouterKey);
+    const keys = {
+      gemini_api_key: document.getElementById('geminiKeyInput').value.trim(),
+      openrouter_api_key: document.getElementById('openrouterKeyInput').value.trim(),
+      groq_api_key: document.getElementById('groqKeyInput').value.trim(),
+      together_api_key: document.getElementById('togetherKeyInput').value.trim(),
+      huggingface_api_key: document.getElementById('huggingfaceKeyInput').value.trim()
+    };
+    for (const [k, v] of Object.entries(keys)) {
+      if (v) localStorage.setItem(k, v);
+    }
     closeApiKeyModal();
     showToast('API keys salvas!', 'success');
     updateApiKeyStatus();
   });
 
   // Toggle visibility
-  document.getElementById('toggleGeminiKey').addEventListener('click', () => {
-    const input = document.getElementById('geminiKeyInput');
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-  document.getElementById('toggleOpenrouterKey').addEventListener('click', () => {
-    const input = document.getElementById('openrouterKeyInput');
-    input.type = input.type === 'password' ? 'text' : 'password';
+  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface'].forEach(name => {
+    document.getElementById(`toggle${name}Key`).addEventListener('click', () => {
+      const input = document.getElementById(`${name.toLowerCase()}KeyInput`);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
   });
 
   updateApiKeyStatus();
@@ -1072,6 +1678,9 @@ function openApiKeyModal() {
   const modal = document.getElementById('apiKeyModal');
   document.getElementById('geminiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
   document.getElementById('openrouterKeyInput').value = localStorage.getItem('openrouter_api_key') || '';
+  document.getElementById('groqKeyInput').value = localStorage.getItem('groq_api_key') || '';
+  document.getElementById('togetherKeyInput').value = localStorage.getItem('together_api_key') || '';
+  document.getElementById('huggingfaceKeyInput').value = localStorage.getItem('huggingface_api_key') || '';
   modal.classList.add('open');
 }
 
@@ -1081,14 +1690,18 @@ function closeApiKeyModal() {
 }
 
 function updateApiKeyStatus() {
-  const hasGemini = !!localStorage.getItem('gemini_api_key');
-  const hasOpenRouter = !!localStorage.getItem('openrouter_api_key');
+  const providers = {
+    Gemini: !!localStorage.getItem('gemini_api_key'),
+    OpenRouter: !!localStorage.getItem('openrouter_api_key'),
+    Groq: !!localStorage.getItem('groq_api_key'),
+    Together: !!localStorage.getItem('together_api_key'),
+    HuggingFace: !!localStorage.getItem('huggingface_api_key')
+  };
   const display = document.getElementById('creditsDisplay');
-  if (hasGemini || hasOpenRouter) {
-    const parts = [];
-    if (hasGemini) parts.push('Gemini');
-    if (hasOpenRouter) parts.push('OpenRouter');
-    display.innerHTML = `<i class="fas fa-check-circle" style="color: var(--green);"></i> <span>${parts.join(' + ')} conectado</span>`;
+  const connected = Object.entries(providers).filter(([,v]) => v).map(([k]) => k);
+  if (connected.length > 0) {
+    const label = connected.length <= 2 ? connected.join(' + ') : `${connected.length} APIs`;
+    display.innerHTML = `<i class="fas fa-check-circle" style="color: var(--green);"></i> <span>${label} conectado</span>`;
   } else {
     display.innerHTML = '<i class="fas fa-key"></i> <span>Configurar APIs</span>';
   }

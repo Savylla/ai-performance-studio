@@ -26,19 +26,19 @@
         <span class="nav-section-title">Criar</span>
         <a href="#" class="nav-item active" data-tab="image">
           <i class="fas fa-image"></i><span>Imagem</span>
-          <span class="nav-badge">8 APIs</span>
+          <span class="nav-badge">22 APIs</span>
         </a>
         <a href="#" class="nav-item" data-tab="video">
           <i class="fas fa-video"></i><span>Video</span>
-          <span class="nav-badge new">Novo</span>
+          <span class="nav-badge">4 APIs</span>
         </a>
         <a href="#" class="nav-item" data-tab="audio">
           <i class="fas fa-headphones"></i><span>Audio</span>
-          <span class="nav-badge new">Novo</span>
+          <span class="nav-badge">6 APIs</span>
         </a>
         <a href="#" class="nav-item" data-tab="text">
           <i class="fas fa-font"></i><span>Texto</span>
-          <span class="nav-badge">4 APIs</span>
+          <span class="nav-badge">35 APIs</span>
         </a>
       </div>
 
@@ -242,31 +242,46 @@
       <div class="settings-row tab-settings active" id="settingsImage">
         <div class="setting-inline provider-selector">
           <div class="provider-pills" id="imageProviders">
-            <span class="provider-label">Provedor:</span>
-            <button class="provider-pill active" data-provider="pollinations-flux" title="Gratis, sem API key">
-              <span class="dot free"></span> Flux
-            </button>
-            <button class="provider-pill" data-provider="pollinations-turbo" title="Gratis, sem API key">
-              <span class="dot free"></span> Turbo
-            </button>
-            <button class="provider-pill" data-provider="pollinations-sd" title="Gratis, sem API key">
-              <span class="dot free"></span> Stable Diff
-            </button>
-            <button class="provider-pill" data-provider="gemini-auto" title="Gemini Free Tier (precisa key)">
-              <span class="dot key"></span> Gemini Auto
-            </button>
-            <button class="provider-pill" data-provider="gemini-3.1-flash-image-preview" title="Gemini Free Tier">
-              <span class="dot key"></span> 3.1 Flash
-            </button>
-            <button class="provider-pill" data-provider="gemini-3-pro-image-preview" title="Gemini Free Tier">
-              <span class="dot key"></span> 3 Pro
-            </button>
-            <button class="provider-pill" data-provider="nano-banana-pro-preview" title="Gemini Free Tier">
-              <span class="dot key"></span> Nano Banana
-            </button>
-            <button class="provider-pill" data-provider="gemini-2.5-flash-image" title="Gemini Free Tier">
-              <span class="dot key"></span> 2.5 Flash
-            </button>
+            <div class="provider-group">
+              <button class="provider-group-btn active" data-default="pollinations-flux"><span class="dot free"></span> Pollinations <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item active" data-provider="pollinations-flux"><span class="dot free"></span> Flux</button>
+                <button class="provider-drop-item" data-provider="pollinations-flux-realism"><span class="dot free"></span> Realism</button>
+                <button class="provider-drop-item" data-provider="pollinations-flux-anime"><span class="dot free"></span> Anime</button>
+                <button class="provider-drop-item" data-provider="pollinations-flux-3d"><span class="dot free"></span> 3D</button>
+                <button class="provider-drop-item" data-provider="pollinations-flux-cablyai"><span class="dot free"></span> CablyAI</button>
+                <button class="provider-drop-item" data-provider="pollinations-turbo"><span class="dot free"></span> Turbo</button>
+                <button class="provider-drop-item" data-provider="pollinations-sd"><span class="dot free"></span> Stable Diff</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="gemini-auto"><span class="dot key"></span> Gemini <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="gemini-auto"><span class="dot key"></span> Auto</button>
+                <button class="provider-drop-item" data-provider="gemini-3.1-flash-image-preview"><span class="dot key"></span> 3.1 Flash</button>
+                <button class="provider-drop-item" data-provider="gemini-3-pro-image-preview"><span class="dot key"></span> 3 Pro</button>
+                <button class="provider-drop-item" data-provider="nano-banana-pro-preview"><span class="dot key"></span> Nano Banana</button>
+                <button class="provider-drop-item" data-provider="gemini-2.5-flash-image"><span class="dot key"></span> 2.5 Flash</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="together-flux-schnell"><span class="dot key"></span> Together <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="together-flux-schnell"><span class="dot key"></span> FLUX Schnell</button>
+                <button class="provider-drop-item" data-provider="together-flux-dev"><span class="dot key"></span> FLUX.1 Dev</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="hf-flux-dev"><span class="dot key"></span> HuggingFace <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="hf-flux-dev"><span class="dot key"></span> FLUX.1 Dev</button>
+                <button class="provider-drop-item" data-provider="hf-sdxl"><span class="dot key"></span> SDXL</button>
+                <button class="provider-drop-item" data-provider="hf-sd35"><span class="dot key"></span> SD 3.5</button>
+                <button class="provider-drop-item" data-provider="hf-openjourney"><span class="dot key"></span> OpenJourney</button>
+                <button class="provider-drop-item" data-provider="hf-realistic-vision"><span class="dot key"></span> Realistic Vision</button>
+                <button class="provider-drop-item" data-provider="hf-sd15"><span class="dot key"></span> SD 1.5</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="settings-row-bottom">
@@ -299,10 +314,20 @@
       <div class="settings-row tab-settings" id="settingsVideo">
         <div class="setting-inline provider-selector">
           <div class="provider-pills" id="videoProviders">
-            <span class="provider-label">Provedor:</span>
-            <button class="provider-pill active" data-provider="pollinations-video" title="Gratis, sem API key">
-              <span class="dot free"></span> Pollinations
-            </button>
+            <div class="provider-group">
+              <button class="provider-group-btn active" data-default="pollinations-video-seedance"><span class="dot free"></span> Pollinations <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item active" data-provider="pollinations-video-seedance"><span class="dot free"></span> Seedance</button>
+                <button class="provider-drop-item" data-provider="pollinations-video-hunyuan"><span class="dot free"></span> Hunyuan</button>
+                <button class="provider-drop-item" data-provider="pollinations-video-wan"><span class="dot free"></span> Wan 2.1</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="hf-video"><span class="dot key"></span> HuggingFace <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="hf-video"><span class="dot key"></span> AnimateDiff</button>
+              </div>
+            </div>
           </div>
         </div>
         <button class="generate-main" id="generateVideoBtn">
@@ -315,13 +340,25 @@
       <div class="settings-row tab-settings" id="settingsAudio">
         <div class="setting-inline provider-selector">
           <div class="provider-pills" id="audioProviders">
-            <span class="provider-label">TTS:</span>
-            <button class="provider-pill active" data-provider="browser-tts" title="Nativo do navegador, gratis ilimitado">
-              <span class="dot free"></span> Browser Nativo
-            </button>
-            <button class="provider-pill" data-provider="pollinations-tts" title="Gratis, sem API key - vozes premium">
-              <span class="dot free"></span> Pollinations TTS
-            </button>
+            <div class="provider-group">
+              <button class="provider-group-btn active" data-default="browser-tts"><span class="dot free"></span> Browser <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item active" data-provider="browser-tts"><span class="dot free"></span> Nativo TTS</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="pollinations-tts"><span class="dot free"></span> Pollinations <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="pollinations-tts"><span class="dot free"></span> TTS Premium</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="hf-tts-speecht5"><span class="dot key"></span> HuggingFace <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="hf-tts-speecht5"><span class="dot key"></span> SpeechT5</button>
+                <button class="provider-drop-item" data-provider="hf-tts-bark"><span class="dot key"></span> Bark</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="setting-inline voice-selector" id="voiceSelector">
@@ -343,19 +380,61 @@
       <div class="settings-row tab-settings" id="settingsText">
         <div class="setting-inline provider-selector">
           <div class="provider-pills" id="textProviders">
-            <span class="provider-label">Provedor:</span>
-            <button class="provider-pill active" data-provider="gemini-text" title="Gemini Free Tier (precisa key)">
-              <span class="dot key"></span> Gemini 2.5 Pro
-            </button>
-            <button class="provider-pill" data-provider="pollinations-text-openai" title="Gratis, sem API key">
-              <span class="dot free"></span> Pollinations
-            </button>
-            <button class="provider-pill" data-provider="pollinations-text-mistral" title="Gratis, sem API key">
-              <span class="dot free"></span> Mistral
-            </button>
-            <button class="provider-pill" data-provider="openrouter-text" title="Gratis, precisa key OpenRouter">
-              <span class="dot key"></span> OpenRouter
-            </button>
+            <div class="provider-group">
+              <button class="provider-group-btn active" data-default="gemini-text-2.5-pro"><span class="dot key"></span> Gemini <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item active" data-provider="gemini-text-2.5-pro"><span class="dot key"></span> 2.5 Pro</button>
+                <button class="provider-drop-item" data-provider="gemini-text-2.5-flash"><span class="dot key"></span> 2.5 Flash</button>
+                <button class="provider-drop-item" data-provider="gemini-text-2.0-flash"><span class="dot key"></span> 2.0 Flash</button>
+                <button class="provider-drop-item" data-provider="gemini-text-2.0-flash-lite"><span class="dot key"></span> 2.0 Flash Lite</button>
+                <button class="provider-drop-item" data-provider="gemini-text-1.5-pro"><span class="dot key"></span> 1.5 Pro</button>
+                <button class="provider-drop-item" data-provider="gemini-text-1.5-flash"><span class="dot key"></span> 1.5 Flash</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="pollinations-text-openai"><span class="dot free"></span> Pollinations <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="pollinations-text-openai"><span class="dot free"></span> GPT-4o Mini</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-mistral"><span class="dot free"></span> Mistral</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-mistral-large"><span class="dot free"></span> Mistral Large</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-llama"><span class="dot free"></span> Llama 3.3</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-deepseek"><span class="dot free"></span> DeepSeek V3</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-deepseek-r1"><span class="dot free"></span> DeepSeek R1</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-qwen"><span class="dot free"></span> Qwen 2.5</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-qwen-coder"><span class="dot free"></span> Qwen Coder</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-command-r-plus"><span class="dot free"></span> Command R+</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-phi"><span class="dot free"></span> Phi-4</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-searchgpt"><span class="dot free"></span> SearchGPT</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-unity"><span class="dot free"></span> Unity</button>
+                <button class="provider-drop-item" data-provider="pollinations-text-hormoz"><span class="dot free"></span> Hormoz</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="groq-text-llama33-70b"><span class="dot key"></span> Groq <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="groq-text-llama33-70b"><span class="dot key"></span> Llama 3.3 70B</button>
+                <button class="provider-drop-item" data-provider="groq-text-llama31-8b"><span class="dot key"></span> Llama 3.1 8B</button>
+                <button class="provider-drop-item" data-provider="groq-text-llama3-70b"><span class="dot key"></span> Llama 3 70B</button>
+                <button class="provider-drop-item" data-provider="groq-text-llama3-8b"><span class="dot key"></span> Llama 3 8B</button>
+                <button class="provider-drop-item" data-provider="groq-text-mixtral"><span class="dot key"></span> Mixtral 8x7B</button>
+                <button class="provider-drop-item" data-provider="groq-text-gemma2"><span class="dot key"></span> Gemma 2 9B</button>
+                <button class="provider-drop-item" data-provider="groq-text-deepseek-r1"><span class="dot key"></span> DeepSeek R1 70B</button>
+                <button class="provider-drop-item" data-provider="groq-text-qwen-qwq"><span class="dot key"></span> Qwen QwQ 32B</button>
+              </div>
+            </div>
+            <div class="provider-group">
+              <button class="provider-group-btn" data-default="or-gemma2-9b"><span class="dot key"></span> OpenRouter <i class="fas fa-chevron-down"></i></button>
+              <div class="provider-dropdown">
+                <button class="provider-drop-item" data-provider="or-gemma2-9b"><span class="dot key"></span> Gemma 2 9B</button>
+                <button class="provider-drop-item" data-provider="or-llama32-3b"><span class="dot key"></span> Llama 3.2 3B</button>
+                <button class="provider-drop-item" data-provider="or-phi3-mini"><span class="dot key"></span> Phi-3 Mini</button>
+                <button class="provider-drop-item" data-provider="or-zephyr-7b"><span class="dot key"></span> Zephyr 7B</button>
+                <button class="provider-drop-item" data-provider="or-mistral-7b"><span class="dot key"></span> Mistral 7B</button>
+                <button class="provider-drop-item" data-provider="or-capybara-7b"><span class="dot key"></span> Capybara 7B</button>
+                <button class="provider-drop-item" data-provider="or-toppy-m-7b"><span class="dot key"></span> Toppy M 7B</button>
+                <button class="provider-drop-item" data-provider="or-mythomist-7b"><span class="dot key"></span> MythoMist 7B</button>
+              </div>
+            </div>
           </div>
         </div>
         <button class="generate-main" id="generateTextBtn">

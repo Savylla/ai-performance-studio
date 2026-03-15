@@ -39,6 +39,20 @@
     font-size: 0.68rem;
   }
 
+  .provider-group-btn {
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+
+  .provider-dropdown {
+    min-width: 130px;
+  }
+
+  .provider-drop-item {
+    padding: 5px 10px;
+    font-size: 0.68rem;
+  }
+
   .audio-subtabs {
     width: 100%;
   }
