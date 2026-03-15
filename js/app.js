@@ -3,6 +3,46 @@
 let currentTab = 'image';
 let syncTimeout = null;
 
+// === USER-SCOPED API KEY STORAGE ===
+const API_KEY_NAMES = [
+  'gemini_api_key', 'openrouter_api_key', 'groq_api_key',
+  'together_api_key', 'huggingface_api_key', 'pexels_api_key'
+];
+
+function getUserId() {
+  try {
+    const user = JSON.parse(localStorage.getItem('google_user') || 'null');
+    return user?.sub || null;
+  } catch(e) { return null; }
+}
+
+function getApiKey(keyName) {
+  const uid = getUserId();
+  if (!uid) return '';
+  return localStorage.getItem(`user_${uid}_${keyName}`) || '';
+}
+
+function setApiKey(keyName, value) {
+  const uid = getUserId();
+  if (!uid) return;
+  if (value) {
+    localStorage.setItem(`user_${uid}_${keyName}`, value);
+  } else {
+    localStorage.removeItem(`user_${uid}_${keyName}`);
+  }
+}
+
+function clearActiveApiKeys() {
+  // Keys are stored per-user, nothing to clear globally
+  // Just update UI
+  updateApiKeyStatus();
+}
+
+function loadUserApiKeys() {
+  // Just update UI - keys are read on-demand via getApiKey()
+  updateApiKeyStatus();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initSidebar();
@@ -321,7 +361,7 @@ function initImageSettings() {
 
 // === GEMINI API CALLS ===
 async function callGemini(prompt) {
-  const apiKey = localStorage.getItem('gemini_api_key');
+  const apiKey = getApiKey('gemini_api_key');
   if (!apiKey) { openApiKeyModal(); return null; }
 
   const response = await fetch(
@@ -338,7 +378,7 @@ async function callGemini(prompt) {
 
   if (!response.ok) {
     if ([400, 401, 403].includes(response.status)) {
-      localStorage.removeItem('gemini_api_key');
+      setApiKey('gemini_api_key', '');
       openApiKeyModal();
       throw new Error('API key invalida. Cole uma nova chave.');
     }
@@ -359,7 +399,7 @@ async function callGemini(prompt) {
 
 // === ENHANCE PROMPT (BILINGUAL) ===
 async function enhancePromptBilingual(original) {
-  const apiKey = localStorage.getItem('gemini_api_key');
+  const apiKey = getApiKey('gemini_api_key');
   if (!apiKey) { openApiKeyModal(); return; }
 
   const enhanceBtn = document.getElementById('enhanceBtn');
@@ -454,21 +494,21 @@ async function startImageGeneration() {
 
   // Check if API key is needed
   if (provider.startsWith('gemini') || provider === 'nano-banana-pro-preview') {
-    if (!localStorage.getItem('gemini_api_key')) {
+    if (!getApiKey('gemini_api_key')) {
       openApiKeyModal();
       showToast('Configure sua API key do Gemini primeiro', 'error');
       return;
     }
   }
   if (provider.startsWith('together-')) {
-    if (!localStorage.getItem('together_api_key')) {
+    if (!getApiKey('together_api_key')) {
       openApiKeyModal();
       showToast('Configure sua API key do Together AI primeiro', 'error');
       return;
     }
   }
   if (provider.startsWith('hf-')) {
-    if (!localStorage.getItem('huggingface_api_key')) {
+    if (!getApiKey('huggingface_api_key')) {
       openApiKeyModal();
       showToast('Configure sua API key do HuggingFace primeiro', 'error');
       return;
@@ -564,7 +604,7 @@ async function generateWithPollinations(prompt, provider, w, h, seed, variation)
 
 // --- Gemini Image ---
 async function generateWithGemini(prompt, ratio, variation, specificModel) {
-  const apiKey = localStorage.getItem('gemini_api_key');
+  const apiKey = getApiKey('gemini_api_key');
   if (!apiKey) return null;
 
   const ratioText = ratio !== '1:1' ? ` The image should have a ${ratio} aspect ratio.` : '';
@@ -616,7 +656,7 @@ const TOGETHER_IMAGE_MODELS = {
 };
 
 async function generateWithTogether(prompt, provider, w, h, seed, variation) {
-  const apiKey = localStorage.getItem('together_api_key');
+  const apiKey = getApiKey('together_api_key');
   if (!apiKey) return null;
   const model = TOGETHER_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-schnell-Free';
   const steps = model.includes('schnell') ? 4 : 20;
@@ -666,7 +706,7 @@ const HF_IMAGE_MODELS = {
 };
 
 async function generateWithHuggingFace(prompt, provider, w, h) {
-  const apiKey = localStorage.getItem('huggingface_api_key');
+  const apiKey = getApiKey('huggingface_api_key');
   if (!apiKey) return null;
   const model = HF_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-dev';
 
@@ -737,7 +777,7 @@ async function startVideoGeneration() {
 
   // HuggingFace video
   if (provider === 'hf-video') {
-    if (!localStorage.getItem('huggingface_api_key')) {
+    if (!getApiKey('huggingface_api_key')) {
       openApiKeyModal();
       showToast('Configure sua API key do HuggingFace primeiro', 'error');
       setButtonLoading('generateVideoBtn', false, 'Gerar Video');
@@ -780,7 +820,7 @@ async function startVideoGeneration() {
 }
 
 async function generateVideoHuggingFace(prompt) {
-  const apiKey = localStorage.getItem('huggingface_api_key');
+  const apiKey = getApiKey('huggingface_api_key');
   showToast('Gerando video com AnimateDiff... pode demorar', 'success');
   try {
     const response = await fetch('https://api-inference.huggingface.co/models/ByteDance/AnimateDiff-Lightning', {
@@ -950,7 +990,7 @@ async function pollinationsTTS(text) {
 
 // --- HuggingFace TTS ---
 async function huggingFaceTTS(text, model) {
-  const apiKey = localStorage.getItem('huggingface_api_key');
+  const apiKey = getApiKey('huggingface_api_key');
   if (!apiKey) { openApiKeyModal(); throw new Error('Configure API key do HuggingFace'); }
 
   showToast(`Gerando audio com ${model.split('/')[1]}...`, 'success');
@@ -1155,7 +1195,7 @@ async function pollinationsSTT() {
 }
 
 async function huggingFaceSTT() {
-  const apiKey = localStorage.getItem('huggingface_api_key');
+  const apiKey = getApiKey('huggingface_api_key');
   if (!apiKey) { openApiKeyModal(); showToast('Configure API key do HuggingFace', 'error'); return; }
 
   const recordBtn = document.getElementById('recordBtn');
@@ -1302,7 +1342,7 @@ async function startTextGeneration() {
     let providerName = '';
 
     if (GEMINI_TEXT_MODELS[provider]) {
-      if (!localStorage.getItem('gemini_api_key')) { openApiKeyModal(); return; }
+      if (!getApiKey('gemini_api_key')) { openApiKeyModal(); return; }
       const cfg = GEMINI_TEXT_MODELS[provider];
       result = await callGeminiModel(prompt, cfg.model);
       providerName = cfg.name;
@@ -1311,13 +1351,13 @@ async function startTextGeneration() {
       result = await pollinationsText(prompt, cfg.model);
       providerName = cfg.name;
     } else if (GROQ_TEXT_MODELS[provider]) {
-      const key = localStorage.getItem('groq_api_key');
+      const key = getApiKey('groq_api_key');
       if (!key) { openApiKeyModal(); showToast('Configure sua API key do Groq', 'error'); return; }
       const cfg = GROQ_TEXT_MODELS[provider];
       result = await groqText(prompt, key, cfg.model);
       providerName = cfg.name;
     } else if (OPENROUTER_TEXT_MODELS[provider]) {
-      const key = localStorage.getItem('openrouter_api_key');
+      const key = getApiKey('openrouter_api_key');
       if (!key) { openApiKeyModal(); showToast('Configure sua API key do OpenRouter', 'error'); return; }
       const cfg = OPENROUTER_TEXT_MODELS[provider];
       result = await openRouterText(prompt, key, cfg.model);
@@ -1341,7 +1381,7 @@ async function startTextGeneration() {
 
 // Generic Gemini text call with model selector
 async function callGeminiModel(prompt, model) {
-  const apiKey = localStorage.getItem('gemini_api_key');
+  const apiKey = getApiKey('gemini_api_key');
   if (!apiKey) { openApiKeyModal(); return null; }
 
   const response = await fetch(
@@ -1358,7 +1398,7 @@ async function callGeminiModel(prompt, model) {
 
   if (!response.ok) {
     if ([400, 401, 403].includes(response.status)) {
-      localStorage.removeItem('gemini_api_key');
+      setApiKey('gemini_api_key', '');
       openApiKeyModal();
       throw new Error('API key invalida. Cole uma nova chave.');
     }
@@ -1653,6 +1693,10 @@ function initApiKeyModal() {
   document.body.appendChild(modal);
 
   document.getElementById('saveApiKeysBtn').addEventListener('click', () => {
+    if (!getUserId()) {
+      showToast('Faca login com Google primeiro para salvar API keys', 'error');
+      return;
+    }
     const keys = {
       gemini_api_key: document.getElementById('geminiKeyInput').value.trim(),
       openrouter_api_key: document.getElementById('openrouterKeyInput').value.trim(),
@@ -1662,7 +1706,7 @@ function initApiKeyModal() {
       pexels_api_key: document.getElementById('pexelsKeyInput').value.trim()
     };
     for (const [k, v] of Object.entries(keys)) {
-      if (v) localStorage.setItem(k, v);
+      setApiKey(k, v);
     }
     closeApiKeyModal();
     showToast('API keys salvas!', 'success');
@@ -1682,12 +1726,12 @@ function initApiKeyModal() {
 
 function openApiKeyModal() {
   const modal = document.getElementById('apiKeyModal');
-  document.getElementById('geminiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
-  document.getElementById('openrouterKeyInput').value = localStorage.getItem('openrouter_api_key') || '';
-  document.getElementById('groqKeyInput').value = localStorage.getItem('groq_api_key') || '';
-  document.getElementById('togetherKeyInput').value = localStorage.getItem('together_api_key') || '';
-  document.getElementById('huggingfaceKeyInput').value = localStorage.getItem('huggingface_api_key') || '';
-  document.getElementById('pexelsKeyInput').value = localStorage.getItem('pexels_api_key') || '';
+  document.getElementById('geminiKeyInput').value = getApiKey('gemini_api_key') || '';
+  document.getElementById('openrouterKeyInput').value = getApiKey('openrouter_api_key') || '';
+  document.getElementById('groqKeyInput').value = getApiKey('groq_api_key') || '';
+  document.getElementById('togetherKeyInput').value = getApiKey('together_api_key') || '';
+  document.getElementById('huggingfaceKeyInput').value = getApiKey('huggingface_api_key') || '';
+  document.getElementById('pexelsKeyInput').value = getApiKey('pexels_api_key') || '';
   modal.classList.add('open');
 }
 
@@ -1698,12 +1742,12 @@ function closeApiKeyModal() {
 
 function updateApiKeyStatus() {
   const providers = {
-    Gemini: !!localStorage.getItem('gemini_api_key'),
-    OpenRouter: !!localStorage.getItem('openrouter_api_key'),
-    Groq: !!localStorage.getItem('groq_api_key'),
-    Together: !!localStorage.getItem('together_api_key'),
-    HuggingFace: !!localStorage.getItem('huggingface_api_key'),
-    Pexels: !!localStorage.getItem('pexels_api_key')
+    Gemini: !!getApiKey('gemini_api_key'),
+    OpenRouter: !!getApiKey('openrouter_api_key'),
+    Groq: !!getApiKey('groq_api_key'),
+    Together: !!getApiKey('together_api_key'),
+    HuggingFace: !!getApiKey('huggingface_api_key'),
+    Pexels: !!getApiKey('pexels_api_key')
   };
   const display = document.getElementById('creditsDisplay');
   const connected = Object.entries(providers).filter(([,v]) => v).map(([k]) => k);
@@ -1815,7 +1859,7 @@ function togglePanel(panelId) {
 
 // --- Pexels Search ---
 async function searchPexels(append = false) {
-  const key = localStorage.getItem('pexels_api_key');
+  const key = getApiKey('pexels_api_key');
   if (!key) { showToast('Configure sua Pexels API Key em Configuracoes', 'error'); return; }
 
   const query = document.getElementById('moodboardSearch').value.trim();
@@ -2136,6 +2180,7 @@ function handleGoogleCredential(response) {
   };
   localStorage.setItem('google_user', JSON.stringify(user));
   updateUserUI(user);
+  loadUserApiKeys();
   showToast(`Bem-vindo, ${user.name}!`, 'success');
 }
 
@@ -2153,6 +2198,7 @@ async function fetchGoogleUserInfo(accessToken) {
     };
     localStorage.setItem('google_user', JSON.stringify(user));
     updateUserUI(user);
+    loadUserApiKeys();
     showToast(`Bem-vindo, ${user.name}!`, 'success');
   } catch(e) {
     showToast('Erro ao obter dados do usuario', 'error');
@@ -2167,6 +2213,8 @@ function updateUserUI(user) {
   // Show logout button
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.style.display = '';
+  // Update API key status for this user
+  updateApiKeyStatus();
 }
 
 function googleLogout() {
@@ -2175,5 +2223,7 @@ function googleLogout() {
   document.getElementById('topbarAvatar').title = 'Clique para login';
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) logoutBtn.style.display = 'none';
+  // Clear API key status (keys stay stored per-user, just not accessible now)
+  updateApiKeyStatus();
   showToast('Voce saiu da conta', 'success');
 }
