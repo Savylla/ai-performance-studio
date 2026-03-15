@@ -1678,17 +1678,6 @@ function initApiKeyModal() {
           <a href="https://www.pexels.com/api/new/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
         </div>
 
-        <hr style="border: none; border-top: 1px solid var(--border); margin: 14px 0;">
-        <div class="setting-group">
-          <label><i class="fab fa-google" style="color: #4285f4;"></i> Google Client ID <span style="color:var(--text-muted);">(Login com Google)</span></label>
-          <div style="display: flex; gap: 6px;">
-            <input type="password" class="input-field" id="googleClientIdInput" placeholder="Cole seu Google OAuth Client ID...">
-            <button class="btn-tiny" id="toggleGoogleClientId"><i class="fas fa-eye"></i></button>
-          </div>
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar Client ID gratis aqui</a>
-          <span style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-top: 2px;">OAuth 2.0 > Web application > Adicione sua URL em Authorized JavaScript origins</span>
-        </div>
-
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
           <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
           Suas chaves ficam salvas apenas no seu navegador.
@@ -1719,20 +1708,9 @@ function initApiKeyModal() {
     for (const [k, v] of Object.entries(keys)) {
       setApiKey(k, v);
     }
-    // Save Google Client ID (not user-scoped, shared)
-    const googleClientId = document.getElementById('googleClientIdInput').value.trim();
-    if (googleClientId) {
-      localStorage.setItem('google_client_id', googleClientId);
-    }
     closeApiKeyModal();
     showToast('API keys salvas!', 'success');
     updateApiKeyStatus();
-  });
-
-  // Google Client ID toggle
-  document.getElementById('toggleGoogleClientId').addEventListener('click', () => {
-    const input = document.getElementById('googleClientIdInput');
-    input.type = input.type === 'password' ? 'text' : 'password';
   });
 
   // Toggle visibility
@@ -1754,7 +1732,6 @@ function openApiKeyModal() {
   document.getElementById('togetherKeyInput').value = getApiKey('together_api_key') || '';
   document.getElementById('huggingfaceKeyInput').value = getApiKey('huggingface_api_key') || '';
   document.getElementById('pexelsKeyInput').value = getApiKey('pexels_api_key') || '';
-  document.getElementById('googleClientIdInput').value = localStorage.getItem('google_client_id') || '';
   modal.classList.add('open');
 }
 
@@ -2102,7 +2079,14 @@ function renderFontPanel() {
 }
 
 // === GOOGLE AUTH ===
-const GOOGLE_CLIENT_ID = localStorage.getItem('google_client_id') || '';
+// Google OAuth - Client ID is public by design, security is enforced by
+// Authorized JavaScript Origins in Google Cloud Console (only savylla.github.io)
+const GOOGLE_CLIENT_ID = '85799521822-i5qg186cusmc6ruvbmgrg38m0vuiv5ih.apps.googleusercontent.com';
+const ALLOWED_ORIGINS = ['https://savylla.github.io', 'http://localhost', 'http://127.0.0.1'];
+
+function isAllowedOrigin() {
+  return ALLOWED_ORIGINS.some(origin => window.location.origin.startsWith(origin));
+}
 
 function initGoogleAuth() {
   // Check if user is already logged in
@@ -2116,12 +2100,11 @@ function initGoogleAuth() {
 
   // Login button
   document.getElementById('googleLoginBtn').addEventListener('click', () => {
-    const clientId = GOOGLE_CLIENT_ID || localStorage.getItem('google_client_id');
-    if (!clientId) {
-      showGoogleClientIdPrompt();
+    if (!isAllowedOrigin()) {
+      showToast('Login disponivel apenas no dominio oficial', 'error');
       return;
     }
-    startGoogleLogin(clientId);
+    startGoogleLogin(GOOGLE_CLIENT_ID);
   });
 
   // Topbar avatar click
@@ -2141,16 +2124,6 @@ function initGoogleAuth() {
 
   // Logout button
   document.getElementById('logoutBtn').addEventListener('click', googleLogout);
-}
-
-function showGoogleClientIdPrompt() {
-  openApiKeyModal();
-  showToast('Configure seu Google Client ID em Configuracoes para fazer login', 'error');
-  // Focus the Google Client ID field after a short delay
-  setTimeout(() => {
-    const input = document.getElementById('googleClientIdInput');
-    if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-  }, 300);
 }
 
 function startGoogleLogin(clientId) {
