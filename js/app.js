@@ -2108,17 +2108,25 @@ function initGoogleAuth() {
   });
 
   // Topbar avatar click
-  document.getElementById('topbarAvatar').addEventListener('click', () => {
+  document.getElementById('topbarAvatar').addEventListener('click', (e) => {
+    e.stopPropagation();
     const savedUser = localStorage.getItem('google_user');
     if (savedUser) {
-      // Already logged in - show user menu
       const user = JSON.parse(savedUser);
       if (confirm(`Logado como ${user.name}\n${user.email}\n\nDeseja sair?`)) {
         googleLogout();
       }
     } else {
-      // Not logged in - trigger login
-      document.getElementById('googleLoginBtn').click();
+      if (!isAllowedOrigin()) {
+        showToast('Login disponivel apenas no dominio oficial', 'error');
+        return;
+      }
+      try {
+        startGoogleLogin(GOOGLE_CLIENT_ID);
+      } catch(err) {
+        console.error('Google Login error:', err);
+        showToast('Erro ao iniciar login. Recarregue a pagina.', 'error');
+      }
     }
   });
 

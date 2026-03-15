@@ -467,6 +467,7 @@ h1, h2, h3, h4, h5, h6 {
 .user-avatar .avatar-default-icon {
   width: 36px;
   height: 36px;
+  pointer-events: none;
 }
 
 .user-avatar img[src]:not([src=""]) + .avatar-default-icon {
