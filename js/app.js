@@ -2394,31 +2394,26 @@ function initGoogleAuth() {
 
 function startGoogleLogin(clientId) {
   try {
-    google.accounts.id.initialize({
+    if (typeof google === 'undefined' || !google.accounts) {
+      showToast('Google Sign-In ainda carregando. Tente novamente.', 'error');
+      return;
+    }
+    // Use OAuth2 popup - most reliable across all browsers
+    const tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      callback: handleGoogleCredential,
-      auto_select: false
-    });
-    google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        // Fallback: use the One Tap or popup
-        google.accounts.id.renderButton(
-          document.createElement('div'),
-          { theme: 'filled_black', size: 'large' }
-        );
-        // Try the popup approach
-        google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: 'profile email',
-          callback: (response) => {
-            if (response.access_token) {
-              fetchGoogleUserInfo(response.access_token);
-            }
-          }
-        }).requestAccessToken();
+      scope: 'profile email',
+      callback: (response) => {
+        if (response.access_token) {
+          fetchGoogleUserInfo(response.access_token);
+        } else if (response.error) {
+          console.error('Google OAuth error:', response.error);
+          showToast('Erro no login: ' + response.error, 'error');
+        }
       }
     });
+    tokenClient.requestAccessToken();
   } catch(e) {
+    console.error('Google Login error:', e);
     showToast('Erro ao iniciar login Google: ' + e.message, 'error');
   }
 }
