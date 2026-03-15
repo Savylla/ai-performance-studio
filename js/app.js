@@ -419,7 +419,83 @@ function initImageSettings() {
     }
     enhancePromptBilingual(currentText);
   });
+
+  // Reference file upload
+  initRefUpload();
 }
+
+// === REFERENCE FILE UPLOAD ===
+let referenceFiles = [];
+
+function initRefUpload() {
+  const btn = document.getElementById('refUploadBtn');
+  const input = document.getElementById('refFileInput');
+  if (!btn || !input) return;
+
+  btn.addEventListener('click', () => {
+    if (referenceFiles.length > 0) {
+      // If files already loaded, show menu to add more or clear
+      if (confirm(`${referenceFiles.length} arquivo(s) carregado(s).\n\nOK = Adicionar mais\nCancelar = Remover todos`)) {
+        input.click();
+      } else {
+        clearRefFiles();
+      }
+    } else {
+      input.click();
+    }
+  });
+
+  input.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+
+    const totalFiles = referenceFiles.length + files.length;
+    if (totalFiles > 15) {
+      showToast(`Maximo 15 arquivos. Voce tem ${referenceFiles.length}, tentou adicionar ${files.length}.`, 'error');
+      input.value = '';
+      return;
+    }
+
+    // Process each file
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        referenceFiles.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: ev.target.result // base64 data URL
+        });
+        updateRefUploadUI();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    input.value = ''; // Reset for next selection
+  });
+}
+
+function updateRefUploadUI() {
+  const btn = document.getElementById('refUploadBtn');
+  const count = document.getElementById('refUploadCount');
+  if (referenceFiles.length > 0) {
+    btn.classList.add('active');
+    count.style.display = 'flex';
+    count.textContent = referenceFiles.length;
+  } else {
+    btn.classList.remove('active');
+    count.style.display = 'none';
+  }
+}
+
+function clearRefFiles() {
+  referenceFiles = [];
+  updateRefUploadUI();
+  showToast('Arquivos removidos', 'success');
+}
+
+function getReferenceFiles() {
+  return referenceFiles;
 
 // === GEMINI API CALLS ===
 const GEMINI_TEXT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
