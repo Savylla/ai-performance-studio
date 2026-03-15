@@ -248,6 +248,30 @@
       </div>
     </div>
 
+    <!-- GALLERY Tab -->
+    <div class="tab-content" id="tabGallery">
+      <div class="display-empty">
+        <div class="empty-illustration">
+          <div class="empty-glow"></div>
+          <i class="fas fa-th-large"></i>
+        </div>
+        <h3>Galeria</h3>
+        <p>Suas imagens geradas aparecerão aqui</p>
+      </div>
+    </div>
+
+    <!-- HISTORY Tab -->
+    <div class="tab-content" id="tabHistory">
+      <div class="display-empty">
+        <div class="empty-illustration">
+          <div class="empty-glow"></div>
+          <i class="fas fa-clock-rotate-left"></i>
+        </div>
+        <h3>Historico</h3>
+        <p>Seu historico de geracoes aparecerá aqui</p>
+      </div>
+    </div>
+
     <!-- ==================== BOTTOM BAR ==================== -->
     <div class="bottom-bar">
       <!-- Bilingual Area (for image enhance) -->
@@ -519,13 +543,17 @@
 
       <!-- Shared Bottom Row (ratio, ref upload, qty, generate) - visible for all generation tabs -->
       <div class="settings-row-bottom" id="sharedBottomRow">
-        <div class="setting-inline ratio-group">
+        <div class="setting-inline ratio-group" id="ratioGroup">
           <button class="ratio-pill" data-ratio="3:4" data-w="768" data-h="1024">3:4</button>
           <button class="ratio-pill" data-ratio="9:16" data-w="576" data-h="1024">9:16</button>
           <button class="ratio-pill active" data-ratio="1:1" data-w="1024" data-h="1024">1:1</button>
           <button class="ratio-pill" data-ratio="16:9" data-w="1024" data-h="576">16:9</button>
           <button class="ratio-pill" data-ratio="4:3" data-w="1024" data-h="768">4:3</button>
         </div>
+        <button class="generate-main speak-btn" id="speakBtn" style="display:none;">
+          <i class="fas fa-play"></i>
+          <span>Falar</span>
+        </button>
         <div class="setting-inline ref-upload-group">
           <button class="ref-upload-btn" id="refUploadBtn" title="Adicionar arquivos de referencia">
             <i class="fas fa-paperclip"></i>

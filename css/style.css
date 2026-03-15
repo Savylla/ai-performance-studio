@@ -1225,6 +1225,11 @@ h1, h2, h3, h4, h5, h6 {
 
 .generate-main i { font-size: 0.85rem; }
 
+.speak-btn {
+  margin-left: 0;
+  background: var(--accent-gradient);
+}
+
 /* === TAB CONTENT === */
 .tab-content {
   flex: 1;

@@ -87,14 +87,14 @@ function initTabs() {
       if (target === 'tts') {
         document.getElementById('audioTTS').classList.add('active');
         document.getElementById('generateBtnMain').style.display = '';
+        document.getElementById('speakBtn').style.display = '';
         document.getElementById('recordBtn').style.display = 'none';
-        document.getElementById('audioProviders').querySelector('.provider-label').textContent = 'TTS:';
         showTTSProviders();
       } else {
         document.getElementById('audioTranscribe').classList.add('active');
         document.getElementById('generateBtnMain').style.display = 'none';
+        document.getElementById('speakBtn').style.display = 'none';
         document.getElementById('recordBtn').style.display = '';
-        document.getElementById('audioProviders').querySelector('.provider-label').textContent = 'STT:';
         showSTTProviders();
       }
     });
@@ -146,10 +146,28 @@ function switchTab(tab) {
   if (sharedRow) {
     sharedRow.style.display = ['gallery', 'history'].includes(tab) ? 'none' : '';
   }
-  // Re-show generate button (may have been hidden by audio transcription mode)
+  // Show/hide ratio pills (only for image, video, moodboard)
+  const ratioGroup = document.getElementById('ratioGroup');
+  if (ratioGroup) {
+    ratioGroup.style.display = ['image', 'video', 'moodboard'].includes(tab) ? '' : 'none';
+  }
+  // Show/hide speak button (only for audio TTS)
+  const speakBtn = document.getElementById('speakBtn');
+  if (speakBtn) {
+    speakBtn.style.display = tab === 'audio' ? '' : 'none';
+  }
+  // Update generate button text per tab
   const genMain = document.getElementById('generateBtnMain');
-  if (genMain && tab !== 'audio') {
+  if (genMain) {
     genMain.style.display = '';
+    const genTexts = {
+      image: 'Gerar',
+      video: 'Gerar Video',
+      audio: 'Gerar',
+      text: 'Gerar Texto',
+      moodboard: 'Gerar'
+    };
+    genMain.querySelector('span').textContent = genTexts[tab] || 'Gerar';
   }
 }
 
@@ -344,6 +362,24 @@ function initPrompt() {
   document.getElementById('generateBtn').addEventListener('click', handleGenerate);
   document.getElementById('generateBtnMain').addEventListener('click', handleGenerate);
   document.getElementById('recordBtn')?.addEventListener('click', startTranscription);
+  document.getElementById('speakBtn')?.addEventListener('click', speakPreview);
+}
+
+function speakPreview() {
+  const text = document.getElementById('promptInput').value.trim();
+  if (!text) { showToast('Digite texto para falar', 'error'); return; }
+  if (!window.speechSynthesis) { showToast('Seu navegador nao suporta TTS', 'error'); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
+  const voiceIdx = document.getElementById('voiceSelect').value;
+  if (voiceIdx !== 'default' && voices[voiceIdx]) {
+    utterance.voice = voices[voiceIdx];
+  }
+  utterance.onend = () => showToast('Audio reproduzido!', 'success');
+  utterance.onerror = (e) => showToast('Erro ao falar: ' + e.error, 'error');
+  speechSynthesis.speak(utterance);
+  showToast('Reproduzindo...', 'success');
 }
 
 function handleGenerate() {
