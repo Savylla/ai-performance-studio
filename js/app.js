@@ -496,6 +496,7 @@ function clearRefFiles() {
 
 function getReferenceFiles() {
   return referenceFiles;
+}
 
 // === GEMINI API CALLS ===
 const GEMINI_TEXT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
