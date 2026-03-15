@@ -233,14 +233,28 @@ function initPrompt() {
     enhancePromptBilingual(textarea.value.trim());
   });
 
-  // Language buttons
+  // Language buttons - copy bilingual text to prompt field
   document.getElementById('langPT').addEventListener('click', () => {
     document.getElementById('langPT').classList.add('active');
     document.getElementById('langEN').classList.remove('active');
+    const ptText = document.getElementById('promptPT').value.trim();
+    if (ptText) {
+      const promptInput = document.getElementById('promptInput');
+      promptInput.value = ptText;
+      promptInput.style.height = 'auto';
+      promptInput.style.height = promptInput.scrollHeight + 'px';
+    }
   });
   document.getElementById('langEN').addEventListener('click', () => {
     document.getElementById('langEN').classList.add('active');
     document.getElementById('langPT').classList.remove('active');
+    const enText = document.getElementById('promptEN').value.trim();
+    if (enText) {
+      const promptInput = document.getElementById('promptInput');
+      promptInput.value = enText;
+      promptInput.style.height = 'auto';
+      promptInput.style.height = promptInput.scrollHeight + 'px';
+    }
   });
 
   // PT textarea edit -> auto sync to EN
