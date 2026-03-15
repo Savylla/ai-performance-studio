@@ -1678,6 +1678,17 @@ function initApiKeyModal() {
           <a href="https://www.pexels.com/api/new/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
         </div>
 
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 14px 0;">
+        <div class="setting-group">
+          <label><i class="fab fa-google" style="color: #4285f4;"></i> Google Client ID <span style="color:var(--text-muted);">(Login com Google)</span></label>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" class="input-field" id="googleClientIdInput" placeholder="Cole seu Google OAuth Client ID...">
+            <button class="btn-tiny" id="toggleGoogleClientId"><i class="fas fa-eye"></i></button>
+          </div>
+          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar Client ID gratis aqui</a>
+          <span style="color: var(--text-muted); font-size: 0.7rem; display: block; margin-top: 2px;">OAuth 2.0 > Web application > Adicione sua URL em Authorized JavaScript origins</span>
+        </div>
+
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
           <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
           Suas chaves ficam salvas apenas no seu navegador.
@@ -1708,9 +1719,20 @@ function initApiKeyModal() {
     for (const [k, v] of Object.entries(keys)) {
       setApiKey(k, v);
     }
+    // Save Google Client ID (not user-scoped, shared)
+    const googleClientId = document.getElementById('googleClientIdInput').value.trim();
+    if (googleClientId) {
+      localStorage.setItem('google_client_id', googleClientId);
+    }
     closeApiKeyModal();
     showToast('API keys salvas!', 'success');
     updateApiKeyStatus();
+  });
+
+  // Google Client ID toggle
+  document.getElementById('toggleGoogleClientId').addEventListener('click', () => {
+    const input = document.getElementById('googleClientIdInput');
+    input.type = input.type === 'password' ? 'text' : 'password';
   });
 
   // Toggle visibility
@@ -1732,6 +1754,7 @@ function openApiKeyModal() {
   document.getElementById('togetherKeyInput').value = getApiKey('together_api_key') || '';
   document.getElementById('huggingfaceKeyInput').value = getApiKey('huggingface_api_key') || '';
   document.getElementById('pexelsKeyInput').value = getApiKey('pexels_api_key') || '';
+  document.getElementById('googleClientIdInput').value = localStorage.getItem('google_client_id') || '';
   modal.classList.add('open');
 }
 
@@ -2121,23 +2144,13 @@ function initGoogleAuth() {
 }
 
 function showGoogleClientIdPrompt() {
-  const clientId = prompt(
-    'Para login com Google, voce precisa de um Client ID.\n\n' +
-    'Siga estes passos:\n' +
-    '1. Acesse console.cloud.google.com\n' +
-    '2. Crie um projeto\n' +
-    '3. Va em APIs & Services > Credentials\n' +
-    '4. Crie OAuth 2.0 Client ID (tipo: Web application)\n' +
-    '5. Adicione sua URL em Authorized JavaScript origins\n' +
-    '6. Copie o Client ID e cole aqui:\n',
-    ''
-  );
-  if (clientId && clientId.includes('.apps.googleusercontent.com')) {
-    localStorage.setItem('google_client_id', clientId);
-    showToast('Client ID salvo! Clique em Entrar novamente.', 'success');
-  } else if (clientId) {
-    showToast('Client ID invalido. Deve terminar com .apps.googleusercontent.com', 'error');
-  }
+  openApiKeyModal();
+  showToast('Configure seu Google Client ID em Configuracoes para fazer login', 'error');
+  // Focus the Google Client ID field after a short delay
+  setTimeout(() => {
+    const input = document.getElementById('googleClientIdInput');
+    if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }, 300);
 }
 
 function startGoogleLogin(clientId) {
