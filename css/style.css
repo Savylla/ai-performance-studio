@@ -1190,7 +1190,6 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Generate Main Button */
 .generate-main {
-  margin-left: auto;
   padding: 8px 24px;
   border: none;
   border-radius: var(--radius-full);
@@ -1417,6 +1416,7 @@ h1, h2, h3, h4, h5, h6 {
 .settings-row-bottom {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 6px;
@@ -1563,6 +1563,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Voice Selector */
+.audio-settings {
+  flex-wrap: wrap;
+}
+
+.audio-voice-row {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
 .voice-selector select {
   background: var(--bg-input);
   border: 1px solid var(--border);

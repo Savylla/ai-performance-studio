@@ -395,7 +395,7 @@
       </div>
 
       <!-- AUDIO Settings -->
-      <div class="settings-row tab-settings" id="settingsAudio">
+      <div class="settings-row tab-settings audio-settings" id="settingsAudio">
         <div class="setting-inline provider-selector">
           <div class="provider-pills" id="audioProviders">
             <div class="provider-group">
@@ -419,10 +419,12 @@
             </div>
           </div>
         </div>
-        <div class="setting-inline voice-selector" id="voiceSelector">
-          <select id="voiceSelect">
-            <option value="default">Voz Padrao</option>
-          </select>
+        <div class="audio-voice-row">
+          <div class="setting-inline voice-selector" id="voiceSelector">
+            <select id="voiceSelect">
+              <option value="default">Voz Padrao</option>
+            </select>
+          </div>
         </div>
         <button class="generate-main record-btn" id="recordBtn" style="display:none;">
           <i class="fas fa-microphone"></i>

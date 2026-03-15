@@ -124,16 +124,12 @@ function switchTab(tab) {
     moodboard: 'Descreva a imagem que voce quer criar...'
   };
   document.getElementById('promptInput').placeholder = placeholders[tab] || placeholders.image;
-  // Show/hide enhance & lang buttons based on tab
+  // Show/hide enhance & lang buttons for all generation tabs
   const langBtns = document.getElementById('langButtons');
   const enhanceBtn = document.getElementById('enhanceBtn');
-  if (tab === 'image' || tab === 'moodboard') {
-    langBtns.style.display = '';
-    enhanceBtn.style.display = '';
-  } else {
-    langBtns.style.display = 'none';
-    enhanceBtn.style.display = 'none';
-  }
+  const isGenTab = ['image', 'video', 'audio', 'text', 'moodboard'].includes(tab);
+  langBtns.style.display = isGenTab ? '' : 'none';
+  enhanceBtn.style.display = isGenTab ? '' : 'none';
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
   if (['gallery', 'history'].includes(tab)) {
