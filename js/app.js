@@ -410,14 +410,14 @@ function initImageSettings() {
     });
   });
   document.getElementById('seedToggle').addEventListener('click', function() {
-    this.classList.toggle('locked');
-    if (this.classList.contains('locked')) {
-      this.dataset.seed = Math.floor(Math.random() * 999999999);
-      this.querySelector('span').textContent = '#' + this.dataset.seed;
-    } else {
-      delete this.dataset.seed;
-      this.querySelector('span').textContent = 'Random';
+    // Re-run prompt enhance with the current prompt text
+    const promptInput = document.getElementById('promptInput');
+    const currentText = promptInput.value.trim();
+    if (!currentText) {
+      showToast('Digite um prompt primeiro', 'error');
+      return;
     }
+    enhancePromptBilingual(currentText);
   });
 }
 
