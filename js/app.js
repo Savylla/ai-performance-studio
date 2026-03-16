@@ -800,6 +800,11 @@ async function startImageGeneration() {
 
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+      if (!imageResult) {
+        console.log('Pollinations failed, falling back to Stable Horde...');
+        card.querySelector('.card-loading-state span').textContent = 'Pollinations falhou, tentando Stable Horde...';
+        imageResult = await generateWithStableHorde(prompt, w, h);
+      }
     } else if (provider.startsWith('horde')) {
       imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('together-')) {
@@ -874,6 +879,7 @@ async function startMoodboardGeneration() {
 
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+      if (!imageResult) imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('horde')) {
       imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('together-')) {
@@ -911,11 +917,11 @@ async function generateWithPollinations(prompt, provider, w, h, seed, variation)
   const encodedPrompt = encodeURIComponent(truncated);
   const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${w}&height=${h}&seed=${seedParam}&nologo=true`;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      if (attempt > 0) await delay(3000 * attempt);
+      if (attempt > 0) await delay(2000);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60000);
+      const timeout = setTimeout(() => controller.abort(), 30000);
       const response = await fetch(url, { signal: controller.signal });
       clearTimeout(timeout);
       if (!response.ok) {
@@ -1025,10 +1031,15 @@ async function generateWithGemini(prompt, ratio, variation, specificModel) {
         );
 
         if (response.status === 429) {
+          console.warn(`Gemini ${model} rate limited (429), attempt ${attempt + 1}/3`);
           if (attempt < 2) continue;
           break;
         }
-        if (!response.ok) break;
+        if (!response.ok) {
+          const errBody = await response.text().catch(() => '');
+          console.warn(`Gemini ${model} error: HTTP ${response.status}`, errBody.substring(0, 200));
+          break;
+        }
 
         const data = await response.json();
         const parts = data.candidates?.[0]?.content?.parts || [];
@@ -1037,8 +1048,12 @@ async function generateWithGemini(prompt, ratio, variation, specificModel) {
             return { base64: part.inlineData.data, mimeType: part.inlineData.mimeType || 'image/png' };
           }
         }
+        console.warn(`Gemini ${model}: no image in response`, JSON.stringify(data).substring(0, 200));
         break;
-      } catch (e) { break; }
+      } catch (e) {
+        console.warn(`Gemini ${model} exception:`, e.message);
+        break;
+      }
     }
   }
   return null;
