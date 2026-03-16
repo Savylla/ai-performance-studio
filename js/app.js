@@ -800,6 +800,8 @@ async function startImageGeneration() {
 
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('horde')) {
+      imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('together-')) {
       imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
     } else if (provider.startsWith('hf-')) {
@@ -872,6 +874,8 @@ async function startMoodboardGeneration() {
 
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('horde')) {
+      imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('together-')) {
       imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
     } else if (provider.startsWith('hf-')) {
@@ -902,21 +906,70 @@ async function startMoodboardGeneration() {
 // --- Pollinations Image ---
 async function generateWithPollinations(prompt, provider, w, h, seed, variation) {
   const seedParam = seed || (Date.now() + variation);
-  const encodedPrompt = encodeURIComponent(prompt);
+  // Truncate prompt to avoid URL too long errors
+  const truncated = prompt.length > 300 ? prompt.substring(0, 300) : prompt;
+  const encodedPrompt = encodeURIComponent(truncated);
   const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${w}&height=${h}&seed=${seedParam}&nologo=true`;
 
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve({ url });
-    img.onerror = () => {
-      console.warn(`Pollinations ${model} failed`);
-      resolve(null);
-    };
-    img.src = url;
-    // Timeout after 60s
-    setTimeout(() => { if (!img.complete) resolve(null); }, 60000);
-  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt > 0) await delay(3000 * attempt);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!response.ok) {
+        console.warn(`Pollinations attempt ${attempt + 1} failed: HTTP ${response.status}`);
+        continue;
+      }
+      const blob = await response.blob();
+      if (blob.size < 1000) { console.warn('Pollinations returned empty/tiny image'); continue; }
+      return { url: URL.createObjectURL(blob) };
+    } catch (e) {
+      console.warn(`Pollinations attempt ${attempt + 1} error:`, e.message);
+    }
+  }
+  return null;
+}
+
+// --- Stable Horde Image (Free, no API key) ---
+async function generateWithStableHorde(prompt, w, h) {
+  try {
+    // Submit async generation
+    const submitRes = await fetch('https://stablehorde.net/api/v2/generate/async', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': '0000000000' },
+      body: JSON.stringify({
+        prompt: prompt,
+        params: { width: Math.min(w, 768), height: Math.min(h, 768), steps: 25 },
+        nsfw: false,
+        trusted_workers: false
+      })
+    });
+    if (!submitRes.ok) { console.warn('Stable Horde submit failed:', submitRes.status); return null; }
+    const { id } = await submitRes.json();
+    if (!id) return null;
+
+    // Poll for result (max 120s)
+    for (let i = 0; i < 40; i++) {
+      await delay(3000);
+      const checkRes = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`, {
+        headers: { 'apikey': '0000000000' }
+      });
+      if (!checkRes.ok) continue;
+      const status = await checkRes.json();
+      if (status.done && status.generations?.length > 0) {
+        const imgUrl = status.generations[0].img;
+        if (imgUrl) return { url: imgUrl };
+      }
+      if (status.faulted) { console.warn('Stable Horde generation faulted'); return null; }
+    }
+    console.warn('Stable Horde timeout');
+    return null;
+  } catch (e) {
+    console.warn('Stable Horde error:', e);
+    return null;
+  }
 }
 
 // --- Gemini Image ---
