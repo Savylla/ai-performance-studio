@@ -943,7 +943,8 @@ async function generateWithStableHorde(prompt, w, h) {
       body: JSON.stringify({
         prompt: prompt.substring(0, 500),
         params: { width: size, height: size, steps: 20, sampler_name: 'k_euler', cfg_scale: 7 },
-        nsfw: false,
+        nsfw: true,
+        censor_nsfw: false,
         trusted_workers: false,
         r2: true
       })
