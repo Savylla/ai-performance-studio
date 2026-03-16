@@ -1396,8 +1396,21 @@ function loadI2VImage(file) {
 
 function i2vApplyRatio() {
   const canvas = document.getElementById('i2vCanvas');
-  const ratios = { '1:1': [512, 512], '9:16': [360, 640], '16:9': [640, 360], '4:5': [400, 500] };
-  const [w, h] = ratios[i2vCurrentRatio] || [512, 512];
+  const container = canvas.parentElement;
+  const maxW = Math.min(container?.clientWidth || 600, 640);
+
+  const baseRatios = { '1:1': [1, 1], '9:16': [9, 16], '16:9': [16, 9], '4:5': [4, 5] };
+  const [rw, rh] = baseRatios[i2vCurrentRatio] || [1, 1];
+
+  let w = maxW;
+  let h = Math.round(w * (rh / rw));
+  // Cap height to avoid huge canvas on portrait
+  const maxH = Math.min(window.innerHeight * 0.55, 640);
+  if (h > maxH) {
+    h = maxH;
+    w = Math.round(h * (rw / rh));
+  }
+
   canvas.width = w;
   canvas.height = h;
   i2vDrawFrame(0);

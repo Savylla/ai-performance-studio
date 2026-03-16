@@ -35,11 +35,13 @@
     font-size: 0.68rem;
   }
 
-  .audio-subtabs {
+  .audio-subtabs,
+  .video-subtabs {
     width: 100%;
   }
 
-  .audio-subtab {
+  .audio-subtab,
+  .video-subtab {
     flex: 1;
     justify-content: center;
     padding: 6px 10px;
