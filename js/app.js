@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initApiKeyModal();
   initMoodboard();
   initStoryboard();
+  initImageToVideo();
   initGoogleAuth();
 });
 
@@ -1258,6 +1259,284 @@ async function generateVideoHuggingFace(prompt, model, modelName) {
     saveToHistory({ type: 'video', prompt, provider: `HuggingFace ${modelName}`, status: 'success' });
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
+  }
+}
+
+// =============================================
+// === IMAGE-TO-VIDEO (Ken Burns Effects) ===
+// =============================================
+
+function initImageToVideo() {
+  // Video sub-tabs
+  document.querySelectorAll('.video-subtab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.video-subtab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.video-section').forEach(s => s.classList.remove('active'));
+      const target = btn.dataset.videotab;
+      document.getElementById(target === 'img2video' ? 'videoImg2Video' : 'videoText2Video')?.classList.add('active');
+    });
+  });
+
+  const uploadArea = document.getElementById('i2vUploadArea');
+  const fileInput = document.getElementById('i2vFileInput');
+  const editor = document.getElementById('i2vEditor');
+  const sourceImg = document.getElementById('i2vSourceImg');
+  const canvas = document.getElementById('i2vCanvas');
+  const ctx = canvas.getContext('2d');
+
+  if (!uploadArea) return;
+
+  // Upload handlers
+  uploadArea.addEventListener('click', () => fileInput.click());
+  uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+  uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+  uploadArea.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadI2VImage(file);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadI2VImage(fileInput.files[0]);
+  });
+
+  // Effect pills
+  document.querySelectorAll('.i2v-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.i2v-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Range labels
+  document.getElementById('i2vDuration')?.addEventListener('input', e => {
+    document.getElementById('i2vDurationVal').textContent = e.target.value + 's';
+  });
+  document.getElementById('i2vIntensity')?.addEventListener('input', e => {
+    document.getElementById('i2vIntensityVal').textContent = e.target.value;
+  });
+
+  // Buttons
+  document.getElementById('i2vPreviewBtn')?.addEventListener('click', () => runI2VPreview());
+  document.getElementById('i2vGenerateBtn')?.addEventListener('click', () => generateI2VVideo());
+  document.getElementById('i2vResetBtn')?.addEventListener('click', () => resetI2V());
+  document.getElementById('i2vNewBtn')?.addEventListener('click', () => resetI2V());
+}
+
+let i2vLoadedImage = null;
+let i2vPreviewAnim = null;
+
+function loadI2VImage(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      i2vLoadedImage = img;
+      document.getElementById('i2vSourceImg').src = e.target.result;
+      document.getElementById('i2vUploadArea').style.display = 'none';
+      document.getElementById('i2vEditor').style.display = '';
+      document.getElementById('i2vResult').style.display = 'none';
+      // Draw initial frame
+      const canvas = document.getElementById('i2vCanvas');
+      canvas.width = img.width > 512 ? 512 : img.width;
+      canvas.height = img.height > 512 ? 512 : img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetI2V() {
+  if (i2vPreviewAnim) { cancelAnimationFrame(i2vPreviewAnim); i2vPreviewAnim = null; }
+  i2vLoadedImage = null;
+  document.getElementById('i2vUploadArea').style.display = '';
+  document.getElementById('i2vEditor').style.display = 'none';
+  document.getElementById('i2vResult').style.display = 'none';
+  document.getElementById('i2vFileInput').value = '';
+}
+
+function getI2VEffect() {
+  return document.querySelector('.i2v-pill.active')?.dataset.effect || 'zoom-in';
+}
+
+function applyKenBurnsFrame(ctx, img, canvasW, canvasH, progress, effect, intensity) {
+  const maxScale = 1 + (intensity * 0.04); // intensity 1-10 → 1.04 to 1.40
+  const maxPan = intensity * 8; // pixels of pan
+
+  ctx.clearRect(0, 0, canvasW, canvasH);
+  ctx.save();
+
+  let scale = 1, tx = 0, ty = 0, rot = 0;
+  const t = progress; // 0..1
+
+  switch (effect) {
+    case 'zoom-in':
+      scale = 1 + (maxScale - 1) * t;
+      break;
+    case 'zoom-out':
+      scale = maxScale - (maxScale - 1) * t;
+      break;
+    case 'pan-left':
+      tx = -maxPan * t;
+      break;
+    case 'pan-right':
+      tx = maxPan * t;
+      break;
+    case 'pan-up':
+      ty = -maxPan * t;
+      break;
+    case 'pan-down':
+      ty = maxPan * t;
+      break;
+    case 'zoom-pan-right':
+      scale = 1 + (maxScale - 1) * t * 0.6;
+      tx = maxPan * t * 0.7;
+      break;
+    case 'rotate-zoom':
+      scale = 1 + (maxScale - 1) * t * 0.5;
+      rot = (intensity * 0.8) * t * (Math.PI / 180);
+      break;
+  }
+
+  ctx.translate(canvasW / 2, canvasH / 2);
+  ctx.rotate(rot);
+  ctx.scale(scale, scale);
+  ctx.translate(-canvasW / 2 + tx, -canvasH / 2 + ty);
+  ctx.drawImage(img, 0, 0, canvasW, canvasH);
+  ctx.restore();
+
+  // Draw caption if present
+  const caption = document.getElementById('i2vCaption')?.value.trim();
+  if (caption) {
+    const fontSize = Math.max(14, canvasW * 0.04);
+    ctx.save();
+    ctx.font = `bold ${fontSize}px 'Space Grotesk', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    // Background
+    const metrics = ctx.measureText(caption);
+    const padX = 12, padY = 6;
+    const textY = canvasH - 20;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.roundRect(
+      canvasW / 2 - metrics.width / 2 - padX,
+      textY - fontSize - padY,
+      metrics.width + padX * 2,
+      fontSize + padY * 2,
+      6
+    );
+    ctx.fill();
+    // Text
+    ctx.fillStyle = '#fff';
+    ctx.fillText(caption, canvasW / 2, textY);
+    ctx.restore();
+  }
+}
+
+function runI2VPreview() {
+  if (!i2vLoadedImage) return;
+  if (i2vPreviewAnim) { cancelAnimationFrame(i2vPreviewAnim); i2vPreviewAnim = null; }
+
+  const canvas = document.getElementById('i2vCanvas');
+  const ctx = canvas.getContext('2d');
+  const effect = getI2VEffect();
+  const duration = parseInt(document.getElementById('i2vDuration').value) * 1000;
+  const intensity = parseInt(document.getElementById('i2vIntensity').value);
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease in-out for smoother motion
+    const eased = progress < 0.5
+      ? 2 * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+    applyKenBurnsFrame(ctx, i2vLoadedImage, canvas.width, canvas.height, eased, effect, intensity);
+
+    if (progress < 1) {
+      i2vPreviewAnim = requestAnimationFrame(animate);
+    }
+  }
+
+  i2vPreviewAnim = requestAnimationFrame(animate);
+}
+
+async function generateI2VVideo() {
+  if (!i2vLoadedImage) return;
+  if (i2vPreviewAnim) { cancelAnimationFrame(i2vPreviewAnim); i2vPreviewAnim = null; }
+
+  const btn = document.getElementById('i2vGenerateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+  const canvas = document.getElementById('i2vCanvas');
+  const ctx = canvas.getContext('2d');
+  const effect = getI2VEffect();
+  const duration = parseInt(document.getElementById('i2vDuration').value);
+  const intensity = parseInt(document.getElementById('i2vIntensity').value);
+  const fps = 30;
+  const totalFrames = duration * fps;
+
+  try {
+    // Use MediaRecorder with canvas stream
+    const stream = canvas.captureStream(fps);
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2500000 });
+    const chunks = [];
+
+    recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+    const videoReady = new Promise((resolve, reject) => {
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        resolve(blob);
+      };
+      recorder.onerror = reject;
+    });
+
+    recorder.start();
+
+    // Render each frame
+    for (let frame = 0; frame <= totalFrames; frame++) {
+      const progress = frame / totalFrames;
+      const eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+      applyKenBurnsFrame(ctx, i2vLoadedImage, canvas.width, canvas.height, eased, effect, intensity);
+
+      // Wait for next frame timing
+      await new Promise(r => setTimeout(r, 1000 / fps));
+    }
+
+    recorder.stop();
+    const videoBlob = await videoReady;
+    const videoUrl = URL.createObjectURL(videoBlob);
+
+    // Show result
+    const resultVideo = document.getElementById('i2vResultVideo');
+    resultVideo.src = videoUrl;
+    document.getElementById('i2vDownloadBtn').href = videoUrl;
+    document.getElementById('i2vResult').style.display = '';
+
+    showToast('Video gerado com sucesso!', 'success');
+
+    // Save to gallery
+    saveVideoToGallery(videoBlob, `Image-to-Video (${effect})`, 'Browser Canvas');
+    saveToHistory({ type: 'video', prompt: `Image-to-Video: ${effect}`, provider: 'Browser (Ken Burns)', status: 'success' });
+
+  } catch (e) {
+    showToast('Erro ao gerar video: ' + e.message, 'error');
+    console.error('I2V error:', e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-video"></i> Gerar Video';
   }
 }
 

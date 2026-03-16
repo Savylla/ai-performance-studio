@@ -88,16 +88,107 @@
 
     <!-- VIDEO Tab -->
     <div class="tab-content" id="tabVideo">
-      <div class="display-empty">
-        <div class="empty-illustration">
-          <div class="empty-glow"></div>
-          <i class="fas fa-film"></i>
-        </div>
-        <h3>Gere videos com IA</h3>
-        <p>Descreva o video que voce quer criar</p>
+      <!-- Video sub-tabs -->
+      <div class="video-subtabs">
+        <button class="video-subtab active" data-videotab="text2video"><i class="fas fa-film"></i> Text-to-Video</button>
+        <button class="video-subtab" data-videotab="img2video"><i class="fas fa-image"></i> Image-to-Video</button>
       </div>
-      <div class="display-results" id="videoResults" style="display: none;">
-        <div class="results-masonry" id="videoMasonry"></div>
+
+      <!-- Text-to-Video Section -->
+      <div class="video-section active" id="videoText2Video">
+        <div class="display-empty" id="videoEmptyT2V">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-film"></i>
+          </div>
+          <h3>Gere videos com IA</h3>
+          <p>Descreva o video que voce quer criar</p>
+        </div>
+        <div class="display-results" id="videoResults" style="display: none;">
+          <div class="results-masonry" id="videoMasonry"></div>
+        </div>
+      </div>
+
+      <!-- Image-to-Video Section -->
+      <div class="video-section" id="videoImg2Video">
+        <div class="i2v-workspace">
+          <!-- Upload area -->
+          <div class="i2v-upload-area" id="i2vUploadArea">
+            <div class="i2v-upload-content">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <h3>Arraste uma imagem ou clique para enviar</h3>
+              <p>Converta qualquer imagem em video com efeitos de movimento</p>
+              <p class="i2v-hint">100% gratuito — processado no navegador</p>
+            </div>
+            <input type="file" id="i2vFileInput" accept="image/*" style="display:none;">
+          </div>
+
+          <!-- Editor (hidden until image uploaded) -->
+          <div class="i2v-editor" id="i2vEditor" style="display:none;">
+            <div class="i2v-preview-row">
+              <div class="i2v-source">
+                <div class="i2v-label">Imagem Original</div>
+                <img id="i2vSourceImg" src="" alt="Source">
+              </div>
+              <div class="i2v-preview">
+                <div class="i2v-label">Preview do Efeito</div>
+                <canvas id="i2vCanvas" width="512" height="512"></canvas>
+              </div>
+            </div>
+
+            <!-- Effect options -->
+            <div class="i2v-controls">
+              <div class="i2v-control-group">
+                <label>Efeito de Movimento</label>
+                <div class="i2v-effect-pills">
+                  <button class="i2v-pill active" data-effect="zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
+                  <button class="i2v-pill" data-effect="zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
+                  <button class="i2v-pill" data-effect="pan-left"><i class="fas fa-arrow-left"></i> Pan Esquerda</button>
+                  <button class="i2v-pill" data-effect="pan-right"><i class="fas fa-arrow-right"></i> Pan Direita</button>
+                  <button class="i2v-pill" data-effect="pan-up"><i class="fas fa-arrow-up"></i> Pan Cima</button>
+                  <button class="i2v-pill" data-effect="pan-down"><i class="fas fa-arrow-down"></i> Pan Baixo</button>
+                  <button class="i2v-pill" data-effect="zoom-pan-right"><i class="fas fa-expand-arrows-alt"></i> Zoom + Pan</button>
+                  <button class="i2v-pill" data-effect="rotate-zoom"><i class="fas fa-sync-alt"></i> Rotacao + Zoom</button>
+                </div>
+              </div>
+
+              <div class="i2v-settings-row">
+                <div class="i2v-control-group">
+                  <label>Duracao (segundos)</label>
+                  <input type="range" id="i2vDuration" min="2" max="15" value="5" step="1">
+                  <span class="i2v-range-val" id="i2vDurationVal">5s</span>
+                </div>
+                <div class="i2v-control-group">
+                  <label>Intensidade</label>
+                  <input type="range" id="i2vIntensity" min="1" max="10" value="5" step="1">
+                  <span class="i2v-range-val" id="i2vIntensityVal">5</span>
+                </div>
+              </div>
+
+              <!-- Text overlay -->
+              <div class="i2v-control-group">
+                <label><i class="fas fa-font"></i> Texto / Legenda (opcional)</label>
+                <input type="text" id="i2vCaption" class="i2v-text-input" placeholder="Adicione um texto sobre o video..." maxlength="120">
+              </div>
+
+              <div class="i2v-actions">
+                <button class="i2v-btn preview" id="i2vPreviewBtn"><i class="fas fa-play"></i> Preview</button>
+                <button class="i2v-btn generate" id="i2vGenerateBtn"><i class="fas fa-video"></i> Gerar Video</button>
+                <button class="i2v-btn reset" id="i2vResetBtn"><i class="fas fa-redo"></i> Trocar Imagem</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Result area -->
+          <div class="i2v-result" id="i2vResult" style="display:none;">
+            <div class="i2v-label">Video Gerado</div>
+            <video id="i2vResultVideo" controls loop></video>
+            <div class="i2v-result-actions">
+              <a id="i2vDownloadBtn" class="i2v-btn generate" download="image-to-video.webm"><i class="fas fa-download"></i> Download</a>
+              <button class="i2v-btn reset" id="i2vNewBtn"><i class="fas fa-plus"></i> Novo Video</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
