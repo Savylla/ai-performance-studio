@@ -902,15 +902,11 @@ async function startMoodboardGeneration() {
 // --- Pollinations Image ---
 async function generateWithPollinations(prompt, provider, w, h, seed, variation) {
   const modelMap = {
-    'pollinations-flux': 'flux',
-    'pollinations-flux-realism': 'flux-realism',
-    'pollinations-flux-anime': 'flux-anime',
-    'pollinations-flux-3d': 'flux-3d',
-    'pollinations-flux-cablyai': 'flux-cablyai',
     'pollinations-turbo': 'turbo',
-    'pollinations-sd': 'stable-diffusion'
+    'pollinations-sana': 'sana',
+    'pollinations-zimage': 'zimage'
   };
-  const model = modelMap[provider] || 'flux';
+  const model = modelMap[provider] || 'turbo';
   const seedParam = seed || (Date.now() + variation);
   const encodedPrompt = encodeURIComponent(prompt);
   const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${w}&height=${h}&seed=${seedParam}&nologo=true`;
