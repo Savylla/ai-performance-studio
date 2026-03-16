@@ -41,6 +41,7 @@
         <a href="#" class="topbar-link" data-tab="audio"><i class="fas fa-headphones"></i> Audio</a>
         <a href="#" class="topbar-link" data-tab="text"><i class="fas fa-font"></i> Texto</a>
         <a href="#" class="topbar-link" data-tab="moodboard"><i class="fas fa-palette"></i> Moodboard</a>
+        <a href="#" class="topbar-link" data-tab="storyboard"><i class="fas fa-book-open"></i> Story Board</a>
         <a href="#" class="topbar-link" data-tab="gallery"><i class="fas fa-th-large"></i> Galeria</a>
         <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Historico</a>
       </nav>
@@ -264,6 +265,46 @@
             <p>Busque imagens, gere paletas de cores e adicione fontes para criar seu moodboard</p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- STORYBOARD Tab -->
+    <div class="tab-content" id="tabStoryboard">
+      <div class="storyboard-workspace">
+        <div class="storyboard-empty" id="storyboardEmpty">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-book-open"></i>
+          </div>
+          <h3>Crie Story Boards com IA</h3>
+          <p>Descreva sua historia e a IA gera os paineis visuais automaticamente</p>
+        </div>
+        <div class="storyboard-controls" id="storyboardControls">
+          <textarea id="storyboardPrompt" class="storyboard-textarea" placeholder="Descreva sua historia aqui... Ex: Uma guerreira medieval encontra um dragao na floresta, eles lutam, ela vence e salva a vila." rows="3"></textarea>
+          <div class="storyboard-options">
+            <div class="storyboard-option-group">
+              <label>Paineis</label>
+              <div class="storyboard-pills">
+                <button class="sb-pill active" data-panels="4">4</button>
+                <button class="sb-pill" data-panels="6">6</button>
+                <button class="sb-pill" data-panels="8">8</button>
+              </div>
+            </div>
+            <div class="storyboard-option-group">
+              <label>Estilo</label>
+              <div class="storyboard-pills">
+                <button class="sb-pill style-pill active" data-style="cinematic">Cinematico</button>
+                <button class="sb-pill style-pill" data-style="comic">Comic</button>
+                <button class="sb-pill style-pill" data-style="anime">Anime</button>
+                <button class="sb-pill style-pill" data-style="watercolor">Aquarela</button>
+              </div>
+            </div>
+            <button class="storyboard-generate-btn" id="storyboardGenerateBtn">
+              <i class="fas fa-magic"></i> Gerar Story Board
+            </button>
+          </div>
+        </div>
+        <div class="storyboard-grid" id="storyboardGrid"></div>
       </div>
     </div>
 

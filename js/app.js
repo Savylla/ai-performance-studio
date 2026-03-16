@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initKeyboardShortcuts();
   initApiKeyModal();
   initMoodboard();
+  initStoryboard();
   initGoogleAuth();
 });
 
@@ -133,7 +134,7 @@ function switchTab(tab) {
   enhanceBtn.style.display = isGenTab ? '' : 'none';
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
-  if (['gallery', 'history'].includes(tab)) {
+  if (['gallery', 'history', 'storyboard'].includes(tab)) {
     bottomBar.style.display = 'none';
   } else {
     bottomBar.style.display = '';
@@ -141,7 +142,7 @@ function switchTab(tab) {
   // Show/hide shared bottom row for generation tabs
   const sharedRow = document.getElementById('sharedBottomRow');
   if (sharedRow) {
-    sharedRow.style.display = ['gallery', 'history'].includes(tab) ? 'none' : '';
+    sharedRow.style.display = ['gallery', 'history', 'storyboard'].includes(tab) ? 'none' : '';
   }
   // Show/hide ratio pills (only for image, video, moodboard)
   const ratioGroup = document.getElementById('ratioGroup');
@@ -1868,6 +1869,145 @@ function copyTextResult() {
   const text = document.getElementById('textResultContent').textContent;
   navigator.clipboard.writeText(text);
   showToast('Texto copiado!', 'success');
+}
+
+// =============================================
+// === STORYBOARD ===
+// =============================================
+function initStoryboard() {
+  // Panel count pills
+  document.querySelectorAll('.sb-pill:not(.style-pill)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sb-pill:not(.style-pill)').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  // Style pills
+  document.querySelectorAll('.sb-pill.style-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sb-pill.style-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+  // Generate button
+  document.getElementById('storyboardGenerateBtn')?.addEventListener('click', generateStoryboard);
+}
+
+async function generateStoryboard() {
+  const storyPrompt = document.getElementById('storyboardPrompt').value.trim();
+  if (!storyPrompt) { showToast('Descreva sua historia primeiro', 'error'); return; }
+
+  const panelCount = parseInt(document.querySelector('.sb-pill:not(.style-pill).active')?.dataset.panels || 4);
+  const style = document.querySelector('.sb-pill.style-pill.active')?.dataset.style || 'cinematic';
+  const grid = document.getElementById('storyboardGrid');
+  const btn = document.getElementById('storyboardGenerateBtn');
+
+  // Style descriptions for image prompts
+  const styleDesc = {
+    cinematic: 'cinematic film still, dramatic lighting, depth of field, 35mm film',
+    comic: 'comic book panel, bold outlines, vibrant colors, speech bubbles style',
+    anime: 'anime style, detailed illustration, cel shading, vibrant colors',
+    watercolor: 'watercolor painting, soft brush strokes, artistic, delicate colors'
+  };
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando roteiro...';
+  document.getElementById('storyboardEmpty').style.display = 'none';
+  grid.innerHTML = '';
+
+  try {
+    // Step 1: Use AI to break story into panel descriptions
+    showToast('Criando roteiro do storyboard...', 'success');
+    const scriptResult = await pollinationsText(
+      `INSTRUCAO: Voce e um roteirista de storyboard. Quebre a historia abaixo em exatamente ${panelCount} paineis visuais.
+
+Para cada painel, escreva UMA descricao visual curta em INGLES (maximo 80 palavras) que descreva a CENA visualmente (personagens, acoes, cenario, iluminacao). Nao inclua dialogos.
+
+FORMATO OBRIGATORIO (siga exatamente, sem nada extra):
+---PANEL 1---
+(descricao visual em ingles)
+---PANEL 2---
+(descricao visual em ingles)
+... ate ---PANEL ${panelCount}---
+
+Historia: ${storyPrompt}`,
+      'openai'
+    );
+
+    // Parse panels
+    const panels = [];
+    for (let i = 1; i <= panelCount; i++) {
+      const regex = new RegExp(`---PANEL ${i}---\\s*([\\s\\S]*?)(?=---PANEL ${i + 1}---|$)`);
+      const match = scriptResult.match(regex);
+      if (match) panels.push(match[1].trim());
+    }
+
+    if (panels.length === 0) {
+      showToast('Erro ao criar roteiro. Tente novamente.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-magic"></i> Gerar Story Board';
+      return;
+    }
+
+    // Step 2: Create panel cards with loading state
+    panels.forEach((desc, i) => {
+      const card = document.createElement('div');
+      card.className = 'storyboard-panel';
+      card.innerHTML = `
+        <div class="sb-panel-number">${i + 1}</div>
+        <div class="sb-panel-image loading">
+          <div class="spinner-ring small"></div>
+          <span>Gerando painel ${i + 1}/${panels.length}...</span>
+        </div>
+        <div class="sb-panel-caption">${desc}</div>
+      `;
+      grid.appendChild(card);
+    });
+
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando imagens...';
+    showToast(`Gerando ${panels.length} paineis... isso pode levar alguns minutos`, 'success');
+
+    // Step 3: Generate images for each panel
+    for (let i = 0; i < panels.length; i++) {
+      const imagePrompt = `${panels[i]}, ${styleDesc[style]}, storyboard panel, high quality`;
+      const card = grid.children[i];
+      const imgContainer = card.querySelector('.sb-panel-image');
+
+      try {
+        // Try Stable Horde (free, reliable)
+        const result = await generateWithStableHorde(imagePrompt, 512, 512);
+        if (result?.url) {
+          imgContainer.classList.remove('loading');
+          imgContainer.innerHTML = `<img src="${result.url}" alt="Panel ${i + 1}">`;
+          continue;
+        }
+      } catch (e) { console.warn(`Panel ${i + 1} Horde failed:`, e); }
+
+      // Fallback: Pollinations
+      try {
+        const result = await generateWithPollinations(imagePrompt, 'pollinations-default', 512, 512, null, i);
+        if (result?.url) {
+          imgContainer.classList.remove('loading');
+          imgContainer.innerHTML = `<img src="${result.url}" alt="Panel ${i + 1}">`;
+          continue;
+        }
+      } catch (e) { console.warn(`Panel ${i + 1} Pollinations failed:`, e); }
+
+      // Both failed
+      imgContainer.classList.remove('loading');
+      imgContainer.innerHTML = `<div class="sb-panel-error"><i class="fas fa-exclamation-triangle"></i> Erro</div>`;
+    }
+
+    showToast('Story Board gerado!', 'success');
+    saveToHistory({ type: 'storyboard', prompt: storyPrompt, provider: 'Stable Horde', status: 'success', detail: `${panels.length} paineis` });
+
+  } catch (e) {
+    console.error('Storyboard error:', e);
+    showToast('Erro ao gerar storyboard: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magic"></i> Gerar Story Board';
+  }
 }
 
 // =============================================
