@@ -262,12 +262,23 @@ function initPrompt() {
     enhancePromptBilingual(textarea.value.trim());
   });
 
-  // Language buttons - copy bilingual text to prompt field
+  // Language buttons - show bilingual area + copy text to prompt field
+  function showBilingualArea() {
+    const biArea = document.getElementById('bilingualArea');
+    biArea.style.display = 'block';
+    biArea.classList.remove('collapsed');
+  }
+
   document.getElementById('langPT').addEventListener('click', () => {
     document.getElementById('langPT').classList.add('active');
     document.getElementById('langEN').classList.remove('active');
+    showBilingualArea();
     const ptText = document.getElementById('promptPT').value.trim();
-    if (ptText) {
+    // If PT is empty but main prompt has text, populate PT and trigger translation
+    if (!ptText && document.getElementById('promptInput').value.trim()) {
+      document.getElementById('promptPT').value = document.getElementById('promptInput').value;
+      syncPTtoEN();
+    } else if (ptText) {
       const promptInput = document.getElementById('promptInput');
       promptInput.value = ptText;
       promptInput.style.height = 'auto';
@@ -277,8 +288,13 @@ function initPrompt() {
   document.getElementById('langEN').addEventListener('click', () => {
     document.getElementById('langEN').classList.add('active');
     document.getElementById('langPT').classList.remove('active');
+    showBilingualArea();
     const enText = document.getElementById('promptEN').value.trim();
-    if (enText) {
+    // If EN is empty but main prompt has text, populate EN and trigger translation
+    if (!enText && document.getElementById('promptInput').value.trim()) {
+      document.getElementById('promptEN').value = document.getElementById('promptInput').value;
+      syncENtoPT();
+    } else if (enText) {
       const promptInput = document.getElementById('promptInput');
       promptInput.value = enText;
       promptInput.style.height = 'auto';
@@ -316,23 +332,19 @@ function initPrompt() {
   let promptSyncTimeout;
   document.getElementById('promptInput').addEventListener('input', () => {
     const biArea = document.getElementById('bilingualArea');
-    if (biArea.style.display === 'none') return; // Only sync if bilingual area is visible
+    if (biArea.style.display === 'none') return;
     clearTimeout(promptSyncTimeout);
+    clearTimeout(syncTimeout);
     const isPT = document.getElementById('langPT').classList.contains('active');
     const promptText = document.getElementById('promptInput').value;
+    const syncStatus = document.getElementById('syncStatus');
+    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
+    syncStatus.className = 'bilingual-sync';
     if (isPT) {
       document.getElementById('promptPT').value = promptText;
-      clearTimeout(syncTimeout);
-      const syncStatus = document.getElementById('syncStatus');
-      syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
-      syncStatus.className = 'bilingual-sync';
       promptSyncTimeout = setTimeout(() => syncPTtoEN(), 1500);
     } else {
       document.getElementById('promptEN').value = promptText;
-      clearTimeout(syncTimeout);
-      const syncStatus = document.getElementById('syncStatus');
-      syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
-      syncStatus.className = 'bilingual-sync';
       promptSyncTimeout = setTimeout(() => syncENtoPT(), 1500);
     }
   });
