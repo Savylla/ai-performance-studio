@@ -1172,10 +1172,9 @@ async function groqText(prompt, apiKey, model) {
 // =============================================
 // === VIDEO GENERATION ===
 // =============================================
-const POLLINATIONS_VIDEO_MODELS = {
-  'pollinations-video-seedance': 'seedance',
-  'pollinations-video-hunyuan': 'hunyuan',
-  'pollinations-video-wan': 'wan-2.1'
+const HF_VIDEO_MODELS = {
+  'hf-video-animatediff': 'ByteDance/AnimateDiff-Lightning',
+  'hf-video-wan': 'Wan-AI/Wan2.1-T2V-1.3B'
 };
 
 async function startVideoGeneration() {
@@ -1185,59 +1184,24 @@ async function startVideoGeneration() {
   const provider = getActiveProvider('videoProviders');
   setButtonLoading('generateBtnMain', true, 'Gerando...');
 
-  // HuggingFace video
-  if (provider === 'hf-video') {
-    if (!getApiKey('huggingface_api_key')) {
-      openApiKeyModal();
-      showToast('Configure sua API key do HuggingFace primeiro', 'error');
-      setButtonLoading('generateBtnMain', false, 'Gerar');
-      return;
-    }
-    await generateVideoHuggingFace(prompt);
+  if (!getApiKey('huggingface_api_key')) {
+    openApiKeyModal();
+    showToast('Configure sua API key do HuggingFace para gerar videos', 'error');
     setButtonLoading('generateBtnMain', false, 'Gerar');
     return;
   }
 
-  // Pollinations video
-  const model = POLLINATIONS_VIDEO_MODELS[provider] || 'seedance';
-  showToast(`Gerando video com ${model}... isso pode levar alguns minutos`, 'success');
-
-  try {
-    const encodedPrompt = encodeURIComponent(prompt);
-    const videoUrl = `https://video.pollinations.ai/prompt/${encodedPrompt}?model=${model}`;
-
-    const videoContainer = document.getElementById('videoResults');
-    const videoGrid = document.getElementById('videoMasonry');
-    document.querySelector('#tabVideo .display-empty').style.display = 'none';
-    videoContainer.style.display = 'block';
-
-    const card = document.createElement('div');
-    card.className = 'result-card';
-    card.innerHTML = `
-      <video controls autoplay style="width:100%; border-radius: var(--radius-lg);">
-        <source src="${videoUrl}" type="video/mp4">
-        Seu navegador nao suporta video.
-      </video>
-      <div class="result-card-provider">Pollinations ${model}</div>
-    `;
-    videoGrid.insertBefore(card, videoGrid.firstChild);
-    showToast('Video gerado!', 'success');
-    // Save to gallery
-    saveVideoToGallery(videoUrl, prompt, `Pollinations ${model}`);
-    saveToHistory({ type: 'video', prompt, provider: `Pollinations ${model}`, status: 'success' });
-  } catch (e) {
-    showToast('Erro ao gerar video: ' + e.message, 'error');
-    saveToHistory({ type: 'video', prompt, provider: `Pollinations ${model}`, status: 'error', detail: e.message });
-  } finally {
-    setButtonLoading('generateBtnMain', false, 'Gerar');
-  }
+  const model = HF_VIDEO_MODELS[provider] || 'ByteDance/AnimateDiff-Lightning';
+  const modelName = model.split('/').pop();
+  await generateVideoHuggingFace(prompt, model, modelName);
+  setButtonLoading('generateBtnMain', false, 'Gerar');
 }
 
-async function generateVideoHuggingFace(prompt) {
+async function generateVideoHuggingFace(prompt, model, modelName) {
   const apiKey = getApiKey('huggingface_api_key');
-  showToast('Gerando video com AnimateDiff... pode demorar', 'success');
+  showToast(`Gerando video com ${modelName}... pode demorar`, 'success');
   try {
-    const response = await fetch('https://router.huggingface.co/hf-inference/models/ByteDance/AnimateDiff-Lightning', {
+    const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1248,7 +1212,15 @@ async function generateVideoHuggingFace(prompt) {
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `HTTP ${response.status}`);
+      const errMsg = err.error || `HTTP ${response.status}`;
+      // Detect permission error and show helpful message
+      if (errMsg.includes('permissions') || errMsg.includes('Inference Providers')) {
+        showToast('Erro: Seu token HuggingFace precisa da permissao "Inference Providers". Crie um novo token em huggingface.co/settings/tokens com essa permissao.', 'error');
+      } else {
+        showToast('Erro ao gerar video: ' + errMsg, 'error');
+      }
+      saveToHistory({ type: 'video', prompt, provider: modelName, status: 'error', detail: errMsg });
+      return;
     }
 
     const blob = await response.blob();
@@ -1265,13 +1237,12 @@ async function generateVideoHuggingFace(prompt) {
       <video controls autoplay loop style="width:100%; border-radius: var(--radius-lg);">
         <source src="${videoUrl}" type="video/mp4">
       </video>
-      <div class="result-card-provider">HuggingFace AnimateDiff</div>
+      <div class="result-card-provider">HuggingFace ${modelName}</div>
     `;
     videoGrid.insertBefore(card, videoGrid.firstChild);
     showToast('Video gerado!', 'success');
-    // Save to gallery
-    saveVideoToGallery(blob, prompt, 'HuggingFace AnimateDiff');
-    saveToHistory({ type: 'video', prompt, provider: 'HuggingFace AnimateDiff', status: 'success' });
+    saveVideoToGallery(blob, prompt, `HuggingFace ${modelName}`);
+    saveToHistory({ type: 'video', prompt, provider: `HuggingFace ${modelName}`, status: 'success' });
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
   }
