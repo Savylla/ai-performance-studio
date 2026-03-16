@@ -901,15 +901,9 @@ async function startMoodboardGeneration() {
 
 // --- Pollinations Image ---
 async function generateWithPollinations(prompt, provider, w, h, seed, variation) {
-  const modelMap = {
-    'pollinations-turbo': 'turbo',
-    'pollinations-sana': 'sana',
-    'pollinations-zimage': 'zimage'
-  };
-  const model = modelMap[provider] || 'turbo';
   const seedParam = seed || (Date.now() + variation);
   const encodedPrompt = encodeURIComponent(prompt);
-  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${model}&width=${w}&height=${h}&seed=${seedParam}&nologo=true`;
+  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${w}&height=${h}&seed=${seedParam}&nologo=true`;
 
   return new Promise((resolve) => {
     const img = new Image();
@@ -1034,7 +1028,7 @@ async function generateWithHuggingFace(prompt, provider, w, h) {
   const model = HF_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-dev';
 
   try {
-    const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+    const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1150,7 +1144,7 @@ async function generateVideoHuggingFace(prompt) {
   const apiKey = getApiKey('huggingface_api_key');
   showToast('Gerando video com AnimateDiff... pode demorar', 'success');
   try {
-    const response = await fetch('https://api-inference.huggingface.co/models/ByteDance/AnimateDiff-Lightning', {
+    const response = await fetch('https://router.huggingface.co/hf-inference/models/ByteDance/AnimateDiff-Lightning', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1328,7 +1322,7 @@ async function huggingFaceTTS(text, model) {
 
   showToast(`Gerando audio com ${model.split('/')[1]}...`, 'success');
 
-  const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+  const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1556,7 +1550,7 @@ async function huggingFaceSTT() {
       showToast('Transcrevendo com Whisper...', 'success');
 
       try {
-        const response = await fetch('https://api-inference.huggingface.co/models/openai/whisper-large-v3', {
+        const response = await fetch('https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${apiKey}` },
           body: blob
