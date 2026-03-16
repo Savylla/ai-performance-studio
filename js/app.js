@@ -935,36 +935,60 @@ async function generateWithPollinations(prompt, provider, w, h, seed, variation)
 // --- Stable Horde Image (Free, no API key) ---
 async function generateWithStableHorde(prompt, w, h) {
   try {
-    // Submit async generation
+    // Use 512x512 for anonymous — most compatible with available workers
+    const size = 512;
     const submitRes = await fetch('https://stablehorde.net/api/v2/generate/async', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': '0000000000' },
+      headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'AI-Performance-Studio:1.0' },
       body: JSON.stringify({
-        prompt: prompt,
-        params: { width: Math.min(w, 768), height: Math.min(h, 768), steps: 25 },
+        prompt: prompt.substring(0, 500),
+        params: { width: size, height: size, steps: 20, sampler_name: 'k_euler', cfg_scale: 7 },
         nsfw: false,
-        trusted_workers: false
+        trusted_workers: false,
+        r2: true
       })
     });
-    if (!submitRes.ok) { console.warn('Stable Horde submit failed:', submitRes.status); return null; }
-    const { id } = await submitRes.json();
-    if (!id) return null;
-
-    // Poll for result (max 120s)
-    for (let i = 0; i < 40; i++) {
-      await delay(3000);
-      const checkRes = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`, {
-        headers: { 'apikey': '0000000000' }
-      });
-      if (!checkRes.ok) continue;
-      const status = await checkRes.json();
-      if (status.done && status.generations?.length > 0) {
-        const imgUrl = status.generations[0].img;
-        if (imgUrl) return { url: imgUrl };
-      }
-      if (status.faulted) { console.warn('Stable Horde generation faulted'); return null; }
+    if (!submitRes.ok) {
+      const errBody = await submitRes.text().catch(() => '');
+      console.warn('Stable Horde submit failed:', submitRes.status, errBody);
+      return null;
     }
-    console.warn('Stable Horde timeout');
+    const submitData = await submitRes.json();
+    const id = submitData.id;
+    if (!id) { console.warn('Stable Horde: no job id returned', submitData); return null; }
+    console.log('Stable Horde job submitted:', id);
+
+    // Poll for result (max 180s)
+    for (let i = 0; i < 60; i++) {
+      await delay(3000);
+      try {
+        const checkRes = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`, {
+          headers: { 'Client-Agent': 'AI-Performance-Studio:1.0' }
+        });
+        if (!checkRes.ok) { console.warn('Stable Horde check failed:', checkRes.status); continue; }
+        const status = await checkRes.json();
+        console.log(`Stable Horde poll ${i + 1}: done=${status.done}, wait=${status.wait_time}s, queue=${status.queue_position}`);
+        if (status.faulted) { console.warn('Stable Horde generation faulted'); return null; }
+        if (status.done && status.generations?.length > 0) {
+          const imgUrl = status.generations[0].img;
+          if (!imgUrl) continue;
+          // Fetch image and convert to blob URL to avoid CORS issues
+          try {
+            const imgRes = await fetch(imgUrl);
+            if (imgRes.ok) {
+              const blob = await imgRes.blob();
+              return { url: URL.createObjectURL(blob) };
+            }
+          } catch (e2) {
+            console.warn('Stable Horde image fetch failed, using direct URL');
+          }
+          return { url: imgUrl };
+        }
+      } catch (pollErr) {
+        console.warn('Stable Horde poll error:', pollErr);
+      }
+    }
+    console.warn('Stable Horde timeout after 180s');
     return null;
   } catch (e) {
     console.warn('Stable Horde error:', e);
