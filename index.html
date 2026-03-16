@@ -109,85 +109,253 @@
         </div>
       </div>
 
-      <!-- Image-to-Video Section -->
+      <!-- Image-to-Video Section (TikTok Creative Studio Style) -->
       <div class="video-section" id="videoImg2Video">
         <div class="i2v-workspace">
-          <!-- Upload area -->
+
+          <!-- Step 1: Upload -->
           <div class="i2v-upload-area" id="i2vUploadArea">
             <div class="i2v-upload-content">
-              <i class="fas fa-cloud-upload-alt"></i>
+              <div class="i2v-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
               <h3>Arraste uma imagem ou clique para enviar</h3>
-              <p>Converta qualquer imagem em video com efeitos de movimento</p>
-              <p class="i2v-hint">100% gratuito — processado no navegador</p>
+              <p>Transforme imagens estaticas em videos dinamicos com IA</p>
+              <div class="i2v-upload-formats">JPG, PNG, WEBP — max 10MB</div>
+              <p class="i2v-hint"><i class="fas fa-bolt"></i> 100% gratuito — processado no navegador</p>
             </div>
             <input type="file" id="i2vFileInput" accept="image/*" style="display:none;">
           </div>
 
-          <!-- Editor (hidden until image uploaded) -->
+          <!-- Step 2: Editor -->
           <div class="i2v-editor" id="i2vEditor" style="display:none;">
-            <div class="i2v-preview-row">
-              <div class="i2v-source">
-                <div class="i2v-label">Imagem Original</div>
-                <img id="i2vSourceImg" src="" alt="Source">
+
+            <!-- Top bar with image info + reset -->
+            <div class="i2v-topbar">
+              <div class="i2v-topbar-left">
+                <i class="fas fa-image"></i>
+                <span id="i2vFileName">imagem.jpg</span>
+                <span class="i2v-badge free">Gratuito</span>
               </div>
-              <div class="i2v-preview">
-                <div class="i2v-label">Preview do Efeito</div>
-                <canvas id="i2vCanvas" width="512" height="512"></canvas>
-              </div>
+              <button class="i2v-topbar-btn" id="i2vResetBtn"><i class="fas fa-times"></i> Trocar imagem</button>
             </div>
 
-            <!-- Effect options -->
-            <div class="i2v-controls">
-              <div class="i2v-control-group">
-                <label>Efeito de Movimento</label>
-                <div class="i2v-effect-pills">
-                  <button class="i2v-pill active" data-effect="zoom-in"><i class="fas fa-search-plus"></i> Zoom In</button>
-                  <button class="i2v-pill" data-effect="zoom-out"><i class="fas fa-search-minus"></i> Zoom Out</button>
-                  <button class="i2v-pill" data-effect="pan-left"><i class="fas fa-arrow-left"></i> Pan Esquerda</button>
-                  <button class="i2v-pill" data-effect="pan-right"><i class="fas fa-arrow-right"></i> Pan Direita</button>
-                  <button class="i2v-pill" data-effect="pan-up"><i class="fas fa-arrow-up"></i> Pan Cima</button>
-                  <button class="i2v-pill" data-effect="pan-down"><i class="fas fa-arrow-down"></i> Pan Baixo</button>
-                  <button class="i2v-pill" data-effect="zoom-pan-right"><i class="fas fa-expand-arrows-alt"></i> Zoom + Pan</button>
-                  <button class="i2v-pill" data-effect="rotate-zoom"><i class="fas fa-sync-alt"></i> Rotacao + Zoom</button>
+            <div class="i2v-editor-layout">
+              <!-- Left: Preview -->
+              <div class="i2v-preview-panel">
+                <div class="i2v-canvas-wrap">
+                  <canvas id="i2vCanvas" width="512" height="512"></canvas>
+                  <div class="i2v-canvas-overlay" id="i2vCanvasOverlay">
+                    <i class="fas fa-play-circle"></i>
+                  </div>
+                </div>
+                <div class="i2v-preview-actions">
+                  <button class="i2v-preview-btn" id="i2vPreviewBtn"><i class="fas fa-play"></i> Preview</button>
+                  <div class="i2v-aspect-pills">
+                    <button class="i2v-aspect-pill active" data-ratio="1:1" title="1:1 Quadrado">1:1</button>
+                    <button class="i2v-aspect-pill" data-ratio="9:16" title="9:16 TikTok/Reels">9:16</button>
+                    <button class="i2v-aspect-pill" data-ratio="16:9" title="16:9 YouTube/Wide">16:9</button>
+                    <button class="i2v-aspect-pill" data-ratio="4:5" title="4:5 Instagram">4:5</button>
+                  </div>
                 </div>
               </div>
 
-              <div class="i2v-settings-row">
-                <div class="i2v-control-group">
-                  <label>Duracao (segundos)</label>
-                  <input type="range" id="i2vDuration" min="2" max="15" value="5" step="1">
-                  <span class="i2v-range-val" id="i2vDurationVal">5s</span>
-                </div>
-                <div class="i2v-control-group">
-                  <label>Intensidade</label>
-                  <input type="range" id="i2vIntensity" min="1" max="10" value="5" step="1">
-                  <span class="i2v-range-val" id="i2vIntensityVal">5</span>
-                </div>
-              </div>
+              <!-- Right: Controls -->
+              <div class="i2v-controls-panel">
 
-              <!-- Text overlay -->
-              <div class="i2v-control-group">
-                <label><i class="fas fa-font"></i> Texto / Legenda (opcional)</label>
-                <input type="text" id="i2vCaption" class="i2v-text-input" placeholder="Adicione um texto sobre o video..." maxlength="120">
-              </div>
+                <!-- AI Prompt -->
+                <div class="i2v-section">
+                  <div class="i2v-section-header">
+                    <i class="fas fa-magic"></i> Prompt de Movimento
+                    <span class="i2v-section-badge">IA</span>
+                  </div>
+                  <textarea id="i2vPrompt" class="i2v-prompt-input" placeholder="Descreva o movimento desejado... Ex: 'camera zoom lento no rosto', 'panoramica para direita revelando a paisagem'" rows="2"></textarea>
+                  <button class="i2v-smart-btn" id="i2vSmartEffectBtn"><i class="fas fa-wand-magic-sparkles"></i> Escolher efeito com IA</button>
+                </div>
 
-              <div class="i2v-actions">
-                <button class="i2v-btn preview" id="i2vPreviewBtn"><i class="fas fa-play"></i> Preview</button>
-                <button class="i2v-btn generate" id="i2vGenerateBtn"><i class="fas fa-video"></i> Gerar Video</button>
-                <button class="i2v-btn reset" id="i2vResetBtn"><i class="fas fa-redo"></i> Trocar Imagem</button>
+                <!-- Effects -->
+                <div class="i2v-section">
+                  <div class="i2v-section-header"><i class="fas fa-film"></i> Efeito de Movimento</div>
+                  <div class="i2v-effect-grid">
+                    <button class="i2v-effect-card active" data-effect="zoom-in">
+                      <div class="i2v-effect-icon"><i class="fas fa-search-plus"></i></div>
+                      <span>Zoom In</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="zoom-out">
+                      <div class="i2v-effect-icon"><i class="fas fa-search-minus"></i></div>
+                      <span>Zoom Out</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="pan-left">
+                      <div class="i2v-effect-icon"><i class="fas fa-arrow-left"></i></div>
+                      <span>Pan Esquerda</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="pan-right">
+                      <div class="i2v-effect-icon"><i class="fas fa-arrow-right"></i></div>
+                      <span>Pan Direita</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="pan-up">
+                      <div class="i2v-effect-icon"><i class="fas fa-arrow-up"></i></div>
+                      <span>Pan Cima</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="pan-down">
+                      <div class="i2v-effect-icon"><i class="fas fa-arrow-down"></i></div>
+                      <span>Pan Baixo</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="zoom-pan-right">
+                      <div class="i2v-effect-icon"><i class="fas fa-expand-arrows-alt"></i></div>
+                      <span>Zoom + Pan</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="rotate-zoom">
+                      <div class="i2v-effect-icon"><i class="fas fa-sync-alt"></i></div>
+                      <span>Rotacao</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="ken-burns">
+                      <div class="i2v-effect-icon"><i class="fas fa-mountain-sun"></i></div>
+                      <span>Ken Burns</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="dolly-zoom">
+                      <div class="i2v-effect-icon"><i class="fas fa-video"></i></div>
+                      <span>Dolly Zoom</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="tilt-shift">
+                      <div class="i2v-effect-icon"><i class="fas fa-ellipsis-h"></i></div>
+                      <span>Tilt Shift</span>
+                    </button>
+                    <button class="i2v-effect-card" data-effect="parallax">
+                      <div class="i2v-effect-icon"><i class="fas fa-layer-group"></i></div>
+                      <span>Parallax</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Duration & Intensity -->
+                <div class="i2v-section">
+                  <div class="i2v-section-header"><i class="fas fa-sliders-h"></i> Ajustes</div>
+                  <div class="i2v-sliders">
+                    <div class="i2v-slider-group">
+                      <div class="i2v-slider-label">
+                        <span>Duracao</span>
+                        <span class="i2v-slider-val" id="i2vDurationVal">5s</span>
+                      </div>
+                      <input type="range" id="i2vDuration" min="2" max="15" value="5" step="1">
+                    </div>
+                    <div class="i2v-slider-group">
+                      <div class="i2v-slider-label">
+                        <span>Intensidade</span>
+                        <span class="i2v-slider-val" id="i2vIntensityVal">5</span>
+                      </div>
+                      <input type="range" id="i2vIntensity" min="1" max="10" value="5" step="1">
+                    </div>
+                    <div class="i2v-slider-group">
+                      <div class="i2v-slider-label">
+                        <span>FPS</span>
+                        <span class="i2v-slider-val" id="i2vFpsVal">30</span>
+                      </div>
+                      <input type="range" id="i2vFps" min="15" max="60" value="30" step="5">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Text Overlay -->
+                <div class="i2v-section">
+                  <div class="i2v-section-header"><i class="fas fa-font"></i> Texto / Legenda</div>
+                  <input type="text" id="i2vCaption" class="i2v-text-input" placeholder="Adicione um texto sobre o video..." maxlength="120">
+                  <div class="i2v-caption-options">
+                    <div class="i2v-caption-row">
+                      <label>Posicao</label>
+                      <div class="i2v-pos-pills">
+                        <button class="i2v-pos-pill" data-pos="top"><i class="fas fa-arrow-up"></i></button>
+                        <button class="i2v-pos-pill active" data-pos="bottom"><i class="fas fa-arrow-down"></i></button>
+                        <button class="i2v-pos-pill" data-pos="center"><i class="fas fa-align-center"></i></button>
+                      </div>
+                    </div>
+                    <div class="i2v-caption-row">
+                      <label>Estilo</label>
+                      <div class="i2v-style-pills">
+                        <button class="i2v-style-pill active" data-style="modern">Modern</button>
+                        <button class="i2v-style-pill" data-style="bold">Bold</button>
+                        <button class="i2v-style-pill" data-style="neon">Neon</button>
+                        <button class="i2v-style-pill" data-style="minimal">Minimal</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="i2v-section">
+                  <div class="i2v-section-header"><i class="fas fa-palette"></i> Filtro de Cor</div>
+                  <div class="i2v-filter-grid">
+                    <button class="i2v-filter-btn active" data-filter="none">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#333,#666)"></div>
+                      <span>Original</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="cinematic">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#1a1a2e,#e94560)"></div>
+                      <span>Cinema</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="warm">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#f4845f,#f7dc6f)"></div>
+                      <span>Warm</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="cool">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#2193b0,#6dd5ed)"></div>
+                      <span>Cool</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="vintage">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#c9b18c,#8b7355)"></div>
+                      <span>Vintage</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="bw">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#000,#fff)"></div>
+                      <span>P&B</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="dramatic">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#0c0c0c,#6a0572)"></div>
+                      <span>Drama</span>
+                    </button>
+                    <button class="i2v-filter-btn" data-filter="vibrant">
+                      <div class="i2v-filter-preview" style="background: linear-gradient(135deg,#ff6b6b,#4ecdc4)"></div>
+                      <span>Vibrant</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Generate -->
+                <div class="i2v-generate-section">
+                  <button class="i2v-generate-btn" id="i2vGenerateBtn">
+                    <i class="fas fa-video"></i> Gerar Video
+                  </button>
+                  <div class="i2v-progress" id="i2vProgress" style="display:none;">
+                    <div class="i2v-progress-bar"><div class="i2v-progress-fill" id="i2vProgressFill"></div></div>
+                    <span class="i2v-progress-text" id="i2vProgressText">0%</span>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
 
-          <!-- Result area -->
+          <!-- Step 3: Result + Editor -->
           <div class="i2v-result" id="i2vResult" style="display:none;">
-            <div class="i2v-label">Video Gerado</div>
-            <video id="i2vResultVideo" controls loop></video>
-            <div class="i2v-result-actions">
-              <a id="i2vDownloadBtn" class="i2v-btn generate" download="image-to-video.webm"><i class="fas fa-download"></i> Download</a>
-              <button class="i2v-btn reset" id="i2vNewBtn"><i class="fas fa-plus"></i> Novo Video</button>
+            <div class="i2v-result-layout">
+              <div class="i2v-result-video-wrap">
+                <video id="i2vResultVideo" controls loop></video>
+              </div>
+              <div class="i2v-result-sidebar">
+                <h3><i class="fas fa-check-circle"></i> Video Gerado!</h3>
+                <div class="i2v-result-info">
+                  <div class="i2v-info-row"><span>Efeito</span><span id="i2vResultEffect">—</span></div>
+                  <div class="i2v-info-row"><span>Duracao</span><span id="i2vResultDuration">—</span></div>
+                  <div class="i2v-info-row"><span>Resolucao</span><span id="i2vResultRes">—</span></div>
+                  <div class="i2v-info-row"><span>Formato</span><span>WebM</span></div>
+                </div>
+                <div class="i2v-result-actions">
+                  <a id="i2vDownloadBtn" class="i2v-action-btn primary" download="image-to-video.webm"><i class="fas fa-download"></i> Download</a>
+                  <button class="i2v-action-btn secondary" id="i2vEditAgainBtn"><i class="fas fa-edit"></i> Editar Novamente</button>
+                  <button class="i2v-action-btn outline" id="i2vNewBtn"><i class="fas fa-plus"></i> Nova Imagem</button>
+                </div>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
