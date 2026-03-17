@@ -14,7 +14,7 @@ const ALLOWED_ORIGIN = '*';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, hf-api-key, hf-secret',
   'Access-Control-Max-Age': '86400',
 };
 
@@ -107,6 +107,10 @@ export default {
     headers.set('Content-Type', request.headers.get('Content-Type') || 'application/json');
     const auth = request.headers.get('Authorization');
     if (auth) headers.set('Authorization', auth);
+    const hfKey = request.headers.get('hf-api-key');
+    const hfSecret = request.headers.get('hf-secret');
+    if (hfKey) headers.set('hf-api-key', hfKey);
+    if (hfSecret) headers.set('hf-secret', hfSecret);
 
     const fetchOptions = { method: request.method, headers };
     let requestBody = null;

@@ -1215,23 +1215,41 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
   if (!modelInfo) return null;
 
   const aspectRatio = getHiggsfieldAspectRatio(w, h);
-  const authHeader = { 'Content-Type': 'application/json', 'Authorization': `Key ${credentials}` };
 
-  // Try multiple endpoint formats since Higgsfield API docs are sparse
+  // Parse credentials into apiKey and apiSecret
+  const [apiKey, apiSecret] = credentials.includes(':') ? credentials.split(':', 2) : [credentials, ''];
+
+  // Dimension string for V1 API (e.g. "1024x1024")
+  const dimStr = `${w}x${h}`;
+
+  // Try multiple endpoint + auth + body formats
   const endpointAttempts = [
-    { path: `/v1/text2image/${modelInfo.model}`, body: { prompt, aspect_ratio: aspectRatio, width: w, height: h } },
-    { path: `/${modelInfo.model}/text-to-image`, body: { input: { prompt, aspect_ratio: aspectRatio } } },
-    { path: '/v1/generations', body: { task: 'text-to-image', model: modelInfo.model, prompt, width: w, height: h } },
+    // V1 format: separate headers, params wrapper
+    { path: `/v1/text2image/${modelInfo.model}`,
+      headers: { 'Content-Type': 'application/json', 'hf-api-key': apiKey, 'hf-secret': apiSecret },
+      body: { params: { prompt, width_and_height: dimStr, quality: '1080p', batch_size: 1 } } },
+    // V2 format: Key auth, flat body
+    { path: `/${modelInfo.model}/text-to-image`,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Key ${credentials}` },
+      body: { prompt, aspect_ratio: aspectRatio } },
+    // V2 alt: Bearer auth
+    { path: `/${modelInfo.model}/text-to-image`,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: { prompt, aspect_ratio: aspectRatio } },
+    // V1 generations endpoint
+    { path: '/v1/generations',
+      headers: { 'Content-Type': 'application/json', 'hf-api-key': apiKey, 'hf-secret': apiSecret },
+      body: { params: { task: 'text-to-image', model: modelInfo.model, prompt, width_and_height: dimStr } } },
   ];
 
   try {
     let submitData = null;
 
     for (const attempt of endpointAttempts) {
-      console.log(`Higgsfield: tentando ${attempt.path}...`);
+      console.log(`Higgsfield: tentando ${attempt.path}...`, attempt.headers);
       const resp = await higgsFetch(attempt.path, {
         method: 'POST',
-        headers: authHeader,
+        headers: attempt.headers,
         body: JSON.stringify(attempt.body)
       });
 
@@ -1288,13 +1306,14 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
     while (Date.now() - startTime < maxPollTime) {
       await delay(pollInterval);
 
+      const pollHeaders = { 'Authorization': `Key ${credentials}`, 'hf-api-key': apiKey, 'hf-secret': apiSecret };
       const statusResponse = await higgsFetch(`/requests/${requestId}/status`, {
-        headers: authHeader
+        headers: pollHeaders
       });
 
       if (!statusResponse.ok) {
         // Also try alternative poll endpoint
-        const altResp = await higgsFetch(`/v1/generations/${requestId}`, { headers: authHeader });
+        const altResp = await higgsFetch(`/v1/generations/${requestId}`, { headers: pollHeaders });
         if (altResp.ok) {
           const altData = await altResp.json();
           const altUrl = altData.output?.url || altData.result?.url || altData.url
