@@ -57,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMoodboard();
   initStoryboard();
   initImageToVideo();
+  initTrash();
   initGoogleAuth();
 });
 
@@ -135,7 +136,7 @@ function switchTab(tab) {
   enhanceBtn.style.display = isGenTab ? '' : 'none';
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
-  if (['gallery', 'history', 'storyboard'].includes(tab)) {
+  if (['gallery', 'history', 'storyboard', 'trash'].includes(tab)) {
     bottomBar.style.display = 'none';
   } else {
     bottomBar.style.display = '';
@@ -143,8 +144,10 @@ function switchTab(tab) {
   // Show/hide shared bottom row for generation tabs
   const sharedRow = document.getElementById('sharedBottomRow');
   if (sharedRow) {
-    sharedRow.style.display = ['gallery', 'history', 'storyboard'].includes(tab) ? 'none' : '';
+    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash'].includes(tab) ? 'none' : '';
   }
+  // Render trash when switching to it
+  if (tab === 'trash') renderTrash();
   // Show/hide ratio pills (only for image, video, moodboard)
   const ratioGroup = document.getElementById('ratioGroup');
   if (ratioGroup) {
@@ -4051,9 +4054,10 @@ function googleLogout() {
 
 let galleryDB = null;
 const GALLERY_DB_NAME = 'AIStudioGallery';
-const GALLERY_DB_VERSION = 2;
+const GALLERY_DB_VERSION = 3;
 const GALLERY_STORE = 'items';
 const HISTORY_STORE = 'history';
+const TRASH_STORE = 'trash';
 
 function openGalleryDB() {
   return new Promise((resolve, reject) => {
@@ -4070,6 +4074,11 @@ function openGalleryDB() {
         const hStore = db.createObjectStore(HISTORY_STORE, { keyPath: 'id', autoIncrement: true });
         hStore.createIndex('type', 'type', { unique: false });
         hStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(TRASH_STORE)) {
+        const tStore = db.createObjectStore(TRASH_STORE, { keyPath: 'trashId', autoIncrement: true });
+        tStore.createIndex('type', 'type', { unique: false });
+        tStore.createIndex('deletedAt', 'deletedAt', { unique: false });
       }
     };
     req.onsuccess = (e) => { galleryDB = e.target.result; resolve(galleryDB); };
@@ -4120,25 +4129,102 @@ async function deleteGalleryItem(id) {
   });
 }
 
-async function clearGallery(type) {
+// --- Trash System ---
+async function moveToTrash(id) {
   const db = await openGalleryDB();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(GALLERY_STORE, 'readwrite');
-    const store = tx.objectStore(GALLERY_STORE);
-    if (!type || type === 'all') {
-      store.clear();
-      tx.oncomplete = () => resolve();
-    } else {
-      const idx = store.index('type');
-      const req = idx.openCursor(type);
-      req.onsuccess = (e) => {
-        const cursor = e.target.result;
-        if (cursor) { cursor.delete(); cursor.continue(); }
-      };
-      tx.oncomplete = () => resolve();
-    }
+    const tx = db.transaction([GALLERY_STORE, TRASH_STORE], 'readwrite');
+    const galleryStore = tx.objectStore(GALLERY_STORE);
+    const trashStore = tx.objectStore(TRASH_STORE);
+    const getReq = galleryStore.get(id);
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if (!item) { resolve(); return; }
+      item.deletedAt = Date.now();
+      item.originalId = item.id;
+      delete item.id;
+      trashStore.add(item);
+      galleryStore.delete(id);
+    };
+    tx.oncomplete = () => resolve();
     tx.onerror = (e) => reject(e.target.error);
   });
+}
+
+async function getTrashItems(type) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE, 'readonly');
+    const store = tx.objectStore(TRASH_STORE);
+    let req;
+    if (type && type !== 'all') {
+      req = store.index('type').getAll(type);
+    } else {
+      req = store.getAll();
+    }
+    req.onsuccess = () => {
+      const items = req.result.sort((a, b) => b.deletedAt - a.deletedAt);
+      resolve(items);
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function restoreFromTrash(trashId) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([GALLERY_STORE, TRASH_STORE], 'readwrite');
+    const galleryStore = tx.objectStore(GALLERY_STORE);
+    const trashStore = tx.objectStore(TRASH_STORE);
+    const getReq = trashStore.get(trashId);
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if (!item) { resolve(); return; }
+      delete item.trashId;
+      delete item.deletedAt;
+      delete item.originalId;
+      galleryStore.add(item);
+      trashStore.delete(trashId);
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function permanentDeleteTrash(trashId) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE, 'readwrite');
+    tx.objectStore(TRASH_STORE).delete(trashId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function clearTrash() {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(TRASH_STORE, 'readwrite');
+    tx.objectStore(TRASH_STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function restoreAllTrash() {
+  const items = await getTrashItems();
+  for (const item of items) {
+    await restoreFromTrash(item.trashId);
+  }
+}
+
+async function clearGallery(type) {
+  // Move all items to trash instead of deleting
+  const items = await getGalleryItems(type);
+  for (const item of items) {
+    await moveToTrash(item.id);
+  }
+  return Promise.resolve();
 }
 
 // Save helpers for each content type
@@ -4212,10 +4298,10 @@ function initGallery() {
 
   // Clear button
   document.getElementById('galleryClearBtn')?.addEventListener('click', async () => {
-    if (!confirm('Limpar toda a galeria? Esta acao nao pode ser desfeita.')) return;
+    if (!confirm('Mover todos os itens para a lixeira?')) return;
     await clearGallery(galleryCurrentFilter);
     renderGallery();
-    showToast('Galeria limpa', 'success');
+    showToast('Itens movidos para lixeira', 'success');
   });
 
   // Preview close
@@ -4283,12 +4369,12 @@ async function renderGallery() {
       // Delete button
       card.querySelector('.gallery-card-delete').addEventListener('click', async (e) => {
         e.stopPropagation();
-        await deleteGalleryItem(item.id);
+        await moveToTrash(item.id);
         card.remove();
         const remaining = grid.querySelectorAll('.gallery-card').length;
         countEl.textContent = `${remaining} ${remaining === 1 ? 'item' : 'itens'}`;
         if (remaining === 0) { grid.style.display = 'none'; empty.style.display = ''; }
-        showToast('Item excluido', 'success');
+        showToast('Item movido para lixeira', 'success');
       });
 
       // Open preview
@@ -4351,10 +4437,10 @@ function closeGalleryPreview() {
 }
 
 async function deleteAndClosePreview(id) {
-  await deleteGalleryItem(id);
+  await moveToTrash(id);
   closeGalleryPreview();
   renderGallery();
-  showToast('Item excluido', 'success');
+  showToast('Item movido para lixeira', 'success');
 }
 
 async function downloadGalleryItem(id) {
@@ -4385,6 +4471,126 @@ function copyGalleryText(btn) {
   if (textEl) {
     navigator.clipboard.writeText(textEl.textContent).then(() => showToast('Texto copiado!', 'success'));
   }
+}
+
+// === TRASH TAB ===
+let trashCurrentFilter = 'all';
+
+async function renderTrash(filterType) {
+  const type = filterType || trashCurrentFilter;
+  trashCurrentFilter = type;
+  const grid = document.getElementById('trashGrid');
+  const empty = document.getElementById('trashEmpty');
+  const countEl = document.getElementById('trashCount');
+  if (!grid) return;
+
+  try {
+    const items = await getTrashItems(type);
+    countEl.textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
+
+    if (items.length === 0) {
+      grid.style.display = 'none';
+      empty.style.display = '';
+      return;
+    }
+
+    grid.style.display = '';
+    empty.style.display = 'none';
+    grid.innerHTML = '';
+
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'gallery-card';
+      card.dataset.trashId = item.trashId;
+
+      const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto' };
+      const timeStr = new Date(item.deletedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const promptSnippet = (item.prompt || '').substring(0, 60) + ((item.prompt || '').length > 60 ? '...' : '');
+
+      let thumbHTML = '';
+      if (item.type === 'image' && item.data instanceof Blob) {
+        const url = URL.createObjectURL(item.data);
+        thumbHTML = `<img src="${url}" alt="Image" loading="lazy">`;
+      } else if (item.type === 'video') {
+        thumbHTML = `<i class="fas fa-play-circle thumb-icon"></i>`;
+      } else if (item.type === 'audio') {
+        thumbHTML = `<i class="fas fa-volume-up thumb-icon"></i>`;
+      } else if (item.type === 'text') {
+        const preview = (typeof item.data === 'string' ? item.data : '').substring(0, 100);
+        thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${preview}</div>`;
+      }
+
+      card.innerHTML = `
+        <span class="gallery-card-badge type-${item.type}">${typeLabels[item.type]}</span>
+        <div class="trash-card-actions">
+          <button class="trash-restore-btn" title="Recuperar"><i class="fas fa-undo"></i></button>
+          <button class="trash-delete-btn" title="Excluir permanentemente"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="gallery-card-thumb">${thumbHTML}</div>
+        <div class="gallery-card-info">
+          <div class="gallery-card-prompt">${promptSnippet || 'Sem prompt'}</div>
+          <div class="gallery-card-meta">
+            <span>${item.provider || ''}</span>
+            <span>Excluido: ${timeStr}</span>
+          </div>
+        </div>
+      `;
+
+      // Restore button
+      card.querySelector('.trash-restore-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await restoreFromTrash(item.trashId);
+        card.remove();
+        const remaining = grid.querySelectorAll('.gallery-card').length;
+        countEl.textContent = `${remaining} ${remaining === 1 ? 'item' : 'itens'}`;
+        if (remaining === 0) { grid.style.display = 'none'; empty.style.display = ''; }
+        showToast('Item recuperado para galeria', 'success');
+      });
+
+      // Permanent delete button
+      card.querySelector('.trash-delete-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm('Excluir permanentemente? Esta acao nao pode ser desfeita.')) return;
+        await permanentDeleteTrash(item.trashId);
+        card.remove();
+        const remaining = grid.querySelectorAll('.gallery-card').length;
+        countEl.textContent = `${remaining} ${remaining === 1 ? 'item' : 'itens'}`;
+        if (remaining === 0) { grid.style.display = 'none'; empty.style.display = ''; }
+        showToast('Item excluido permanentemente', 'success');
+      });
+
+      grid.appendChild(card);
+    });
+  } catch (e) {
+    console.error('Trash render error:', e);
+  }
+}
+
+function initTrash() {
+  // Filter buttons
+  document.querySelectorAll('#tabTrash .gallery-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tabTrash .gallery-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderTrash(btn.dataset.filter);
+    });
+  });
+
+  // Clear all trash
+  document.getElementById('trashClearBtn')?.addEventListener('click', async () => {
+    if (!confirm('Esvaziar lixeira? Todos os itens serao excluidos permanentemente.')) return;
+    await clearTrash();
+    renderTrash();
+    showToast('Lixeira esvaziada', 'success');
+  });
+
+  // Restore all
+  document.getElementById('trashRestoreAllBtn')?.addEventListener('click', async () => {
+    if (!confirm('Recuperar todos os itens da lixeira para a galeria?')) return;
+    await restoreAllTrash();
+    renderTrash();
+    showToast('Todos os itens recuperados', 'success');
+  });
 }
 
 // === MOODBOARD FILES PANEL ===

@@ -44,6 +44,7 @@
         <a href="#" class="topbar-link" data-tab="storyboard"><i class="fas fa-book-open"></i> Story Board</a>
         <a href="#" class="topbar-link" data-tab="gallery"><i class="fas fa-th-large"></i> Galeria</a>
         <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Historico</a>
+        <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i></a>
       </nav>
       <div class="topbar-actions">
         <a href="#" class="topbar-action-link" onclick="openApiKeyModal(); return false;" title="Configuracoes">
@@ -641,6 +642,39 @@
           </div>
           <h3>Historico vazio</h3>
           <p>Suas geracoes aparecerão aqui automaticamente</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRASH Tab -->
+    <div class="tab-content" id="tabTrash">
+      <div class="gallery-workspace">
+        <div class="gallery-toolbar">
+          <div class="gallery-filters">
+            <button class="gallery-filter active" data-filter="all"><i class="fas fa-trash"></i> Todos</button>
+            <button class="gallery-filter" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
+            <button class="gallery-filter" data-filter="video"><i class="fas fa-video"></i> Videos</button>
+            <button class="gallery-filter" data-filter="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="gallery-filter" data-filter="text"><i class="fas fa-font"></i> Textos</button>
+          </div>
+          <div class="gallery-actions">
+            <span class="gallery-count" id="trashCount">0 itens</span>
+            <button class="gallery-action-btn" id="trashRestoreAllBtn" title="Recuperar tudo" style="color:#4caf50;">
+              <i class="fas fa-undo"></i>
+            </button>
+            <button class="gallery-action-btn gallery-delete-all" id="trashClearBtn" title="Esvaziar lixeira">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="gallery-grid" id="trashGrid"></div>
+        <div class="gallery-empty" id="trashEmpty">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-trash"></i>
+          </div>
+          <h3>Lixeira vazia</h3>
+          <p>Itens excluidos aparecerão aqui e podem ser recuperados</p>
         </div>
       </div>
     </div>
