@@ -1201,11 +1201,11 @@ function showHiggsfieldImporter(modelName) {
 
   const widget = document.createElement('div');
   widget.id = 'higgsfieldImporter';
-  widget.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #c8ff00;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(200,255,0,0.15);font-family:inherit;';
+  widget.style.cssText = 'position:fixed;top:70px;left:20px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #c8ff00;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(200,255,0,0.15);font-family:inherit;';
   widget.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div id="higgsDragHandle" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:grab;user-select:none;">
       <span style="color:#c8ff00;font-weight:700;font-size:0.9rem;"><i class="fas fa-star"></i> Importar do Higgsfield</span>
-      <button onclick="document.getElementById('higgsfieldImporter').remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
+      <button onclick="event.stopPropagation();document.getElementById('higgsfieldImporter').remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
     </div>
     <div id="higgsDropZone" style="border:2px dashed #c8ff0055;border-radius:12px;padding:24px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
       <i class="fas fa-paste" style="font-size:1.8rem;color:#c8ff00;margin-bottom:8px;display:block;"></i>
@@ -1232,6 +1232,57 @@ function showHiggsfieldImporter(modelName) {
     </div>
   `;
   document.body.appendChild(widget);
+
+  // Drag functionality
+  const dragHandle = document.getElementById('higgsDragHandle');
+  let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+  dragHandle.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    isDragging = true;
+    dragOffsetX = e.clientX - widget.getBoundingClientRect().left;
+    dragOffsetY = e.clientY - widget.getBoundingClientRect().top;
+    dragHandle.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    let newX = e.clientX - dragOffsetX;
+    let newY = e.clientY - dragOffsetY;
+    // Keep within viewport
+    newX = Math.max(0, Math.min(newX, window.innerWidth - widget.offsetWidth));
+    newY = Math.max(0, Math.min(newY, window.innerHeight - widget.offsetHeight));
+    widget.style.left = newX + 'px';
+    widget.style.top = newY + 'px';
+    widget.style.right = 'auto';
+    widget.style.bottom = 'auto';
+  });
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      dragHandle.style.cursor = 'grab';
+    }
+  });
+  // Touch support for mobile
+  dragHandle.addEventListener('touchstart', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    isDragging = true;
+    const touch = e.touches[0];
+    dragOffsetX = touch.clientX - widget.getBoundingClientRect().left;
+    dragOffsetY = touch.clientY - widget.getBoundingClientRect().top;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    let newX = touch.clientX - dragOffsetX;
+    let newY = touch.clientY - dragOffsetY;
+    newX = Math.max(0, Math.min(newX, window.innerWidth - widget.offsetWidth));
+    newY = Math.max(0, Math.min(newY, window.innerHeight - widget.offsetHeight));
+    widget.style.left = newX + 'px';
+    widget.style.top = newY + 'px';
+    widget.style.right = 'auto';
+    widget.style.bottom = 'auto';
+  }, { passive: true });
+  document.addEventListener('touchend', () => { isDragging = false; });
 
   const dropZone = document.getElementById('higgsDropZone');
   const fileInput = document.getElementById('higgsFileInput');
