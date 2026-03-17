@@ -1222,24 +1222,14 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
   // Dimension string for V1 API (e.g. "1024x1024")
   const dimStr = `${w}x${h}`;
 
-  // Try multiple endpoint + auth + body formats
+  // V1 auth headers (confirmed working)
+  const v1Headers = { 'Content-Type': 'application/json', 'hf-api-key': apiKey, 'hf-secret': apiSecret };
+
+  // V1 format confirmed: /v1/text2image/{model} with { params: {...} }
   const endpointAttempts = [
-    // V1 format: separate headers, params wrapper
     { path: `/v1/text2image/${modelInfo.model}`,
-      headers: { 'Content-Type': 'application/json', 'hf-api-key': apiKey, 'hf-secret': apiSecret },
-      body: { params: { prompt, width_and_height: dimStr, quality: '1080p', batch_size: 1 } } },
-    // V2 format: Key auth, flat body
-    { path: `/${modelInfo.model}/text-to-image`,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Key ${credentials}` },
-      body: { prompt, aspect_ratio: aspectRatio } },
-    // V2 alt: Bearer auth
-    { path: `/${modelInfo.model}/text-to-image`,
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: { prompt, aspect_ratio: aspectRatio } },
-    // V1 generations endpoint
-    { path: '/v1/generations',
-      headers: { 'Content-Type': 'application/json', 'hf-api-key': apiKey, 'hf-secret': apiSecret },
-      body: { params: { task: 'text-to-image', model: modelInfo.model, prompt, width_and_height: dimStr } } },
+      headers: v1Headers,
+      body: { params: { prompt, width_and_height: dimStr, quality: '1080p', batch_size: 1, input_images: [] } } },
   ];
 
   try {
@@ -1265,21 +1255,17 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
         }
       }
 
-      // If 401/403 = wrong credentials, stop trying
+      // Handle specific errors
       if (resp.status === 401 || resp.status === 403) {
         throw new Error(`Credenciais invalidas (${resp.status}). Verifique KEY_ID:KEY_SECRET`);
       }
-      // If 404 = wrong endpoint, try next
-      if (resp.status === 404) continue;
-      // If 400 = wrong body format but right endpoint
-      if (resp.status === 400) {
-        let errDetail;
-        try { errDetail = JSON.parse(respText); } catch { errDetail = respText; }
-        console.log('Higgsfield 400 detail:', errDetail);
-        continue;
+      if (resp.status === 422 || resp.status === 400) {
+        console.log(`Higgsfield ${resp.status} detail:`, respText);
+        throw new Error(`Formato invalido (${resp.status}): ${respText.slice(0, 200)}`);
       }
-      // 500 = server error, try next
-      if (resp.status >= 500) continue;
+      if (resp.status === 404) {
+        throw new Error(`Modelo "${modelInfo.model}" nao encontrado (404)`);
+      }
     }
 
     if (!submitData) {
@@ -1306,7 +1292,7 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
     while (Date.now() - startTime < maxPollTime) {
       await delay(pollInterval);
 
-      const pollHeaders = { 'Authorization': `Key ${credentials}`, 'hf-api-key': apiKey, 'hf-secret': apiSecret };
+      const pollHeaders = { 'hf-api-key': apiKey, 'hf-secret': apiSecret };
       const statusResponse = await higgsFetch(`/requests/${requestId}/status`, {
         headers: pollHeaders
       });
