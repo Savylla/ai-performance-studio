@@ -1216,7 +1216,8 @@ function showHiggsfieldImporter(modelName) {
       </div>
       <input type="file" id="higgsFileInput" accept="image/*" style="display:none;">
     </div>
-    <div id="higgsPromptRow" style="margin-top:10px;">
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+      <input type="text" id="higgsImportModel" class="input-field" value="${modelName}" placeholder="Modelo (ex: Nano Banana)" style="font-size:0.8rem;padding:6px 10px;">
       <input type="text" id="higgsImportPrompt" class="input-field" placeholder="Prompt usado (opcional)" style="font-size:0.8rem;padding:6px 10px;">
     </div>
     <div id="higgsPreview" style="display:none;margin-top:10px;text-align:center;">
@@ -1316,7 +1317,8 @@ function showHiggsfieldImporter(modelName) {
   document.getElementById('higgsSaveBtn').addEventListener('click', async () => {
     if (!importedBlob) return;
     const prompt = document.getElementById('higgsImportPrompt').value.trim() || 'Higgsfield generation';
-    const provider = `Higgsfield ${modelName}`;
+    const importModel = document.getElementById('higgsImportModel').value.trim() || modelName;
+    const provider = `Higgsfield ${importModel}`;
     const imgUrl = URL.createObjectURL(importedBlob);
 
     // Save to gallery
