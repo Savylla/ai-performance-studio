@@ -1179,13 +1179,13 @@ async function generateWithHuggingFace(prompt, provider, w, h) {
 
 // --- Higgsfield Image ---
 const HIGGSFIELD_IMAGE_MODELS = {
-  'higgs-nano-banana': { endpoint: '/v1/text2image/nano-banana', name: 'Nano Banana' },
-  'higgs-soul': { endpoint: '/v1/text2image/soul', name: 'Higgsfield Soul' },
-  'higgs-seedream': { endpoint: '/v1/text2image/seedream', name: 'Seedream 4.0' },
-  'higgs-gpt-image': { endpoint: '/v1/text2image/gpt-image', name: 'GPT Image 1.5' },
-  'higgs-z-image': { endpoint: '/v1/text2image/z-image', name: 'Z-Image' },
-  'higgs-kling-o1': { endpoint: '/v1/text2image/kling', name: 'Kling O1' },
-  'higgs-flux2-pro': { endpoint: '/v1/text2image/flux.2-pro', name: 'FLUX.2 Pro' }
+  'higgs-nano-banana': { model: 'nano-banana', name: 'Nano Banana' },
+  'higgs-soul': { model: 'soul', name: 'Higgsfield Soul' },
+  'higgs-seedream': { model: 'seedream', name: 'Seedream 4.0' },
+  'higgs-gpt-image': { model: 'gpt-image-1.5', name: 'GPT Image 1.5' },
+  'higgs-z-image': { model: 'z-image', name: 'Z-Image' },
+  'higgs-kling-o1': { model: 'kling-o1', name: 'Kling O1' },
+  'higgs-flux2-pro': { model: 'flux.2-pro', name: 'FLUX.2 Pro' }
 };
 
 function getHiggsfieldAspectRatio(w, h) {
@@ -1215,74 +1215,121 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
   if (!modelInfo) return null;
 
   const aspectRatio = getHiggsfieldAspectRatio(w, h);
+  const authHeader = { 'Content-Type': 'application/json', 'Authorization': `Key ${credentials}` };
+
+  // Try multiple endpoint formats since Higgsfield API docs are sparse
+  const endpointAttempts = [
+    { path: `/v1/text2image/${modelInfo.model}`, body: { prompt, aspect_ratio: aspectRatio, width: w, height: h } },
+    { path: `/${modelInfo.model}/text-to-image`, body: { input: { prompt, aspect_ratio: aspectRatio } } },
+    { path: '/v1/generations', body: { task: 'text-to-image', model: modelInfo.model, prompt, width: w, height: h } },
+  ];
 
   try {
-    // Submit generation request via proxy
-    const submitResponse = await higgsFetch(modelInfo.endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Key ${credentials}`
-      },
-      body: JSON.stringify({
-        input: {
-          prompt: prompt,
-          aspect_ratio: aspectRatio,
-          width: w,
-          height: h
-        }
-      })
-    });
+    let submitData = null;
 
-    if (!submitResponse.ok) {
-      const errText = await submitResponse.text();
-      let errMsg;
-      try { errMsg = JSON.parse(errText).message || JSON.parse(errText).error; } catch { errMsg = errText; }
-      throw new Error(errMsg || `HTTP ${submitResponse.status}`);
+    for (const attempt of endpointAttempts) {
+      console.log(`Higgsfield: tentando ${attempt.path}...`);
+      const resp = await higgsFetch(attempt.path, {
+        method: 'POST',
+        headers: authHeader,
+        body: JSON.stringify(attempt.body)
+      });
+
+      const respText = await resp.text();
+      console.log(`Higgsfield ${attempt.path}: ${resp.status} - ${respText.slice(0, 500)}`);
+
+      if (resp.ok) {
+        try { submitData = JSON.parse(respText); } catch { submitData = null; }
+        if (submitData) {
+          console.log('Higgsfield: endpoint encontrado!', attempt.path);
+          break;
+        }
+      }
+
+      // If 401/403 = wrong credentials, stop trying
+      if (resp.status === 401 || resp.status === 403) {
+        throw new Error(`Credenciais invalidas (${resp.status}). Verifique KEY_ID:KEY_SECRET`);
+      }
+      // If 404 = wrong endpoint, try next
+      if (resp.status === 404) continue;
+      // If 400 = wrong body format but right endpoint
+      if (resp.status === 400) {
+        let errDetail;
+        try { errDetail = JSON.parse(respText); } catch { errDetail = respText; }
+        console.log('Higgsfield 400 detail:', errDetail);
+        continue;
+      }
+      // 500 = server error, try next
+      if (resp.status >= 500) continue;
     }
 
-    const submitData = await submitResponse.json();
-    const requestId = submitData.id || submitData.request_id;
-    if (!requestId) throw new Error('No request ID returned');
+    if (!submitData) {
+      throw new Error('Nenhum endpoint funcionou. Abra o Console (F12) para ver detalhes dos erros.');
+    }
 
-    showToast(`Higgsfield: geracao iniciada (ID: ${requestId.slice(0,8)}...). Aguardando...`, 'success');
+    const requestId = submitData.id || submitData.request_id || submitData.requestId;
+    if (!requestId) {
+      console.log('Higgsfield response (no ID):', JSON.stringify(submitData));
+      // Maybe the response already contains the image
+      const directUrl = submitData.output?.url || submitData.url || submitData.image_url
+        || submitData.data?.[0]?.url || submitData.result?.url;
+      if (directUrl) return { url: directUrl };
+      throw new Error('Resposta sem ID e sem imagem. Veja Console (F12).');
+    }
+
+    showToast(`Higgsfield: geracao iniciada! Aguardando resultado...`, 'success');
 
     // Poll for completion
-    const maxPollTime = 300000; // 5 min
-    const pollInterval = 4000; // 4 sec
+    const maxPollTime = 300000;
+    const pollInterval = 4000;
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxPollTime) {
       await delay(pollInterval);
 
       const statusResponse = await higgsFetch(`/requests/${requestId}/status`, {
-        headers: { 'Authorization': `Key ${credentials}` }
+        headers: authHeader
       });
 
-      if (!statusResponse.ok) continue;
+      if (!statusResponse.ok) {
+        // Also try alternative poll endpoint
+        const altResp = await higgsFetch(`/v1/generations/${requestId}`, { headers: authHeader });
+        if (altResp.ok) {
+          const altData = await altResp.json();
+          const altUrl = altData.output?.url || altData.result?.url || altData.url
+            || altData.data?.[0]?.url || altData.image_url;
+          if (altUrl) return { url: altUrl };
+          if (altData.status === 'completed') {
+            console.log('Higgsfield alt poll completed:', JSON.stringify(altData));
+          }
+        }
+        continue;
+      }
+
       const statusData = await statusResponse.json();
+      console.log('Higgsfield poll:', JSON.stringify(statusData).slice(0, 300));
       const status = statusData.status || statusData.jobs?.[0]?.status;
 
       if (status === 'completed') {
         const imageUrl = statusData.jobs?.[0]?.results?.raw?.url
-          || statusData.output?.url
-          || statusData.result?.url
-          || statusData.url;
+          || statusData.output?.url || statusData.result?.url
+          || statusData.url || statusData.data?.[0]?.url;
         if (imageUrl) return { url: imageUrl };
-        throw new Error('Completed but no image URL found');
+        console.log('Higgsfield completed full response:', JSON.stringify(statusData));
+        throw new Error('Completo mas sem URL de imagem. Veja Console (F12).');
       }
 
       if (status === 'failed') {
-        const failMsg = statusData.jobs?.[0]?.error || statusData.error || 'Generation failed';
+        const failMsg = statusData.jobs?.[0]?.error || statusData.error || 'Geracao falhou';
         throw new Error(failMsg);
       }
-      if (status === 'nsfw') throw new Error('Content rejected by moderation (NSFW)');
+      if (status === 'nsfw') throw new Error('Conteudo rejeitado por moderacao (NSFW)');
     }
 
     throw new Error('Timeout - geracao demorou mais de 5 minutos');
   } catch (e) {
     console.warn('Higgsfield error:', e);
-    showToast(`Higgsfield erro: ${e.message}`, 'error');
+    showToast(`Higgsfield: ${e.message}`, 'error');
     return null;
   }
 }
