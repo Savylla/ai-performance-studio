@@ -846,6 +846,7 @@ async function startImageGeneration() {
         <div class="result-card-overlay">
           <button title="Download" onclick="event.stopPropagation(); downloadImage('${imgSrc}', 'ai-image-${Date.now()}.png')"><i class="fas fa-download"></i></button>
           <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+          <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
         <div class="result-card-provider">${providerLabel}</div>
       `;
@@ -1389,6 +1390,7 @@ function showHiggsfieldImporter(modelName) {
         <div class="result-card-overlay">
           <button title="Download" onclick="event.stopPropagation(); downloadImage('${imgUrl}', 'higgsfield-${Date.now()}.png')"><i class="fas fa-download"></i></button>
           <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+          <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
         <div class="result-card-provider">${provider}</div>
       `;
@@ -1567,6 +1569,7 @@ function showTikTokImporter() {
         <div class="result-card-overlay">
           <button title="Download" onclick="event.stopPropagation(); const a=document.createElement('a');a.href='${vidUrl}';a.download='tiktok-${Date.now()}.mp4';a.click();"><i class="fas fa-download"></i></button>
           <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+          <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
         <div class="result-card-provider">${provider}</div>
       `;
