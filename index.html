@@ -544,7 +544,22 @@
           <p>Descreva sua historia e a IA gera os paineis visuais automaticamente</p>
         </div>
         <div class="storyboard-controls" id="storyboardControls">
-          <textarea id="storyboardPrompt" class="storyboard-textarea" placeholder="Descreva sua historia aqui... Ex: Uma guerreira medieval encontra um dragao na floresta, eles lutam, ela vence e salva a vila." rows="3"></textarea>
+          <div class="sb-prompt-wrap">
+            <textarea id="storyboardPrompt" class="storyboard-textarea" placeholder="Descreva sua historia aqui... Ex: Uma guerreira medieval encontra um dragao na floresta, eles lutam, ela vence e salva a vila." rows="3"></textarea>
+            <button class="sb-ai-assist-btn" id="sbAiAssistBtn" title="IA Assistente - Melhora seu prompt usando IA">
+              <i class="fas fa-robot"></i> <span>IA Assistente</span>
+            </button>
+          </div>
+          <div class="sb-ai-response" id="sbAiResponse" style="display:none;">
+            <div class="sb-ai-response-header">
+              <span><i class="fas fa-robot"></i> Sugestao da IA</span>
+              <div class="sb-ai-response-actions">
+                <button class="sb-ai-use-btn" id="sbAiUseBtn" title="Usar este prompt"><i class="fas fa-check"></i> Usar</button>
+                <button class="sb-ai-close-btn" id="sbAiCloseBtn" title="Fechar"><i class="fas fa-times"></i></button>
+              </div>
+            </div>
+            <div class="sb-ai-response-content" id="sbAiContent"></div>
+          </div>
           <div class="storyboard-options">
             <div class="storyboard-option-group">
               <label>Paineis</label>

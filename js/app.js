@@ -2865,6 +2865,80 @@ function initStoryboard() {
   });
   // Generate button
   document.getElementById('storyboardGenerateBtn')?.addEventListener('click', generateStoryboard);
+
+  // AI Assistant button
+  document.getElementById('sbAiAssistBtn')?.addEventListener('click', sbAiAssist);
+  document.getElementById('sbAiUseBtn')?.addEventListener('click', () => {
+    const content = document.getElementById('sbAiContent').textContent;
+    if (content) {
+      document.getElementById('storyboardPrompt').value = content;
+      document.getElementById('sbAiResponse').style.display = 'none';
+      showToast('Prompt aplicado!', 'success');
+    }
+  });
+  document.getElementById('sbAiCloseBtn')?.addEventListener('click', () => {
+    document.getElementById('sbAiResponse').style.display = 'none';
+  });
+}
+
+async function sbAiAssist() {
+  const btn = document.getElementById('sbAiAssistBtn');
+  const currentPrompt = document.getElementById('storyboardPrompt').value.trim();
+  const panelCount = parseInt(document.querySelector('.sb-pill:not(.style-pill).active')?.dataset.panels || 4);
+  const style = document.querySelector('.sb-pill.style-pill.active')?.dataset.style || 'cinematic';
+
+  // Collect reference images captions from storyboard grid
+  const refPanels = [];
+  document.querySelectorAll('#storyboardGrid .storyboard-panel').forEach((panel, i) => {
+    const caption = panel.querySelector('.sb-panel-caption')?.textContent?.trim();
+    if (caption) refPanels.push(`Painel ${i + 1}: ${caption}`);
+  });
+
+  const styleNames = { cinematic: 'Cinematico', comic: 'Comic/HQ', anime: 'Anime', watercolor: 'Aquarela' };
+
+  let context = `Voce e um assistente criativo especialista em criar historias para storyboards visuais.
+
+TAREFA: Crie um prompt/historia DETALHADA e criativa em portugues para gerar um storyboard de ${panelCount} paineis no estilo ${styleNames[style] || style}.
+
+O prompt deve ser uma narrativa envolvente com descricoes visuais ricas que funcionem bem como cenas de um storyboard. Inclua:
+- Cenario e ambientacao
+- Personagens com descricoes visuais
+- Sequencia de acoes/eventos claros
+- Emocoes e atmosfera
+- Detalhes visuais (iluminacao, cores, angulos)
+
+IMPORTANTE: Responda APENAS com o texto do prompt/historia. Nada de explicacoes extras, titulos ou formatacao markdown.`;
+
+  if (currentPrompt) {
+    context += `\n\nO usuario ja escreveu esta ideia inicial, MELHORE e EXPANDA ela:\n"${currentPrompt}"`;
+  }
+
+  if (refPanels.length > 0) {
+    context += `\n\nImagens de referencia ja adicionadas ao storyboard:\n${refPanels.join('\n')}\n\nUse essas referencias como inspiracao para a historia.`;
+  }
+
+  if (!currentPrompt && refPanels.length === 0) {
+    context += `\n\nO usuario ainda nao escreveu nada. Crie uma historia original, criativa e visualmente interessante que funcione bem em ${panelCount} paineis no estilo ${styleNames[style] || style}.`;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Pensando...</span>';
+
+  try {
+    const result = await pollinationsText(context, 'openai');
+    if (result) {
+      document.getElementById('sbAiContent').textContent = result.trim();
+      document.getElementById('sbAiResponse').style.display = '';
+    } else {
+      showToast('IA nao retornou resposta. Tente novamente.', 'error');
+    }
+  } catch (e) {
+    console.error('SB AI Assist error:', e);
+    showToast('Erro ao consultar IA: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-robot"></i> <span>IA Assistente</span>';
+  }
 }
 
 async function generateStoryboard() {
