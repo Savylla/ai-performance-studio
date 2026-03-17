@@ -8,7 +8,8 @@ const API_KEY_NAMES = [
   'gemini_api_key', 'openrouter_api_key', 'groq_api_key',
   'together_api_key', 'huggingface_api_key', 'pexels_api_key',
   'pixabay_api_key', 'unsplash_api_key', 'freesound_api_key',
-  'higgsfield_credentials'
+  'higgsfield_credentials',
+  'higgsfield_proxy_url'
 ];
 
 function getUserId() {
@@ -794,9 +795,9 @@ async function startImageGeneration() {
     }
   }
   if (provider.startsWith('higgs-')) {
-    if (!getApiKey('higgsfield_credentials')) {
+    if (!getApiKey('higgsfield_credentials') || !getApiKey('higgsfield_proxy_url')) {
       openApiKeyModal();
-      showToast('Configure suas credenciais do Higgsfield primeiro (Key ID:Key Secret)', 'error');
+      showToast('Configure as credenciais E a URL do proxy Higgsfield nas API Keys', 'error');
       return;
     }
   }
@@ -1196,11 +1197,15 @@ function getHiggsfieldAspectRatio(w, h) {
   return '1:1';
 }
 
-const HIGGSFIELD_CORS_PROXY = 'https://corsproxy.io/?';
-const HIGGSFIELD_BASE = 'https://platform.higgsfield.ai';
+function getHiggsfieldProxyUrl() {
+  return getApiKey('higgsfield_proxy_url') || '';
+}
 
-function higgsFetch(url, options = {}) {
-  return fetch(`${HIGGSFIELD_CORS_PROXY}${encodeURIComponent(url)}`, options);
+function higgsFetch(path, options = {}) {
+  const proxyUrl = getHiggsfieldProxyUrl();
+  if (!proxyUrl) throw new Error('Configure a URL do Proxy Higgsfield nas API Keys');
+  const base = proxyUrl.replace(/\/+$/, '');
+  return fetch(`${base}${path}`, options);
 }
 
 async function generateWithHiggsfield(prompt, provider, w, h) {
@@ -1212,8 +1217,8 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
   const aspectRatio = getHiggsfieldAspectRatio(w, h);
 
   try {
-    // Submit generation request via CORS proxy
-    const submitResponse = await higgsFetch(`${HIGGSFIELD_BASE}${modelInfo.endpoint}`, {
+    // Submit generation request via proxy
+    const submitResponse = await higgsFetch(modelInfo.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1250,7 +1255,7 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
     while (Date.now() - startTime < maxPollTime) {
       await delay(pollInterval);
 
-      const statusResponse = await higgsFetch(`${HIGGSFIELD_BASE}/requests/${requestId}/status`, {
+      const statusResponse = await higgsFetch(`/requests/${requestId}/status`, {
         headers: { 'Authorization': `Key ${credentials}` }
       });
 
@@ -2960,6 +2965,16 @@ function initApiKeyModal() {
             </div>
             <a href="https://cloud.higgsfield.ai" target="_blank" style="color: #c8ff00; font-size: 0.75rem;">Pegar credenciais aqui</a>
           </div>
+          <div class="setting-group" style="margin-top:8px;">
+            <label><i class="fas fa-server" style="color: #c8ff00;"></i> Higgsfield Proxy URL <span style="color:var(--text-muted);">(Cloudflare Worker)</span></label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" class="input-field" id="higgsfieldProxyInput" placeholder="https://seu-worker.usuario.workers.dev">
+            </div>
+            <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px; line-height: 1.4;">
+              Necessario para contornar CORS. Crie gratis em <a href="https://workers.cloudflare.com" target="_blank" style="color:#c8ff00;">workers.cloudflare.com</a>
+              <br>Use o arquivo <strong>higgsfield-worker.js</strong> do repositorio como template.
+            </div>
+          </div>
         </div>
 
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
@@ -2991,7 +3006,8 @@ function initApiKeyModal() {
       pixabay_api_key: document.getElementById('pixabayKeyInput').value.trim(),
       unsplash_api_key: document.getElementById('unsplashKeyInput').value.trim(),
       freesound_api_key: document.getElementById('freesoundKeyInput').value.trim(),
-      higgsfield_credentials: document.getElementById('higgsfieldKeyInput').value.trim()
+      higgsfield_credentials: document.getElementById('higgsfieldKeyInput').value.trim(),
+      higgsfield_proxy_url: document.getElementById('higgsfieldProxyInput').value.trim()
     };
     for (const [k, v] of Object.entries(keys)) {
       setApiKey(k, v);
@@ -3024,6 +3040,7 @@ function openApiKeyModal() {
   document.getElementById('unsplashKeyInput').value = getApiKey('unsplash_api_key') || '';
   document.getElementById('freesoundKeyInput').value = getApiKey('freesound_api_key') || '';
   document.getElementById('higgsfieldKeyInput').value = getApiKey('higgsfield_credentials') || '';
+  document.getElementById('higgsfieldProxyInput').value = getApiKey('higgsfield_proxy_url') || '';
   modal.classList.add('open');
 }
 
