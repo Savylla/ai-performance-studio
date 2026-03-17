@@ -4422,6 +4422,7 @@ async function renderGallery() {
 
       card.innerHTML = `
         <span class="gallery-card-badge type-${item.type}">${typeLabels[item.type]}</span>
+        <button class="gallery-card-moodboard" title="Adicionar ao Moodboard"><i class="fas fa-palette"></i></button>
         <button class="gallery-card-delete" title="Excluir"><i class="fas fa-trash"></i></button>
         <div class="gallery-card-thumb">${thumbHTML}</div>
         <div class="gallery-card-info">
@@ -4444,6 +4445,12 @@ async function renderGallery() {
         showToast('Item movido para lixeira', 'success');
       });
 
+      // Moodboard button
+      card.querySelector('.gallery-card-moodboard').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addGalleryItemToMoodboard(item);
+      });
+
       // Open preview
       card.addEventListener('click', () => openGalleryPreview(item));
 
@@ -4454,7 +4461,30 @@ async function renderGallery() {
   }
 }
 
+let galleryPreviewCurrentItem = null;
+
+function addGalleryItemToMoodboard(item) {
+  if (!item) return;
+  if (item.type === 'image' && item.data instanceof Blob) {
+    const url = URL.createObjectURL(item.data);
+    moodboardItems.push({ type: 'image', url, photographer: item.provider || 'Galeria', id: Date.now() });
+  } else if (item.type === 'video') {
+    const url = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
+    moodboardItems.push({ type: 'video', url, provider: item.provider || 'Galeria', id: Date.now() });
+  } else if (item.type === 'audio' && item.data instanceof Blob) {
+    const url = URL.createObjectURL(item.data);
+    moodboardItems.push({ type: 'audio', url, provider: item.provider || 'Galeria', id: Date.now() });
+  } else if (item.type === 'text') {
+    const text = typeof item.data === 'string' ? item.data.substring(0, 500) : '';
+    moodboardItems.push({ type: 'note', text: `[${item.provider || 'Texto'}] ${text}`, id: Date.now() });
+  }
+  saveMoodboard();
+  renderMoodboard();
+  showToast('Adicionado ao Moodboard!', 'success');
+}
+
 function openGalleryPreview(item) {
+  galleryPreviewCurrentItem = item;
   const overlay = document.getElementById('galleryPreview');
   const mediaEl = document.getElementById('galleryPreviewMedia');
   const infoEl = document.getElementById('galleryPreviewInfo');
@@ -4490,6 +4520,7 @@ function openGalleryPreview(item) {
     </div>
     <div class="preview-actions">
       ${item.type !== 'text' ? `<button class="preview-action-btn" onclick="downloadGalleryItem(${item.id})"><i class="fas fa-download"></i> Download</button>` : `<button class="preview-action-btn" onclick="copyGalleryText(this)"><i class="fas fa-copy"></i> Copiar</button>`}
+      <button class="preview-action-btn" onclick="addGalleryItemToMoodboard(galleryPreviewCurrentItem)"><i class="fas fa-palette"></i> Moodboard</button>
       <button class="preview-action-btn btn-delete" onclick="deleteAndClosePreview(${item.id})"><i class="fas fa-trash"></i> Excluir</button>
     </div>
   `;
