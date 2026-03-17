@@ -1196,6 +1196,13 @@ function getHiggsfieldAspectRatio(w, h) {
   return '1:1';
 }
 
+const HIGGSFIELD_CORS_PROXY = 'https://corsproxy.io/?';
+const HIGGSFIELD_BASE = 'https://platform.higgsfield.ai';
+
+function higgsFetch(url, options = {}) {
+  return fetch(`${HIGGSFIELD_CORS_PROXY}${encodeURIComponent(url)}`, options);
+}
+
 async function generateWithHiggsfield(prompt, provider, w, h) {
   const credentials = getApiKey('higgsfield_credentials');
   if (!credentials) return null;
@@ -1205,8 +1212,8 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
   const aspectRatio = getHiggsfieldAspectRatio(w, h);
 
   try {
-    // Submit generation request
-    const submitResponse = await fetch(`https://platform.higgsfield.ai${modelInfo.endpoint}`, {
+    // Submit generation request via CORS proxy
+    const submitResponse = await higgsFetch(`${HIGGSFIELD_BASE}${modelInfo.endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1223,23 +1230,27 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
     });
 
     if (!submitResponse.ok) {
-      const err = await submitResponse.json().catch(() => ({}));
-      throw new Error(err.message || err.error || `HTTP ${submitResponse.status}`);
+      const errText = await submitResponse.text();
+      let errMsg;
+      try { errMsg = JSON.parse(errText).message || JSON.parse(errText).error; } catch { errMsg = errText; }
+      throw new Error(errMsg || `HTTP ${submitResponse.status}`);
     }
 
     const submitData = await submitResponse.json();
     const requestId = submitData.id || submitData.request_id;
     if (!requestId) throw new Error('No request ID returned');
 
+    showToast(`Higgsfield: geracao iniciada (ID: ${requestId.slice(0,8)}...). Aguardando...`, 'success');
+
     // Poll for completion
     const maxPollTime = 300000; // 5 min
-    const pollInterval = 3000; // 3 sec
+    const pollInterval = 4000; // 4 sec
     const startTime = Date.now();
 
     while (Date.now() - startTime < maxPollTime) {
       await delay(pollInterval);
 
-      const statusResponse = await fetch(`https://platform.higgsfield.ai/requests/${requestId}/status`, {
+      const statusResponse = await higgsFetch(`${HIGGSFIELD_BASE}/requests/${requestId}/status`, {
         headers: { 'Authorization': `Key ${credentials}` }
       });
 
@@ -1256,16 +1267,17 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
         throw new Error('Completed but no image URL found');
       }
 
-      if (status === 'failed') throw new Error('Generation failed on Higgsfield');
+      if (status === 'failed') {
+        const failMsg = statusData.jobs?.[0]?.error || statusData.error || 'Generation failed';
+        throw new Error(failMsg);
+      }
       if (status === 'nsfw') throw new Error('Content rejected by moderation (NSFW)');
     }
 
-    throw new Error('Timeout - generation took too long');
+    throw new Error('Timeout - geracao demorou mais de 5 minutos');
   } catch (e) {
     console.warn('Higgsfield error:', e);
-    if (e.message?.includes('Failed to fetch') || e.message?.includes('NetworkError')) {
-      showToast('Higgsfield: erro de CORS. A API pode nao aceitar chamadas diretas do navegador. Veja o console para detalhes.', 'error');
-    }
+    showToast(`Higgsfield erro: ${e.message}`, 'error');
     return null;
   }
 }
