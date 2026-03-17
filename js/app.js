@@ -1256,8 +1256,11 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
       }
 
       // Handle specific errors
-      if (resp.status === 401 || resp.status === 403) {
-        throw new Error(`Credenciais invalidas (${resp.status}). Verifique KEY_ID:KEY_SECRET`);
+      if (resp.status === 401) {
+        throw new Error(`Credenciais invalidas (401). Verifique KEY_ID:KEY_SECRET`);
+      }
+      if (resp.status === 403) {
+        throw new Error(`Sem creditos na API Higgsfield (403). Adicione creditos em cloud.higgsfield.ai`);
       }
       if (resp.status === 422 || resp.status === 400) {
         console.log(`Higgsfield ${resp.status} detail:`, respText);
