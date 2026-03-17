@@ -1236,7 +1236,8 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
       });
 
       const respText = await resp.text();
-      console.log(`Higgsfield ${attempt.path}: ${resp.status} - ${respText.slice(0, 500)}`);
+      const baseUsed = resp.headers?.get('X-Higgsfield-Base') || '?';
+      console.log(`Higgsfield [${baseUsed}] ${attempt.path}: ${resp.status} - ${respText.slice(0, 500)}`);
 
       if (resp.ok) {
         try { submitData = JSON.parse(respText); } catch { submitData = null; }
