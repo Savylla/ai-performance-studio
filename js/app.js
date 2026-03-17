@@ -1189,7 +1189,168 @@ function openHiggsfield(model) {
   const left = (screen.width - w) / 2;
   const top = (screen.height - h) / 2;
   window.open(url, 'higgsfield', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
-  showToast(`Higgsfield ${modelName} aberto! Use UNLIMITED na janela.`, 'success');
+
+  // Show import widget
+  showHiggsfieldImporter(modelName);
+}
+
+function showHiggsfieldImporter(modelName) {
+  // Remove existing
+  const existing = document.getElementById('higgsfieldImporter');
+  if (existing) existing.remove();
+
+  const widget = document.createElement('div');
+  widget.id = 'higgsfieldImporter';
+  widget.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #c8ff00;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(200,255,0,0.15);font-family:inherit;';
+  widget.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <span style="color:#c8ff00;font-weight:700;font-size:0.9rem;"><i class="fas fa-star"></i> Importar do Higgsfield</span>
+      <button onclick="document.getElementById('higgsfieldImporter').remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
+    </div>
+    <div id="higgsDropZone" style="border:2px dashed #c8ff0055;border-radius:12px;padding:24px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
+      <i class="fas fa-paste" style="font-size:1.8rem;color:#c8ff00;margin-bottom:8px;display:block;"></i>
+      <div style="color:#ccc;font-size:0.82rem;line-height:1.5;">
+        <strong style="color:#fff;">Ctrl+V</strong> para colar imagem<br>
+        ou <strong style="color:#fff;">arraste</strong> a imagem aqui<br>
+        ou <strong style="color:#fff;">clique</strong> para escolher arquivo
+      </div>
+      <input type="file" id="higgsFileInput" accept="image/*" style="display:none;">
+    </div>
+    <div id="higgsPromptRow" style="margin-top:10px;">
+      <input type="text" id="higgsImportPrompt" class="input-field" placeholder="Prompt usado (opcional)" style="font-size:0.8rem;padding:6px 10px;">
+    </div>
+    <div id="higgsPreview" style="display:none;margin-top:10px;text-align:center;">
+      <img id="higgsPreviewImg" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #333;">
+      <div style="margin-top:8px;display:flex;gap:6px;justify-content:center;">
+        <button id="higgsSaveBtn" style="background:#c8ff00;color:#000;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.82rem;"><i class="fas fa-check"></i> Salvar na Galeria</button>
+        <button onclick="document.getElementById('higgsPreview').style.display='none';document.getElementById('higgsDropZone').style.display='block';" style="background:#333;color:#fff;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.82rem;">Trocar</button>
+      </div>
+    </div>
+    <div style="margin-top:8px;color:#555;font-size:0.65rem;text-align:center;">
+      Modelo: <strong style="color:#c8ff00;">${modelName}</strong> | Salva na Galeria + Historico
+    </div>
+  `;
+  document.body.appendChild(widget);
+
+  const dropZone = document.getElementById('higgsDropZone');
+  const fileInput = document.getElementById('higgsFileInput');
+  const preview = document.getElementById('higgsPreview');
+  const previewImg = document.getElementById('higgsPreviewImg');
+  let importedBlob = null;
+
+  // Click to select file
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleImportedImage(e.target.files[0]);
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#c8ff00';
+    dropZone.style.background = '#c8ff0011';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = '#c8ff0055';
+    dropZone.style.background = 'none';
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#c8ff0055';
+    dropZone.style.background = 'none';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImportedImage(file);
+    } else {
+      // Try to get image from HTML drag
+      const html = e.dataTransfer.getData('text/html');
+      const match = html?.match(/src="([^"]+)"/);
+      if (match) handleImportedUrl(match[1]);
+    }
+  });
+
+  // Paste (Ctrl+V)
+  const pasteHandler = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        handleImportedImage(item.getAsFile());
+        return;
+      }
+    }
+    // Check for pasted URL
+    const text = e.clipboardData.getData('text');
+    if (text && (text.startsWith('http') && (text.includes('.png') || text.includes('.jpg') || text.includes('.webp') || text.includes('image')))) {
+      e.preventDefault();
+      handleImportedUrl(text);
+    }
+  };
+  document.addEventListener('paste', pasteHandler);
+
+  // Store cleanup function
+  widget._cleanup = () => document.removeEventListener('paste', pasteHandler);
+  const origRemove = widget.remove.bind(widget);
+  widget.remove = () => { widget._cleanup(); origRemove(); };
+
+  function handleImportedImage(file) {
+    importedBlob = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    dropZone.style.display = 'none';
+    preview.style.display = 'block';
+  }
+
+  async function handleImportedUrl(url) {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      handleImportedImage(blob);
+    } catch {
+      showToast('Nao consegui carregar a imagem da URL', 'error');
+    }
+  }
+
+  // Save button
+  document.getElementById('higgsSaveBtn').addEventListener('click', async () => {
+    if (!importedBlob) return;
+    const prompt = document.getElementById('higgsImportPrompt').value.trim() || 'Higgsfield generation';
+    const provider = `Higgsfield ${modelName}`;
+    const imgUrl = URL.createObjectURL(importedBlob);
+
+    // Save to gallery
+    await saveImageToGallery(importedBlob, prompt, provider);
+    // Save to history
+    await saveToHistory({ type: 'image', prompt, provider, status: 'success', detail: 'Importado do Higgsfield' });
+
+    // Also show in results grid
+    const grid = document.getElementById('resultsMasonry');
+    if (grid) {
+      document.getElementById('displayEmpty').style.display = 'none';
+      document.getElementById('displayResults').style.display = 'block';
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <img src="${imgUrl}" alt="Higgsfield" crossorigin="anonymous">
+        <div class="result-card-overlay">
+          <button title="Download" onclick="event.stopPropagation(); downloadImage('${imgUrl}', 'higgsfield-${Date.now()}.png')"><i class="fas fa-download"></i></button>
+          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+        </div>
+        <div class="result-card-provider">${provider}</div>
+      `;
+      card.addEventListener('click', () => openLightbox(imgUrl, prompt, '1:1'));
+      grid.insertBefore(card, grid.firstChild);
+    }
+
+    showToast(`Imagem salva na Galeria! (${provider})`, 'success');
+
+    // Reset for next import
+    importedBlob = null;
+    preview.style.display = 'none';
+    dropZone.style.display = 'block';
+    document.getElementById('higgsImportPrompt').value = '';
+  });
 }
 
 // --- Groq Text ---
