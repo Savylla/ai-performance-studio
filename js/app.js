@@ -1406,6 +1406,183 @@ function showHiggsfieldImporter(modelName) {
   });
 }
 
+// --- TikTok Creative Studio (UNLIMITED via popup) ---
+function openTikTokStudio() {
+  const url = 'https://ads.tiktok.com/creative/creativestudio/image-to-video?subApp=CreativeStudio/ImageGeneration/I2VImageGeneration';
+  const w = Math.min(1400, screen.width - 100);
+  const h = Math.min(900, screen.height - 100);
+  const left = (screen.width - w) / 2;
+  const top = (screen.height - h) / 2;
+  window.open(url, 'tiktokstudio', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+  showTikTokImporter();
+}
+
+function showTikTokImporter() {
+  const existing = document.getElementById('tiktokImporter');
+  if (existing) existing.remove();
+
+  const widget = document.createElement('div');
+  widget.id = 'tiktokImporter';
+  widget.style.cssText = 'position:fixed;top:70px;left:20px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #ff0044;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(255,0,68,0.15);font-family:inherit;';
+  widget.innerHTML = `
+    <div id="tiktokDragHandle" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:grab;user-select:none;">
+      <span style="color:#ff0044;font-weight:700;font-size:0.9rem;"><i class="fab fa-tiktok"></i> Importar do TikTok Studio</span>
+      <button onclick="event.stopPropagation();document.getElementById('tiktokImporter').remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
+    </div>
+    <div id="tiktokDropZone" style="border:2px dashed #ff004455;border-radius:12px;padding:24px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
+      <i class="fas fa-paste" style="font-size:1.8rem;color:#ff0044;margin-bottom:8px;display:block;"></i>
+      <div style="color:#ccc;font-size:0.82rem;line-height:1.5;">
+        <strong style="color:#fff;">Arraste</strong> o video aqui<br>
+        ou <strong style="color:#fff;">clique</strong> para escolher arquivo
+      </div>
+      <input type="file" id="tiktokFileInput" accept="video/*" style="display:none;">
+    </div>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+      <input type="text" id="tiktokImportPrompt" class="input-field" placeholder="Prompt usado (opcional)" style="font-size:0.8rem;padding:6px 10px;">
+    </div>
+    <div id="tiktokPreview" style="display:none;margin-top:10px;text-align:center;">
+      <video id="tiktokPreviewVid" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #333;" controls></video>
+      <div style="margin-top:8px;display:flex;gap:6px;justify-content:center;">
+        <button id="tiktokSaveBtn" style="background:#ff0044;color:#fff;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.82rem;"><i class="fas fa-check"></i> Salvar na Galeria</button>
+        <button onclick="document.getElementById('tiktokPreview').style.display='none';document.getElementById('tiktokDropZone').style.display='block';" style="background:#333;color:#fff;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.82rem;">Trocar</button>
+      </div>
+    </div>
+    <div style="margin-top:8px;color:#555;font-size:0.65rem;text-align:center;">
+      Provedor: <strong style="color:#ff0044;">TikTok Creative Studio</strong> | Salva na Galeria + Historico
+    </div>
+  `;
+  document.body.appendChild(widget);
+
+  // Drag functionality
+  const dragHandle = document.getElementById('tiktokDragHandle');
+  let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
+  dragHandle.addEventListener('mousedown', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    isDragging = true;
+    dragOffsetX = e.clientX - widget.getBoundingClientRect().left;
+    dragOffsetY = e.clientY - widget.getBoundingClientRect().top;
+    dragHandle.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    let newX = e.clientX - dragOffsetX;
+    let newY = e.clientY - dragOffsetY;
+    newX = Math.max(0, Math.min(newX, window.innerWidth - widget.offsetWidth));
+    newY = Math.max(0, Math.min(newY, window.innerHeight - widget.offsetHeight));
+    widget.style.left = newX + 'px';
+    widget.style.top = newY + 'px';
+    widget.style.right = 'auto';
+    widget.style.bottom = 'auto';
+  });
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      dragHandle.style.cursor = 'grab';
+    }
+  });
+  // Touch support for mobile
+  dragHandle.addEventListener('touchstart', (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    isDragging = true;
+    const touch = e.touches[0];
+    dragOffsetX = touch.clientX - widget.getBoundingClientRect().left;
+    dragOffsetY = touch.clientY - widget.getBoundingClientRect().top;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    let newX = touch.clientX - dragOffsetX;
+    let newY = touch.clientY - dragOffsetY;
+    newX = Math.max(0, Math.min(newX, window.innerWidth - widget.offsetWidth));
+    newY = Math.max(0, Math.min(newY, window.innerHeight - widget.offsetHeight));
+    widget.style.left = newX + 'px';
+    widget.style.top = newY + 'px';
+    widget.style.right = 'auto';
+    widget.style.bottom = 'auto';
+  }, { passive: true });
+  document.addEventListener('touchend', () => { isDragging = false; });
+
+  const dropZone = document.getElementById('tiktokDropZone');
+  const fileInput = document.getElementById('tiktokFileInput');
+  const preview = document.getElementById('tiktokPreview');
+  const previewVid = document.getElementById('tiktokPreviewVid');
+  let importedBlob = null;
+
+  // Click to select file
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleImportedVideo(e.target.files[0]);
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#ff0044';
+    dropZone.style.background = '#ff004411';
+  });
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = '#ff004455';
+    dropZone.style.background = 'none';
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#ff004455';
+    dropZone.style.background = 'none';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('video/')) {
+      handleImportedVideo(file);
+    }
+  });
+
+  function handleImportedVideo(file) {
+    importedBlob = file;
+    const url = URL.createObjectURL(file);
+    previewVid.src = url;
+    dropZone.style.display = 'none';
+    preview.style.display = 'block';
+  }
+
+  // Save button
+  document.getElementById('tiktokSaveBtn').addEventListener('click', async () => {
+    if (!importedBlob) return;
+    const prompt = document.getElementById('tiktokImportPrompt').value.trim() || 'TikTok Studio generation';
+    const provider = 'TikTok Creative Studio';
+    const vidUrl = URL.createObjectURL(importedBlob);
+
+    // Save to gallery
+    await saveVideoToGallery(importedBlob, prompt, provider);
+    // Save to history
+    await saveToHistory({ type: 'video', prompt, provider, status: 'success', detail: 'Importado do TikTok Creative Studio' });
+
+    // Show in results grid
+    const grid = document.getElementById('resultsMasonry');
+    if (grid) {
+      document.getElementById('displayEmpty').style.display = 'none';
+      document.getElementById('displayResults').style.display = 'block';
+      const card = document.createElement('div');
+      card.className = 'result-card';
+      card.innerHTML = `
+        <video src="${vidUrl}" style="width:100%;border-radius:8px;" controls muted></video>
+        <div class="result-card-overlay">
+          <button title="Download" onclick="event.stopPropagation(); const a=document.createElement('a');a.href='${vidUrl}';a.download='tiktok-${Date.now()}.mp4';a.click();"><i class="fas fa-download"></i></button>
+          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
+        </div>
+        <div class="result-card-provider">${provider}</div>
+      `;
+      grid.insertBefore(card, grid.firstChild);
+    }
+
+    showToast('Video salvo! (TikTok Creative Studio)', 'success');
+
+    // Reset for next import
+    importedBlob = null;
+    preview.style.display = 'none';
+    dropZone.style.display = 'block';
+    document.getElementById('tiktokImportPrompt').value = '';
+  });
+}
+
 // --- Groq Text ---
 async function groqText(prompt, apiKey, model) {
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
