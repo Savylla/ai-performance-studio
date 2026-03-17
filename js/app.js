@@ -1229,7 +1229,7 @@ async function generateWithHiggsfield(prompt, provider, w, h) {
   const endpointAttempts = [
     { path: `/v1/text2image/${modelInfo.model}`,
       headers: v1Headers,
-      body: { params: { prompt, width_and_height: dimStr, quality: '1080p', batch_size: 1, input_images: [] } } },
+      body: { params: { prompt, width_and_height: dimStr, aspect_ratio: aspectRatio, quality: '1080p', batch_size: 1, input_images: [] } } },
   ];
 
   try {
