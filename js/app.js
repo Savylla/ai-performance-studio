@@ -2984,6 +2984,22 @@ Historia: ${storyPrompt}`,
   }
 }
 
+function addToStoryboard(imageUrl, caption) {
+  const grid = document.getElementById('storyboardGrid');
+  const emptyEl = document.getElementById('storyboardEmpty');
+  if (emptyEl) emptyEl.style.display = 'none';
+  const panelNum = grid.children.length + 1;
+  const card = document.createElement('div');
+  card.className = 'storyboard-panel';
+  card.innerHTML = `
+    <div class="sb-panel-number">${panelNum}</div>
+    <div class="sb-panel-image"><img src="${imageUrl}" alt="Panel ${panelNum}"></div>
+    <div class="sb-panel-caption">${caption || ''}</div>
+  `;
+  grid.appendChild(card);
+  showToast('Adicionado ao Story Board!', 'success');
+}
+
 // =============================================
 // === UTILITIES ===
 // =============================================
@@ -3823,6 +3839,7 @@ function renderMoodboard() {
         <div class="moodboard-item-actions">
           <button class="moodboard-item-action-btn moodboard-download-btn" title="Baixar imagem"><i class="fas fa-download"></i></button>
           <button class="moodboard-item-action-btn moodboard-gallery-btn" title="Adicionar na Galeria"><i class="fas fa-images"></i></button>
+          <button class="moodboard-item-action-btn moodboard-storyboard-btn" title="Adicionar ao Story Board"><i class="fas fa-book-open"></i></button>
         </div>
         <div class="moodboard-item-info">
           <span><i class="fas fa-camera"></i> ${item.photographer}</span>
@@ -3888,6 +3905,10 @@ function renderMoodboard() {
         e.stopPropagation();
         await saveImageToGallery(item.url, '', item.photographer || 'Moodboard');
         showToast('Imagem salva na Galeria!', 'success');
+      });
+      el.querySelector('.moodboard-storyboard-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        addToStoryboard(item.url, item.photographer || '');
       });
     }
 
@@ -4422,6 +4443,7 @@ async function renderGallery() {
 
       card.innerHTML = `
         <span class="gallery-card-badge type-${item.type}">${typeLabels[item.type]}</span>
+        <button class="gallery-card-storyboard" title="Adicionar ao Story Board"><i class="fas fa-book-open"></i></button>
         <button class="gallery-card-moodboard" title="Adicionar ao Moodboard"><i class="fas fa-palette"></i></button>
         <button class="gallery-card-delete" title="Excluir"><i class="fas fa-trash"></i></button>
         <div class="gallery-card-thumb">${thumbHTML}</div>
@@ -4449,6 +4471,18 @@ async function renderGallery() {
       card.querySelector('.gallery-card-moodboard').addEventListener('click', (e) => {
         e.stopPropagation();
         addGalleryItemToMoodboard(item);
+      });
+
+      // Storyboard button (only for images)
+      card.querySelector('.gallery-card-storyboard').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.type === 'image' && item.data instanceof Blob) {
+          addToStoryboard(URL.createObjectURL(item.data), item.prompt || item.provider || '');
+        } else if (item.type === 'image') {
+          addToStoryboard(item.data, item.prompt || item.provider || '');
+        } else {
+          showToast('Apenas imagens podem ser adicionadas ao Story Board', 'error');
+        }
       });
 
       // Open preview
@@ -4481,6 +4515,13 @@ function addGalleryItemToMoodboard(item) {
   saveMoodboard();
   renderMoodboard();
   showToast('Adicionado ao Moodboard!', 'success');
+}
+
+function addGalleryPreviewToStoryboard() {
+  const item = galleryPreviewCurrentItem;
+  if (!item || item.type !== 'image') return;
+  const url = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
+  addToStoryboard(url, item.prompt || item.provider || '');
 }
 
 function openGalleryPreview(item) {
@@ -4521,6 +4562,7 @@ function openGalleryPreview(item) {
     <div class="preview-actions">
       ${item.type !== 'text' ? `<button class="preview-action-btn" onclick="downloadGalleryItem(${item.id})"><i class="fas fa-download"></i> Download</button>` : `<button class="preview-action-btn" onclick="copyGalleryText(this)"><i class="fas fa-copy"></i> Copiar</button>`}
       <button class="preview-action-btn" onclick="addGalleryItemToMoodboard(galleryPreviewCurrentItem)"><i class="fas fa-palette"></i> Moodboard</button>
+      ${item.type === 'image' ? `<button class="preview-action-btn" onclick="addGalleryPreviewToStoryboard()"><i class="fas fa-book-open"></i> Story Board</button>` : ''}
       <button class="preview-action-btn btn-delete" onclick="deleteAndClosePreview(${item.id})"><i class="fas fa-trash"></i> Excluir</button>
     </div>
   `;
