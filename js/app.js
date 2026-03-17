@@ -3802,6 +3802,10 @@ function renderMoodboard() {
     if (item.type === 'image') {
       el.innerHTML = `
         <img src="${item.url}" alt="" loading="lazy">
+        <div class="moodboard-item-actions">
+          <button class="moodboard-item-action-btn moodboard-download-btn" title="Baixar imagem"><i class="fas fa-download"></i></button>
+          <button class="moodboard-item-action-btn moodboard-gallery-btn" title="Adicionar na Galeria"><i class="fas fa-images"></i></button>
+        </div>
         <div class="moodboard-item-info">
           <span><i class="fas fa-camera"></i> ${item.photographer}</span>
         </div>
@@ -3855,6 +3859,20 @@ function renderMoodboard() {
     }
 
     el.querySelector('.moodboard-item-remove').addEventListener('click', () => removeFromBoard(item.id));
+
+    // Download & Gallery buttons for images
+    if (item.type === 'image') {
+      el.querySelector('.moodboard-download-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadImage(item.url, `moodboard-${item.photographer || 'image'}-${Date.now()}.jpg`);
+      });
+      el.querySelector('.moodboard-gallery-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await saveImageToGallery(item.url, '', item.photographer || 'Moodboard');
+        showToast('Imagem salva na Galeria!', 'success');
+      });
+    }
+
     board.appendChild(el);
   });
 }
