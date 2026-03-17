@@ -2982,13 +2982,43 @@ Historia: ${storyPrompt}`,
       'openai'
     );
 
-    // Parse panels
-    const panels = [];
+    // Parse panels - try multiple formats
+    let panels = [];
+
+    // Format 1: ---PANEL X---
     for (let i = 1; i <= panelCount; i++) {
       const regex = new RegExp(`---PANEL ${i}---\\s*([\\s\\S]*?)(?=---PANEL ${i + 1}---|$)`);
       const match = scriptResult.match(regex);
       if (match) panels.push(match[1].trim());
     }
+
+    // Format 2: **Panel X:** or Panel X: or Painel X:
+    if (panels.length === 0) {
+      const altRegex = /(?:\*\*)?(?:Panel|Painel|Quadro|Scene|Cena)\s*(\d+)\s*(?::|\*\*:?)\s*([\s\S]*?)(?=(?:\*\*)?(?:Panel|Painel|Quadro|Scene|Cena)\s*\d+|$)/gi;
+      let m;
+      while ((m = altRegex.exec(scriptResult)) !== null) {
+        const text = m[2].trim().replace(/^\*\*\s*/, '').replace(/\s*\*\*$/, '');
+        if (text) panels.push(text);
+      }
+    }
+
+    // Format 3: Numbered list (1. or 1)
+    if (panels.length === 0) {
+      const numRegex = /(?:^|\n)\s*\d+[\.\)]\s*([\s\S]*?)(?=\n\s*\d+[\.\)]|$)/g;
+      let m;
+      while ((m = numRegex.exec(scriptResult)) !== null) {
+        const text = m[1].trim();
+        if (text && text.length > 10) panels.push(text);
+      }
+    }
+
+    // Format 4: Split by double newlines as last resort
+    if (panels.length === 0) {
+      panels = scriptResult.split(/\n\s*\n/).map(s => s.trim()).filter(s => s.length > 15);
+    }
+
+    // Limit to requested panel count
+    panels = panels.slice(0, panelCount);
 
     if (panels.length === 0) {
       showToast('Erro ao criar roteiro. Tente novamente.', 'error');
