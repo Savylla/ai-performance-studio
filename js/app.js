@@ -1183,36 +1183,13 @@ function openHiggsfield(model) {
   const modelName = HIGGSFIELD_MODELS[model] || model;
   const url = `https://higgsfield.ai/image/${model}`;
 
-  // Remove existing modal if any
-  const existing = document.getElementById('higgsfieldModal');
-  if (existing) existing.remove();
-
-  const modal = document.createElement('div');
-  modal.id = 'higgsfieldModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:10000;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;';
-  modal.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#1a1a1a;border-bottom:1px solid #c8ff0033;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="color:#c8ff00;font-weight:700;font-size:0.95rem;"><i class="fas fa-star"></i> Higgsfield</span>
-        <span style="color:#888;font-size:0.8rem;">${modelName} - UNLIMITED</span>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="window.open('${url}','_blank')" style="background:#333;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.75rem;" title="Abrir em nova aba"><i class="fas fa-external-link-alt"></i> Nova aba</button>
-        <button onclick="document.getElementById('higgsfieldModal').remove()" style="background:#c8ff00;color:#000;border:none;padding:4px 12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:0.85rem;">✕ Fechar</button>
-      </div>
-    </div>
-    <iframe src="${url}" style="flex:1;border:none;width:100%;height:100%;" allow="clipboard-read;clipboard-write"></iframe>
-  `;
-  document.body.appendChild(modal);
-
-  // Close on Escape
-  const closeOnEsc = (e) => {
-    if (e.key === 'Escape') {
-      modal.remove();
-      document.removeEventListener('keydown', closeOnEsc);
-    }
-  };
-  document.addEventListener('keydown', closeOnEsc);
+  // Open as popup window
+  const w = Math.min(1400, screen.width - 100);
+  const h = Math.min(900, screen.height - 100);
+  const left = (screen.width - w) / 2;
+  const top = (screen.height - h) / 2;
+  window.open(url, 'higgsfield', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+  showToast(`Higgsfield ${modelName} aberto! Use UNLIMITED na janela.`, 'success');
 }
 
 // --- Groq Text ---
