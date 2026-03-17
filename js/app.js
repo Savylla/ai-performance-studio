@@ -1183,6 +1183,35 @@ const HIGGSFIELD_MODELS = {
   'flux-pro': 'FLUX.2 Pro'
 };
 
+function repositionImporterWidgets() {
+  const higgsWidget = document.getElementById('higgsfieldImporter');
+  const tiktokWidget = document.getElementById('tiktokImporter');
+  const gap = 12;
+  const margin = 16;
+
+  if (higgsWidget && tiktokWidget) {
+    // Both open: side by side on the right
+    const higgsW = higgsWidget.offsetWidth || 340;
+    const tiktokW = tiktokWidget.offsetWidth || 340;
+    higgsWidget.style.left = (window.innerWidth - margin - higgsW) + 'px';
+    higgsWidget.style.top = '70px';
+    tiktokWidget.style.left = (window.innerWidth - margin - higgsW - gap - tiktokW) + 'px';
+    tiktokWidget.style.top = '70px';
+  } else if (higgsWidget) {
+    higgsWidget.style.left = (window.innerWidth - margin - (higgsWidget.offsetWidth || 340)) + 'px';
+    higgsWidget.style.top = '70px';
+  } else if (tiktokWidget) {
+    tiktokWidget.style.left = (window.innerWidth - margin - (tiktokWidget.offsetWidth || 340)) + 'px';
+    tiktokWidget.style.top = '70px';
+  }
+}
+
+function closeImporterWidget(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  repositionImporterWidgets();
+}
+
 function openHiggsfield(model) {
   const modelName = HIGGSFIELD_MODELS[model] || model;
   const url = `https://higgsfield.ai/image/${model}`;
@@ -1205,11 +1234,11 @@ function showHiggsfieldImporter(modelName) {
 
   const widget = document.createElement('div');
   widget.id = 'higgsfieldImporter';
-  widget.style.cssText = 'position:fixed;top:70px;left:20px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #c8ff00;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(200,255,0,0.15);font-family:inherit;';
+  widget.style.cssText = 'position:fixed;top:70px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #c8ff00;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(200,255,0,0.15);font-family:inherit;';
   widget.innerHTML = `
     <div id="higgsDragHandle" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:grab;user-select:none;">
       <span style="color:#c8ff00;font-weight:700;font-size:0.9rem;"><i class="fas fa-star"></i> Importar do Higgsfield</span>
-      <button onclick="event.stopPropagation();document.getElementById('higgsfieldImporter').remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
+      <button onclick="event.stopPropagation();closeImporterWidget('higgsfieldImporter')" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
     </div>
     <div id="higgsDropZone" style="border:2px dashed #c8ff0055;border-radius:12px;padding:24px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
       <i class="fas fa-paste" style="font-size:1.8rem;color:#c8ff00;margin-bottom:8px;display:block;"></i>
@@ -1236,6 +1265,7 @@ function showHiggsfieldImporter(modelName) {
     </div>
   `;
   document.body.appendChild(widget);
+  repositionImporterWidgets();
 
   // Drag functionality
   const dragHandle = document.getElementById('higgsDragHandle');
@@ -1428,11 +1458,11 @@ function showTikTokImporter() {
 
   const widget = document.createElement('div');
   widget.id = 'tiktokImporter';
-  widget.style.cssText = 'position:fixed;top:70px;left:20px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #ff0044;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(255,0,68,0.15);font-family:inherit;';
+  widget.style.cssText = 'position:fixed;top:70px;z-index:9999;width:340px;background:#1a1a1a;border:2px solid #ff0044;border-radius:16px;padding:16px;box-shadow:0 8px 32px rgba(255,0,68,0.15);font-family:inherit;';
   widget.innerHTML = `
     <div id="tiktokDragHandle" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;cursor:grab;user-select:none;">
       <span style="color:#ff0044;font-weight:700;font-size:0.9rem;"><i class="fab fa-tiktok"></i> Importar do TikTok Studio</span>
-      <button onclick="event.stopPropagation();document.getElementById('tiktokImporter').remove()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
+      <button onclick="event.stopPropagation();closeImporterWidget('tiktokImporter')" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:0 4px;">✕</button>
     </div>
     <div id="tiktokDropZone" style="border:2px dashed #ff004455;border-radius:12px;padding:24px 12px;text-align:center;cursor:pointer;transition:all 0.2s;">
       <i class="fas fa-paste" style="font-size:1.8rem;color:#ff0044;margin-bottom:8px;display:block;"></i>
@@ -1457,6 +1487,7 @@ function showTikTokImporter() {
     </div>
   `;
   document.body.appendChild(widget);
+  repositionImporterWidgets();
 
   // Drag functionality
   const dragHandle = document.getElementById('tiktokDragHandle');
