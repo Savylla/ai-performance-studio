@@ -2827,6 +2827,24 @@ function copyTextResult() {
   showToast('Texto copiado!', 'success');
 }
 
+function addTextToMoodboard() {
+  const text = document.getElementById('textResultContent').textContent;
+  if (!text) return;
+  const provider = document.getElementById('textProviderUsed').textContent || 'Texto';
+  moodboardItems.push({ type: 'note', text: `[${provider}] ${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`, id: Date.now() });
+  saveMoodboard();
+  renderMoodboard();
+  showToast('Texto adicionado ao Moodboard!', 'success');
+}
+
+function addTextToGallery() {
+  const text = document.getElementById('textResultContent').textContent;
+  if (!text) return;
+  const provider = document.getElementById('textProviderUsed').textContent || 'Texto';
+  saveTextToGallery(text, '', provider);
+  showToast('Texto salvo na Galeria!', 'success');
+}
+
 // =============================================
 // === STORYBOARD ===
 // =============================================
