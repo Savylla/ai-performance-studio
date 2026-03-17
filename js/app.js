@@ -7,7 +7,8 @@ let syncTimeout = null;
 const API_KEY_NAMES = [
   'gemini_api_key', 'openrouter_api_key', 'groq_api_key',
   'together_api_key', 'huggingface_api_key', 'pexels_api_key',
-  'pixabay_api_key', 'unsplash_api_key', 'freesound_api_key'
+  'pixabay_api_key', 'unsplash_api_key', 'freesound_api_key',
+  'higgsfield_credentials'
 ];
 
 function getUserId() {
@@ -792,6 +793,13 @@ async function startImageGeneration() {
       return;
     }
   }
+  if (provider.startsWith('higgs-')) {
+    if (!getApiKey('higgsfield_credentials')) {
+      openApiKeyModal();
+      showToast('Configure suas credenciais do Higgsfield primeiro (Key ID:Key Secret)', 'error');
+      return;
+    }
+  }
 
   // Show loading
   document.getElementById('displayEmpty').style.display = 'none';
@@ -823,6 +831,9 @@ async function startImageGeneration() {
       imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('together-')) {
       imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('higgs-')) {
+      card.querySelector('.card-loading-state span').textContent = `Gerando com Higgsfield ${HIGGSFIELD_IMAGE_MODELS[provider]?.name || ''}... pode demorar`;
+      imageResult = await generateWithHiggsfield(prompt, provider, w, h);
     } else if (provider.startsWith('hf-')) {
       imageResult = await generateWithHuggingFace(prompt, provider, w, h);
     } else if (provider === 'gemini-auto') {
@@ -835,18 +846,19 @@ async function startImageGeneration() {
       success++;
       const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
       card.classList.remove('loading');
+      const providerLabel = HIGGSFIELD_IMAGE_MODELS[provider]?.name || provider;
       card.innerHTML = `
         <img src="${imgSrc}" alt="Generated" crossorigin="anonymous">
         <div class="result-card-overlay">
           <button title="Download" onclick="event.stopPropagation(); downloadImage('${imgSrc}', 'ai-image-${Date.now()}.png')"><i class="fas fa-download"></i></button>
           <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
         </div>
-        <div class="result-card-provider">${provider}</div>
+        <div class="result-card-provider">${providerLabel}</div>
       `;
       card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
       // Save to gallery + history
-      saveImageToGallery(imgSrc, prompt, provider);
-      saveToHistory({ type: 'image', prompt, provider, status: 'success', detail: ratio });
+      saveImageToGallery(imgSrc, prompt, providerLabel);
+      saveToHistory({ type: 'image', prompt, provider: providerLabel, status: 'success', detail: ratio });
     } else {
       card.classList.remove('loading');
       card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle"></i><span>Erro - tente novamente</span></div>`;
@@ -898,6 +910,8 @@ async function startMoodboardGeneration() {
       imageResult = await generateWithStableHorde(prompt, w, h);
     } else if (provider.startsWith('together-')) {
       imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
+    } else if (provider.startsWith('higgs-')) {
+      imageResult = await generateWithHiggsfield(prompt, provider, w, h);
     } else if (provider.startsWith('hf-')) {
       imageResult = await generateWithHuggingFace(prompt, provider, w, h);
     } else if (provider === 'gemini-auto') {
@@ -909,10 +923,11 @@ async function startMoodboardGeneration() {
     if (imageResult) {
       success++;
       const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
-      addImageToBoard(imgSrc, 'AI Generated (' + provider + ')', null);
+      const providerLabel = HIGGSFIELD_IMAGE_MODELS[provider]?.name || provider;
+      addImageToBoard(imgSrc, 'AI Generated (' + providerLabel + ')', null);
       // Save to gallery + history
-      saveImageToGallery(imgSrc, prompt, provider);
-      saveToHistory({ type: 'moodboard', prompt, provider, status: 'success', detail: 'Imagem gerada' });
+      saveImageToGallery(imgSrc, prompt, providerLabel);
+      saveToHistory({ type: 'moodboard', prompt, provider: providerLabel, status: 'success', detail: 'Imagem gerada' });
     }
 
     if (i < qty - 1) await delay(1500);
@@ -1157,6 +1172,100 @@ async function generateWithHuggingFace(prompt, provider, w, h) {
     return { url };
   } catch (e) {
     console.warn('HuggingFace error:', e);
+    return null;
+  }
+}
+
+// --- Higgsfield Image ---
+const HIGGSFIELD_IMAGE_MODELS = {
+  'higgs-nano-banana': { endpoint: '/v1/text2image/nano-banana', name: 'Nano Banana' },
+  'higgs-soul': { endpoint: '/v1/text2image/soul', name: 'Higgsfield Soul' },
+  'higgs-seedream': { endpoint: '/v1/text2image/seedream', name: 'Seedream 4.0' },
+  'higgs-gpt-image': { endpoint: '/v1/text2image/gpt-image', name: 'GPT Image 1.5' },
+  'higgs-z-image': { endpoint: '/v1/text2image/z-image', name: 'Z-Image' },
+  'higgs-kling-o1': { endpoint: '/v1/text2image/kling', name: 'Kling O1' },
+  'higgs-flux2-pro': { endpoint: '/v1/text2image/flux.2-pro', name: 'FLUX.2 Pro' }
+};
+
+function getHiggsfieldAspectRatio(w, h) {
+  const ratio = w / h;
+  if (ratio > 1.6) return '16:9';
+  if (ratio > 1.2) return '3:2';
+  if (ratio < 0.625) return '9:16';
+  if (ratio < 0.83) return '2:3';
+  return '1:1';
+}
+
+async function generateWithHiggsfield(prompt, provider, w, h) {
+  const credentials = getApiKey('higgsfield_credentials');
+  if (!credentials) return null;
+  const modelInfo = HIGGSFIELD_IMAGE_MODELS[provider];
+  if (!modelInfo) return null;
+
+  const aspectRatio = getHiggsfieldAspectRatio(w, h);
+
+  try {
+    // Submit generation request
+    const submitResponse = await fetch(`https://platform.higgsfield.ai${modelInfo.endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Key ${credentials}`
+      },
+      body: JSON.stringify({
+        input: {
+          prompt: prompt,
+          aspect_ratio: aspectRatio,
+          width: w,
+          height: h
+        }
+      })
+    });
+
+    if (!submitResponse.ok) {
+      const err = await submitResponse.json().catch(() => ({}));
+      throw new Error(err.message || err.error || `HTTP ${submitResponse.status}`);
+    }
+
+    const submitData = await submitResponse.json();
+    const requestId = submitData.id || submitData.request_id;
+    if (!requestId) throw new Error('No request ID returned');
+
+    // Poll for completion
+    const maxPollTime = 300000; // 5 min
+    const pollInterval = 3000; // 3 sec
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxPollTime) {
+      await delay(pollInterval);
+
+      const statusResponse = await fetch(`https://platform.higgsfield.ai/requests/${requestId}/status`, {
+        headers: { 'Authorization': `Key ${credentials}` }
+      });
+
+      if (!statusResponse.ok) continue;
+      const statusData = await statusResponse.json();
+      const status = statusData.status || statusData.jobs?.[0]?.status;
+
+      if (status === 'completed') {
+        const imageUrl = statusData.jobs?.[0]?.results?.raw?.url
+          || statusData.output?.url
+          || statusData.result?.url
+          || statusData.url;
+        if (imageUrl) return { url: imageUrl };
+        throw new Error('Completed but no image URL found');
+      }
+
+      if (status === 'failed') throw new Error('Generation failed on Higgsfield');
+      if (status === 'nsfw') throw new Error('Content rejected by moderation (NSFW)');
+    }
+
+    throw new Error('Timeout - generation took too long');
+  } catch (e) {
+    console.warn('Higgsfield error:', e);
+    if (e.message?.includes('Failed to fetch') || e.message?.includes('NetworkError')) {
+      showToast('Higgsfield: erro de CORS. A API pode nao aceitar chamadas diretas do navegador. Veja o console para detalhes.', 'error');
+    }
     return null;
   }
 }
@@ -2827,6 +2936,20 @@ function initApiKeyModal() {
           <a href="https://freesound.org/apiv2/apply/" target="_blank" style="color: var(--accent); font-size: 0.75rem;">Criar chave gratis aqui</a>
         </div>
 
+        <div style="margin-top: 12px; padding: 8px 10px; background: linear-gradient(135deg, #c8ff0022, #c8ff0008); border: 1px solid #c8ff0033; border-radius: var(--radius-md);">
+          <div class="setting-group" style="margin:0;">
+            <label><i class="fas fa-star" style="color: #c8ff00;"></i> Higgsfield Credentials <span style="color:var(--text-muted);">(Imagem - modelos UNLIMITED)</span></label>
+            <div style="display: flex; gap: 6px;">
+              <input type="password" class="input-field" id="higgsfieldKeyInput" placeholder="Cole KEY_ID:KEY_SECRET do Higgsfield...">
+              <button class="btn-tiny" id="toggleHiggsfieldKey"><i class="fas fa-eye"></i></button>
+            </div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+              Formato: <code style="background:#333;padding:1px 4px;border-radius:3px;">KEY_ID:KEY_SECRET</code> &mdash; Pegue em cloud.higgsfield.ai
+            </div>
+            <a href="https://cloud.higgsfield.ai" target="_blank" style="color: #c8ff00; font-size: 0.75rem;">Pegar credenciais aqui</a>
+          </div>
+        </div>
+
         <div style="margin-top: 10px; padding: 8px 10px; background: var(--accent-subtle); border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-secondary);">
           <i class="fas fa-shield-halved" style="color: var(--accent);"></i>
           Suas chaves ficam salvas apenas no seu navegador.
@@ -2855,7 +2978,8 @@ function initApiKeyModal() {
       pexels_api_key: document.getElementById('pexelsKeyInput').value.trim(),
       pixabay_api_key: document.getElementById('pixabayKeyInput').value.trim(),
       unsplash_api_key: document.getElementById('unsplashKeyInput').value.trim(),
-      freesound_api_key: document.getElementById('freesoundKeyInput').value.trim()
+      freesound_api_key: document.getElementById('freesoundKeyInput').value.trim(),
+      higgsfield_credentials: document.getElementById('higgsfieldKeyInput').value.trim()
     };
     for (const [k, v] of Object.entries(keys)) {
       setApiKey(k, v);
@@ -2866,7 +2990,7 @@ function initApiKeyModal() {
   });
 
   // Toggle visibility
-  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface', 'Pexels', 'Pixabay', 'Unsplash', 'Freesound'].forEach(name => {
+  ['Gemini', 'Openrouter', 'Groq', 'Together', 'Huggingface', 'Pexels', 'Pixabay', 'Unsplash', 'Freesound', 'Higgsfield'].forEach(name => {
     document.getElementById(`toggle${name}Key`).addEventListener('click', () => {
       const input = document.getElementById(`${name.toLowerCase()}KeyInput`);
       input.type = input.type === 'password' ? 'text' : 'password';
@@ -2887,6 +3011,7 @@ function openApiKeyModal() {
   document.getElementById('pixabayKeyInput').value = getApiKey('pixabay_api_key') || '';
   document.getElementById('unsplashKeyInput').value = getApiKey('unsplash_api_key') || '';
   document.getElementById('freesoundKeyInput').value = getApiKey('freesound_api_key') || '';
+  document.getElementById('higgsfieldKeyInput').value = getApiKey('higgsfield_credentials') || '';
   modal.classList.add('open');
 }
 
@@ -2902,7 +3027,8 @@ function updateApiKeyStatus() {
     Groq: !!getApiKey('groq_api_key'),
     Together: !!getApiKey('together_api_key'),
     HuggingFace: !!getApiKey('huggingface_api_key'),
-    Pexels: !!getApiKey('pexels_api_key')
+    Pexels: !!getApiKey('pexels_api_key'),
+    Higgsfield: !!getApiKey('higgsfield_credentials')
   };
   const display = document.getElementById('creditsDisplay');
   if (display) {
