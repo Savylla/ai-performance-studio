@@ -3003,12 +3003,14 @@ Historia: ${storyPrompt}`,
       card.className = 'storyboard-panel';
       card.innerHTML = `
         <div class="sb-panel-number">${i + 1}</div>
+        <button class="sb-panel-remove" title="Remover painel"><i class="fas fa-times"></i></button>
         <div class="sb-panel-image loading">
           <div class="spinner-ring small"></div>
           <span>Gerando painel ${i + 1}/${panels.length}...</span>
         </div>
         <div class="sb-panel-caption">${desc}</div>
       `;
+      card.querySelector('.sb-panel-remove').addEventListener('click', () => removeSbPanel(card));
       grid.appendChild(card);
     });
 
@@ -3067,11 +3069,26 @@ function addToStoryboard(imageUrl, caption) {
   card.className = 'storyboard-panel';
   card.innerHTML = `
     <div class="sb-panel-number">${panelNum}</div>
+    <button class="sb-panel-remove" title="Remover painel"><i class="fas fa-times"></i></button>
     <div class="sb-panel-image"><img src="${imageUrl}" alt="Panel ${panelNum}"></div>
     <div class="sb-panel-caption">${caption || ''}</div>
   `;
+  card.querySelector('.sb-panel-remove').addEventListener('click', () => removeSbPanel(card));
   grid.appendChild(card);
   showToast('Adicionado ao Story Board!', 'success');
+}
+
+function removeSbPanel(card) {
+  card.remove();
+  // Renumber remaining panels
+  const grid = document.getElementById('storyboardGrid');
+  grid.querySelectorAll('.storyboard-panel').forEach((panel, i) => {
+    const numEl = panel.querySelector('.sb-panel-number');
+    if (numEl) numEl.textContent = i + 1;
+  });
+  if (grid.children.length === 0) {
+    document.getElementById('storyboardEmpty').style.display = '';
+  }
 }
 
 // =============================================

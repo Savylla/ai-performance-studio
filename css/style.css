@@ -3381,6 +3381,28 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+.sb-panel-remove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  z-index: 2;
+  opacity: 0;
+  transition: all var(--transition);
+}
+.storyboard-panel:hover .sb-panel-remove { opacity: 1; }
+.sb-panel-remove:hover { background: var(--red); }
+
 .sb-panel-image {
   width: 100%;
   aspect-ratio: 1;
