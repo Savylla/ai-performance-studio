@@ -449,6 +449,20 @@
             <button class="moodboard-tool-btn moodboard-clear-btn" id="moodboardClearBtn" title="Limpar board"><i class="fas fa-trash"></i></button>
           </div>
         </div>
+        <!-- Folder Bar + AI Search -->
+        <div class="folder-bar" id="moodboardFolderBar">
+          <div class="folder-chips-wrap">
+            <div class="folder-chips" id="moodboardFolderChips">
+              <button class="folder-chip active" data-folder="all"><i class="fas fa-layer-group"></i> Todos</button>
+            </div>
+            <button class="folder-add-btn" id="moodboardAddFolder" title="Nova pasta"><i class="fas fa-folder-plus"></i></button>
+          </div>
+          <div class="ai-search-wrap">
+            <i class="fas fa-wand-magic-sparkles ai-search-icon"></i>
+            <input type="text" class="ai-search-input" id="moodboardAiSearch" placeholder="Busca inteligente com IA...">
+            <button class="ai-search-btn" id="moodboardAiSearchBtn" title="Buscar com IA"><i class="fas fa-search"></i></button>
+          </div>
+        </div>
         <!-- Source Selector -->
         <div class="moodboard-sources" id="moodboardSources">
           <span class="moodboard-sources-label"><i class="fas fa-globe"></i> Buscar em:</span>
@@ -584,6 +598,32 @@
           </div>
         </div>
         <div class="storyboard-grid" id="storyboardGrid"></div>
+
+        <!-- Saved Storyboards Section -->
+        <div class="storyboard-saved-section" id="storyboardSavedSection">
+          <div class="storyboard-saved-header">
+            <h3><i class="fas fa-bookmark"></i> Storyboards Salvos</h3>
+            <button class="sb-save-current-btn" id="sbSaveCurrentBtn" title="Salvar storyboard atual"><i class="fas fa-save"></i> Salvar Atual</button>
+          </div>
+          <!-- Folder Bar + AI Search -->
+          <div class="folder-bar" id="storyboardFolderBar">
+            <div class="folder-chips-wrap">
+              <div class="folder-chips" id="storyboardFolderChips">
+                <button class="folder-chip active" data-folder="all"><i class="fas fa-layer-group"></i> Todos</button>
+              </div>
+              <button class="folder-add-btn" id="storyboardAddFolder" title="Nova pasta"><i class="fas fa-folder-plus"></i></button>
+            </div>
+            <div class="ai-search-wrap">
+              <i class="fas fa-wand-magic-sparkles ai-search-icon"></i>
+              <input type="text" class="ai-search-input" id="storyboardAiSearch" placeholder="Busca inteligente com IA...">
+              <button class="ai-search-btn" id="storyboardAiSearchBtn" title="Buscar com IA"><i class="fas fa-search"></i></button>
+            </div>
+          </div>
+          <div class="storyboard-saved-grid" id="storyboardSavedGrid"></div>
+          <div class="storyboard-saved-empty" id="storyboardSavedEmpty">
+            <p><i class="fas fa-info-circle"></i> Gere um storyboard e clique em "Salvar Atual" para guardar aqui</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -607,6 +647,20 @@
             <button class="gallery-action-btn gallery-delete-all" id="galleryClearBtn" title="Limpar galeria">
               <i class="fas fa-trash"></i>
             </button>
+          </div>
+        </div>
+        <!-- Folder Bar + AI Search -->
+        <div class="folder-bar" id="galleryFolderBar">
+          <div class="folder-chips-wrap">
+            <div class="folder-chips" id="galleryFolderChips">
+              <button class="folder-chip active" data-folder="all"><i class="fas fa-layer-group"></i> Todos</button>
+            </div>
+            <button class="folder-add-btn" id="galleryAddFolder" title="Nova pasta"><i class="fas fa-folder-plus"></i></button>
+          </div>
+          <div class="ai-search-wrap">
+            <i class="fas fa-wand-magic-sparkles ai-search-icon"></i>
+            <input type="text" class="ai-search-input" id="galleryAiSearch" placeholder="Busca inteligente com IA...">
+            <button class="ai-search-btn" id="galleryAiSearchBtn" title="Buscar com IA"><i class="fas fa-search"></i></button>
           </div>
         </div>
         <!-- Gallery Grid -->
@@ -649,6 +703,20 @@
             <button class="gallery-action-btn gallery-delete-all" id="historyClearBtn" title="Limpar historico">
               <i class="fas fa-trash"></i>
             </button>
+          </div>
+        </div>
+        <!-- Folder Bar + AI Search -->
+        <div class="folder-bar" id="historyFolderBar">
+          <div class="folder-chips-wrap">
+            <div class="folder-chips" id="historyFolderChips">
+              <button class="folder-chip active" data-folder="all"><i class="fas fa-layer-group"></i> Todos</button>
+            </div>
+            <button class="folder-add-btn" id="historyAddFolder" title="Nova pasta"><i class="fas fa-folder-plus"></i></button>
+          </div>
+          <div class="ai-search-wrap">
+            <i class="fas fa-wand-magic-sparkles ai-search-icon"></i>
+            <input type="text" class="ai-search-input" id="historyAiSearch" placeholder="Busca inteligente com IA...">
+            <button class="ai-search-btn" id="historyAiSearchBtn" title="Buscar com IA"><i class="fas fa-search"></i></button>
           </div>
         </div>
         <!-- History List -->
@@ -1024,6 +1092,42 @@
         <button class="btn-light"><i class="fas fa-heart"></i> Favoritar</button>
       </div>
       <div class="lightbox-info" id="lightboxInfo"></div>
+    </div>
+  </div>
+
+  <!-- Folder Modal -->
+  <div class="folder-modal-overlay" id="folderModal" style="display:none;">
+    <div class="folder-modal">
+      <div class="folder-modal-header">
+        <h3 id="folderModalTitle"><i class="fas fa-folder-plus"></i> Nova Pasta</h3>
+        <button class="folder-modal-close" id="folderModalClose"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="text" class="folder-modal-input" id="folderModalName" placeholder="Nome da pasta..." maxlength="30" autocomplete="off">
+      <div class="folder-color-picker" id="folderColorPicker">
+        <div class="folder-color-opt selected" data-color="#AD39FB" style="background:#AD39FB;"></div>
+        <div class="folder-color-opt" data-color="#4a6cf7" style="background:#4a6cf7;"></div>
+        <div class="folder-color-opt" data-color="#34d399" style="background:#34d399;"></div>
+        <div class="folder-color-opt" data-color="#ef4444" style="background:#ef4444;"></div>
+        <div class="folder-color-opt" data-color="#FD41D8" style="background:#FD41D8;"></div>
+        <div class="folder-color-opt" data-color="#f59e0b" style="background:#f59e0b;"></div>
+        <div class="folder-color-opt" data-color="#06b6d4" style="background:#06b6d4;"></div>
+        <div class="folder-color-opt" data-color="#8b5cf6" style="background:#8b5cf6;"></div>
+      </div>
+      <div class="folder-modal-actions">
+        <button class="folder-modal-cancel" id="folderModalCancel">Cancelar</button>
+        <button class="folder-modal-save" id="folderModalSave"><i class="fas fa-check"></i> Criar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move to Folder Modal -->
+  <div class="folder-modal-overlay" id="moveToFolderModal" style="display:none;">
+    <div class="folder-modal folder-modal-sm">
+      <div class="folder-modal-header">
+        <h3><i class="fas fa-folder-open"></i> Mover para Pasta</h3>
+        <button class="folder-modal-close" id="moveToFolderClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="move-folder-list" id="moveFolderList"></div>
     </div>
   </div>
 

@@ -4068,13 +4068,26 @@ function renderMoodboard() {
   // Remove all items except empty state
   board.querySelectorAll('.moodboard-item').forEach(el => el.remove());
 
-  if (moodboardItems.length === 0) {
+  let itemsToRender = [...moodboardItems];
+
+  // Apply folder filter
+  if (currentFolderByPage.moodboard !== 'all') {
+    const folderMap = getFolderMap('moodboard');
+    itemsToRender = itemsToRender.filter(item => folderMap[String(item.id)] === currentFolderByPage.moodboard);
+  }
+
+  // Apply AI search filter
+  if (aiSearchResultsByPage.moodboard) {
+    itemsToRender = itemsToRender.filter((item, i) => aiSearchResultsByPage.moodboard.has(String(item.id || i)));
+  }
+
+  if (itemsToRender.length === 0) {
     empty.style.display = '';
     return;
   }
   empty.style.display = 'none';
 
-  moodboardItems.forEach(item => {
+  itemsToRender.forEach(item => {
     const el = document.createElement('div');
     el.className = 'moodboard-item moodboard-item-' + item.type;
 
@@ -4082,6 +4095,7 @@ function renderMoodboard() {
       el.innerHTML = `
         <img src="${item.url}" alt="" loading="lazy">
         <div class="moodboard-item-actions">
+          <button class="moodboard-item-action-btn moodboard-item-folder-btn" title="Mover para pasta"><i class="fas fa-folder"></i></button>
           <button class="moodboard-item-action-btn moodboard-download-btn" title="Baixar imagem"><i class="fas fa-download"></i></button>
           <button class="moodboard-item-action-btn moodboard-gallery-btn" title="Adicionar na Galeria"><i class="fas fa-images"></i></button>
           <button class="moodboard-item-action-btn moodboard-storyboard-btn" title="Adicionar ao Story Board"><i class="fas fa-book-open"></i></button>
@@ -4096,11 +4110,13 @@ function renderMoodboard() {
         <div class="moodboard-palette-strip">
           ${item.colors.map(c => `<div class="moodboard-palette-cell" style="background:${c};" title="${c}"><span>${c}</span></div>`).join('')}
         </div>
+        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
     } else if (item.type === 'note') {
       el.innerHTML = `
         <div class="moodboard-note-content"><i class="fas fa-sticky-note"></i> ${item.text}</div>
+        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
     } else if (item.type === 'video') {
@@ -4111,6 +4127,7 @@ function renderMoodboard() {
         <div class="moodboard-item-info">
           <span><i class="fas fa-video"></i> ${item.provider || 'Video'}</span>
         </div>
+        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
     } else if (item.type === 'audio') {
@@ -4120,6 +4137,7 @@ function renderMoodboard() {
           <audio controls src="${item.url}" style="width:100%;"></audio>
           <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${item.provider || 'Audio'}</div>
         </div>
+        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
     } else if (item.type === 'font') {
@@ -4139,6 +4157,16 @@ function renderMoodboard() {
     }
 
     el.querySelector('.moodboard-item-remove').addEventListener('click', () => removeFromBoard(item.id));
+
+    // Folder button for all moodboard items
+    const folderBtn = el.querySelector('.moodboard-item-folder-btn');
+    if (folderBtn) {
+      folderBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const folderMap = getFolderMap('moodboard');
+        openMoveToFolderModal('moodboard', item.id, folderMap[String(item.id)]);
+      });
+    }
 
     // Download & Gallery buttons for images
     if (item.type === 'image') {
@@ -4651,7 +4679,19 @@ async function renderGallery() {
   if (!grid) return;
 
   try {
-    const items = await getGalleryItems(galleryCurrentFilter);
+    let items = await getGalleryItems(galleryCurrentFilter);
+
+    // Apply folder filter
+    if (currentFolderByPage.gallery !== 'all') {
+      const folderMap = getFolderMap('gallery');
+      items = items.filter(item => folderMap[String(item.id)] === currentFolderByPage.gallery);
+    }
+
+    // Apply AI search filter
+    if (aiSearchResultsByPage.gallery) {
+      items = items.filter(item => aiSearchResultsByPage.gallery.has(String(item.id)));
+    }
+
     countEl.textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
 
     if (items.length === 0) {
@@ -4663,6 +4703,9 @@ async function renderGallery() {
     grid.style.display = '';
     empty.style.display = 'none';
     grid.innerHTML = '';
+
+    const folderMap = getFolderMap('gallery');
+    const allFolders = getFolders('gallery');
 
     items.forEach(item => {
       const card = document.createElement('div');
@@ -4686,8 +4729,14 @@ async function renderGallery() {
         thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${preview}</div>`;
       }
 
+      // Folder badge
+      const itemFolderId = folderMap[String(item.id)];
+      const itemFolder = itemFolderId ? allFolders.find(f => f.id === itemFolderId) : null;
+      const folderBadgeHTML = itemFolder ? `<span class="item-folder-badge" style="background:${itemFolder.color}20;color:${itemFolder.color};"><span class="badge-dot" style="background:${itemFolder.color};"></span>${itemFolder.name}</span>` : '';
+
       card.innerHTML = `
         <span class="gallery-card-badge type-${item.type}">${typeLabels[item.type]}</span>
+        <button class="gallery-card-folder" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="gallery-card-storyboard" title="Adicionar ao Story Board"><i class="fas fa-book-open"></i></button>
         <button class="gallery-card-moodboard" title="Adicionar ao Moodboard"><i class="fas fa-palette"></i></button>
         <button class="gallery-card-delete" title="Excluir"><i class="fas fa-trash"></i></button>
@@ -4697,9 +4746,16 @@ async function renderGallery() {
           <div class="gallery-card-meta">
             <span>${item.provider || ''}</span>
             <span>${timeStr}</span>
+            ${folderBadgeHTML}
           </div>
         </div>
       `;
+
+      // Folder button
+      card.querySelector('.gallery-card-folder').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openMoveToFolderModal('gallery', item.id, folderMap[String(item.id)]);
+      });
 
       // Delete button
       card.querySelector('.gallery-card-delete').addEventListener('click', async (e) => {
@@ -5141,7 +5197,19 @@ async function renderHistory() {
   if (!list) return;
 
   try {
-    const items = await getHistoryItems(historyCurrentFilter);
+    let items = await getHistoryItems(historyCurrentFilter);
+
+    // Apply folder filter
+    if (currentFolderByPage.history !== 'all') {
+      const folderMap = getFolderMap('history');
+      items = items.filter(item => folderMap[String(item.id)] === currentFolderByPage.history);
+    }
+
+    // Apply AI search filter
+    if (aiSearchResultsByPage.history) {
+      items = items.filter(item => aiSearchResultsByPage.history.has(String(item.id)));
+    }
+
     countEl.textContent = `${items.length} ${items.length === 1 ? 'registro' : 'registros'}`;
 
     if (items.length === 0) {
@@ -5163,6 +5231,8 @@ async function renderHistory() {
       text: 'Texto', moodboard: 'Moodboard'
     };
 
+    const folderMap = getFolderMap('history');
+    const allFolders = getFolders('history');
     let lastDate = '';
 
     items.forEach(item => {
@@ -5191,6 +5261,11 @@ async function renderHistory() {
         thumbHTML = `<i class="fas ${typeIcons[item.type] || 'fa-file'}" style="color:var(--text-muted);"></i>`;
       }
 
+      // Folder badge
+      const itemFolderId = folderMap[String(item.id)];
+      const itemFolder = itemFolderId ? allFolders.find(f => f.id === itemFolderId) : null;
+      const folderBadgeHTML = itemFolder ? `<span class="item-folder-badge" style="background:${itemFolder.color}20;color:${itemFolder.color};"><span class="badge-dot" style="background:${itemFolder.color};"></span>${itemFolder.name}</span>` : '';
+
       el.innerHTML = `
         <div class="history-item-icon type-${item.type}">
           <i class="fas ${typeIcons[item.type] || 'fa-file'}"></i>
@@ -5202,17 +5277,26 @@ async function renderHistory() {
             <span><i class="fas fa-robot"></i> ${item.provider || ''}</span>
             <span><i class="fas fa-clock"></i> ${timeStr}</span>
             ${item.detail ? `<span><i class="fas fa-info-circle"></i> ${item.detail}</span>` : ''}
+            ${folderBadgeHTML}
           </div>
         </div>
         <div class="history-item-thumb">${thumbHTML}</div>
         <div class="history-item-actions">
+          <button class="history-item-action" title="Mover para pasta"><i class="fas fa-folder"></i></button>
           <button class="history-item-action" title="Reutilizar prompt"><i class="fas fa-redo"></i></button>
           <button class="history-item-action btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>
         </div>
       `;
 
-      // Reuse prompt
-      el.querySelector('.history-item-action:not(.btn-delete)').addEventListener('click', (e) => {
+      // Folder button (first action)
+      const actionBtns = el.querySelectorAll('.history-item-action');
+      actionBtns[0]?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openMoveToFolderModal('history', item.id, folderMap[String(item.id)]);
+      });
+
+      // Reuse prompt (second action)
+      actionBtns[1]?.addEventListener('click', (e) => {
         e.stopPropagation();
         document.getElementById('promptInput').value = item.prompt || '';
         const tabMap = { image: 'image', video: 'video', audio: 'audio', text: 'text', moodboard: 'moodboard' };
@@ -5220,7 +5304,7 @@ async function renderHistory() {
         showToast('Prompt carregado!', 'success');
       });
 
-      // Delete
+      // Delete (third action)
       el.querySelector('.btn-delete').addEventListener('click', async (e) => {
         e.stopPropagation();
         await deleteHistoryItem(item.id);
@@ -5247,4 +5331,633 @@ document.addEventListener('DOMContentLoaded', () => {
   openGalleryDB().catch(e => console.warn('IndexedDB init:', e));
   initGallery();
   initHistory();
+  initFolderSystem();
+  initAiSearch();
+  initStoryboardSave();
 });
+
+// =============================================
+// === FOLDER SYSTEM ===
+// =============================================
+
+const FOLDERS_KEY = 'app_folders';
+const FOLDER_MAP_PREFIX = 'folder_map_';
+
+function getFolders(page) {
+  try {
+    const all = JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]');
+    return page ? all.filter(f => f.page === page) : all;
+  } catch { return []; }
+}
+
+function saveAllFolders(folders) {
+  localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+}
+
+function createFolder(page, name, color) {
+  const folders = getFolders();
+  const folder = { id: 'fld_' + Date.now(), name, color: color || '#AD39FB', page, createdAt: Date.now() };
+  folders.push(folder);
+  saveAllFolders(folders);
+  return folder;
+}
+
+function renameFolder(folderId, newName) {
+  const folders = getFolders();
+  const f = folders.find(f => f.id === folderId);
+  if (f) { f.name = newName; saveAllFolders(folders); }
+}
+
+function deleteFolderById(folderId) {
+  const folders = getFolders().filter(f => f.id !== folderId);
+  saveAllFolders(folders);
+  // Remove folder mappings for this folder
+  FOLDER_PAGES.forEach(page => {
+    const map = getFolderMap(page);
+    Object.keys(map).forEach(key => { if (map[key] === folderId) delete map[key]; });
+    saveFolderMap(page, map);
+  });
+}
+
+function getFolderMap(page) {
+  try { return JSON.parse(localStorage.getItem(FOLDER_MAP_PREFIX + page) || '{}'); } catch { return {}; }
+}
+
+function saveFolderMap(page, map) {
+  localStorage.setItem(FOLDER_MAP_PREFIX + page, JSON.stringify(map));
+}
+
+function setItemFolder(page, itemId, folderId) {
+  const map = getFolderMap(page);
+  if (folderId && folderId !== 'none') {
+    map[String(itemId)] = folderId;
+  } else {
+    delete map[String(itemId)];
+  }
+  saveFolderMap(page, map);
+}
+
+function getItemFolder(page, itemId) {
+  return getFolderMap(page)[String(itemId)] || null;
+}
+
+// Current folder filters per page
+const currentFolderByPage = { gallery: 'all', history: 'all', moodboard: 'all', storyboard: 'all' };
+
+// Render function lookup per page
+const PAGE_RENDER_FN = {
+  gallery: () => typeof renderGallery === 'function' && renderGallery(),
+  history: () => typeof renderHistory === 'function' && renderHistory(),
+  moodboard: () => typeof renderMoodboard === 'function' && renderMoodboard(),
+  storyboard: () => typeof renderSavedStoryboards === 'function' && renderSavedStoryboards()
+};
+
+// Page container IDs for search results display
+const PAGE_CONTAINER_IDS = {
+  gallery: 'galleryGrid',
+  history: 'historyList',
+  moodboard: 'moodboardBoard',
+  storyboard: 'storyboardSavedGrid'
+};
+
+const FOLDER_PAGES = ['gallery', 'history', 'moodboard', 'storyboard'];
+
+function initFolderSystem() {
+  // Init folder bars and add-folder buttons for each page
+  FOLDER_PAGES.forEach(page => {
+    renderFolderChips(page);
+    document.getElementById(page + 'AddFolder')?.addEventListener('click', () => openFolderModal(page));
+  });
+
+  // Folder modal events
+  document.getElementById('folderModalCancel')?.addEventListener('click', closeFolderModal);
+  document.getElementById('folderModalClose')?.addEventListener('click', closeFolderModal);
+  document.getElementById('folderModal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeFolderModal(); });
+  document.getElementById('folderModalSave')?.addEventListener('click', saveFolderFromModal);
+  document.getElementById('folderModalName')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveFolderFromModal(); });
+
+  // Color picker
+  document.querySelectorAll('.folder-color-opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.folder-color-opt').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+    });
+  });
+
+  // Move to folder modal
+  document.getElementById('moveToFolderClose')?.addEventListener('click', closeMoveToFolderModal);
+  document.getElementById('moveToFolderModal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeMoveToFolderModal(); });
+
+  // Close context menu on click elsewhere
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.folder-context-menu').forEach(m => m.remove());
+  });
+}
+
+function renderFolderChips(page) {
+  const container = document.getElementById(page + 'FolderChips');
+  if (!container) return;
+
+  const folders = getFolders(page);
+  const folderMap = getFolderMap(page);
+  const currentFolder = currentFolderByPage[page] || 'all';
+
+  // Count items per folder
+  const folderCounts = {};
+  Object.values(folderMap).forEach(fid => { folderCounts[fid] = (folderCounts[fid] || 0) + 1; });
+
+  container.innerHTML = `<button class="folder-chip ${currentFolder === 'all' ? 'active' : ''}" data-folder="all"><i class="fas fa-layer-group"></i> Todos</button>`;
+
+  folders.forEach(folder => {
+    const count = folderCounts[folder.id] || 0;
+    const chip = document.createElement('button');
+    chip.className = `folder-chip ${currentFolder === folder.id ? 'active' : ''}`;
+    chip.dataset.folder = folder.id;
+    chip.innerHTML = `
+      <span class="folder-chip-dot" style="background:${folder.color};"></span>
+      ${folder.name}
+      <span class="folder-chip-count">${count}</span>
+      <span class="folder-chip-delete" title="Opcoes"><i class="fas fa-ellipsis-v"></i></span>
+    `;
+
+    // Click to filter
+    chip.addEventListener('click', (e) => {
+      if (e.target.closest('.folder-chip-delete')) return;
+      setCurrentFolder(page, folder.id);
+    });
+
+    // Options button
+    chip.querySelector('.folder-chip-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      showFolderContextMenu(e, folder, page);
+    });
+
+    container.appendChild(chip);
+  });
+
+  // "All" click handler
+  container.querySelector('[data-folder="all"]').addEventListener('click', () => setCurrentFolder(page, 'all'));
+}
+
+function setCurrentFolder(page, folderId) {
+  currentFolderByPage[page] = folderId;
+  PAGE_RENDER_FN[page]?.();
+  renderFolderChips(page);
+}
+
+function showFolderContextMenu(e, folder, page) {
+  document.querySelectorAll('.folder-context-menu').forEach(m => m.remove());
+
+  const menu = document.createElement('div');
+  menu.className = 'folder-context-menu';
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+  menu.innerHTML = `
+    <button class="folder-context-item" data-action="rename"><i class="fas fa-pen"></i> Renomear</button>
+    <button class="folder-context-item danger" data-action="delete"><i class="fas fa-trash"></i> Excluir pasta</button>
+  `;
+
+  menu.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.remove();
+    const newName = prompt('Novo nome da pasta:', folder.name);
+    if (newName && newName.trim()) {
+      renameFolder(folder.id, newName.trim());
+      renderFolderChips(page);
+      showToast('Pasta renomeada!', 'success');
+    }
+  });
+
+  menu.querySelector('[data-action="delete"]').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.remove();
+    if (confirm(`Excluir a pasta "${folder.name}"? Os itens nao serao excluidos.`)) {
+      deleteFolderById(folder.id);
+      setCurrentFolder(page, 'all');
+      showToast('Pasta excluida!', 'success');
+    }
+  });
+
+  document.body.appendChild(menu);
+
+  // Adjust position if off-screen
+  const rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
+  if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
+}
+
+// Folder Modal
+let folderModalPage = '';
+let folderModalEditId = null;
+
+function openFolderModal(page, editFolder) {
+  folderModalPage = page;
+  folderModalEditId = editFolder?.id || null;
+  const modal = document.getElementById('folderModal');
+  const title = document.getElementById('folderModalTitle');
+  const input = document.getElementById('folderModalName');
+  const saveBtn = document.getElementById('folderModalSave');
+
+  if (editFolder) {
+    title.innerHTML = '<i class="fas fa-pen"></i> Editar Pasta';
+    input.value = editFolder.name;
+    saveBtn.innerHTML = '<i class="fas fa-check"></i> Salvar';
+  } else {
+    title.innerHTML = '<i class="fas fa-folder-plus"></i> Nova Pasta';
+    input.value = '';
+    saveBtn.innerHTML = '<i class="fas fa-check"></i> Criar';
+  }
+
+  modal.style.display = 'flex';
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeFolderModal() {
+  document.getElementById('folderModal').style.display = 'none';
+  folderModalEditId = null;
+}
+
+function saveFolderFromModal() {
+  const name = document.getElementById('folderModalName').value.trim();
+  if (!name) { showToast('Digite um nome para a pasta', 'error'); return; }
+
+  const color = document.querySelector('.folder-color-opt.selected')?.dataset.color || '#AD39FB';
+  const isEditing = !!folderModalEditId;
+  const page = folderModalPage;
+
+  if (isEditing) {
+    renameFolder(folderModalEditId, name);
+  } else {
+    createFolder(page, name, color);
+  }
+
+  closeFolderModal();
+  renderFolderChips(page);
+  showToast(isEditing ? 'Pasta atualizada!' : 'Pasta criada!', 'success');
+}
+
+// Move to Folder Modal
+let moveToFolderCallback = null;
+
+function openMoveToFolderModal(page, itemId, currentFolderId) {
+  const modal = document.getElementById('moveToFolderModal');
+  const list = document.getElementById('moveFolderList');
+  const folders = getFolders(page);
+
+  list.innerHTML = '';
+
+  // "No folder" option
+  const noneItem = document.createElement('button');
+  noneItem.className = `move-folder-item ${!currentFolderId ? 'active' : ''}`;
+  noneItem.innerHTML = '<i class="fas fa-layer-group"></i> Sem pasta';
+  noneItem.addEventListener('click', () => {
+    setItemFolder(page, itemId, null);
+    closeMoveToFolderModal();
+    refreshPageAfterFolderChange(page);
+    showToast('Item removido da pasta', 'success');
+  });
+  list.appendChild(noneItem);
+
+  folders.forEach(folder => {
+    const item = document.createElement('button');
+    item.className = `move-folder-item ${currentFolderId === folder.id ? 'active' : ''}`;
+    item.innerHTML = `<span class="move-folder-item-dot" style="background:${folder.color};"></span> ${folder.name}`;
+    item.addEventListener('click', () => {
+      setItemFolder(page, itemId, folder.id);
+      closeMoveToFolderModal();
+      refreshPageAfterFolderChange(page);
+      showToast(`Movido para "${folder.name}"`, 'success');
+    });
+    list.appendChild(item);
+  });
+
+  if (folders.length === 0) {
+    list.innerHTML += '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:0.8rem;"><i class="fas fa-folder-plus"></i><br>Crie uma pasta primeiro</div>';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeMoveToFolderModal() {
+  document.getElementById('moveToFolderModal').style.display = 'none';
+}
+
+function refreshPageAfterFolderChange(page) {
+  renderFolderChips(page);
+  PAGE_RENDER_FN[page]?.();
+}
+
+// =============================================
+// === AI SMART SEARCH (Pollinations - Free) ===
+// =============================================
+
+function initAiSearch() {
+  FOLDER_PAGES.forEach(page => {
+    document.getElementById(page + 'AiSearchBtn')?.addEventListener('click', () => runAiSearch(page));
+    document.getElementById(page + 'AiSearch')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') runAiSearch(page); });
+  });
+}
+
+async function runAiSearch(page) {
+  const inputId = page + 'AiSearch';
+  const btnId = page + 'AiSearchBtn';
+  const query = document.getElementById(inputId)?.value.trim();
+
+  if (!query) {
+    // Clear search - show all items
+    clearAiSearchResults(page);
+    return;
+  }
+
+  const btn = document.getElementById(btnId);
+  btn?.classList.add('loading');
+
+  try {
+    const items = await getItemsForPage(page);
+    if (items.length === 0) {
+      showToast('Nenhum item para buscar', 'error');
+      btn?.classList.remove('loading');
+      return;
+    }
+
+    // Build item descriptions for the AI
+    const itemDescriptions = items.map((item, i) => {
+      const prompt = item.prompt || item.text || '';
+      const type = item.type || '';
+      const provider = item.provider || '';
+      return `[${i}] ${type} | ${provider} | "${prompt.substring(0, 100)}"`;
+    }).join('\n');
+
+    const aiPrompt = `Voce e um assistente de busca. O usuario busca: "${query}"
+
+Aqui estao os itens disponiveis:
+${itemDescriptions}
+
+Retorne APENAS os numeros dos itens que correspondem a busca, separados por virgula. Se nenhum corresponder, retorne "NONE". Considere sinonimos, termos relacionados e contexto semantico. Responda SOMENTE com os numeros ou NONE, nada mais.`;
+
+    const response = await fetch('https://text.pollinations.ai/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: 'Voce e um assistente de busca. Responda SOMENTE com numeros separados por virgula ou NONE.' },
+          { role: 'user', content: aiPrompt }
+        ],
+        model: 'openai',
+        seed: 42
+      })
+    });
+
+    if (!response.ok) throw new Error('Erro na busca IA');
+
+    const text = await response.text();
+
+    if (text.trim().toUpperCase() === 'NONE' || !text.match(/\d/)) {
+      showAiSearchNoResults(page, query);
+      btn?.classList.remove('loading');
+      return;
+    }
+
+    const indices = [...new Set(text.match(/\d+/g)?.map(Number) || [])];
+    const matchedIds = indices.filter(i => i < items.length).map(i => items[i].id || items[i].trashId || i);
+
+    highlightAiSearchResults(page, matchedIds, items, query);
+  } catch (e) {
+    console.error('AI Search error:', e);
+    // Fallback to local fuzzy search
+    runLocalFuzzySearch(page, query);
+  }
+
+  btn?.classList.remove('loading');
+}
+
+async function getItemsForPage(page) {
+  if (page === 'gallery') return await getGalleryItems('all');
+  if (page === 'history') return await getHistoryItems('all');
+  if (page === 'moodboard') return [...moodboardItems];
+  if (page === 'storyboard') {
+    try { return JSON.parse(localStorage.getItem('saved_storyboards') || '[]'); } catch { return []; }
+  }
+  return [];
+}
+
+function runLocalFuzzySearch(page, query) {
+  const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+
+  getItemsForPage(page).then(items => {
+    const scored = items.map((item, i) => {
+      const text = [item.prompt, item.provider, item.type, item.text, item.detail, item.title].filter(Boolean).join(' ').toLowerCase();
+      let score = 0;
+      tokens.forEach(token => {
+        if (text.includes(token)) score += 10;
+        // Partial match
+        else if (text.split(/\s+/).some(w => w.startsWith(token) || token.startsWith(w))) score += 5;
+      });
+      return { item, index: i, score };
+    }).filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+
+    if (scored.length === 0) {
+      showAiSearchNoResults(page, query);
+      return;
+    }
+
+    const matchedIds = scored.map(s => s.item.id || s.item.trashId || s.index);
+    highlightAiSearchResults(page, matchedIds, items, query);
+  });
+}
+
+function highlightAiSearchResults(page, matchedIds, allItems, query) {
+  const matchedSet = new Set(matchedIds.map(String));
+  aiSearchResultsByPage[page] = matchedSet;
+  PAGE_RENDER_FN[page]?.();
+  showToast(`IA encontrou ${matchedSet.size} resultado(s) para "${query}"`, 'success');
+}
+
+// AI search result sets per page (null = no search active, Set = active search filter)
+const aiSearchResultsByPage = { gallery: null, history: null, moodboard: null, storyboard: null };
+
+function clearAiSearchResults(page) {
+  aiSearchResultsByPage[page] = null;
+  PAGE_RENDER_FN[page]?.();
+  document.getElementById(page + 'AiSearch').value = '';
+}
+
+function showAiSearchNoResults(page, query) {
+  const containerId = PAGE_CONTAINER_IDS[page];
+  if (containerId && document.getElementById(containerId)) {
+    showToast(`Nenhum resultado para "${query}"`, 'error');
+  }
+}
+
+// =============================================
+// === STORYBOARD SAVE SYSTEM ===
+// =============================================
+
+function initStoryboardSave() {
+  document.getElementById('sbSaveCurrentBtn')?.addEventListener('click', saveCurrentStoryboard);
+  renderSavedStoryboards();
+}
+
+function saveCurrentStoryboard() {
+  const grid = document.getElementById('storyboardGrid');
+  const panels = grid?.querySelectorAll('.storyboard-panel');
+  if (!panels || panels.length === 0) {
+    showToast('Gere um storyboard primeiro', 'error');
+    return;
+  }
+
+  const storyboardData = {
+    id: 'sb_' + Date.now(),
+    title: document.getElementById('storyboardPrompt')?.value?.substring(0, 60) || 'Storyboard sem titulo',
+    prompt: document.getElementById('storyboardPrompt')?.value || '',
+    panels: [],
+    timestamp: Date.now(),
+    style: document.querySelector('.sb-pill.style-pill.active')?.dataset.style || 'cinematic'
+  };
+
+  panels.forEach(panel => {
+    const img = panel.querySelector('img');
+    const desc = panel.querySelector('.sb-panel-description, .sb-panel-desc, p, .panel-text');
+    storyboardData.panels.push({
+      imageUrl: img?.src || '',
+      description: desc?.textContent || ''
+    });
+  });
+
+  const saved = getSavedStoryboards();
+  saved.unshift(storyboardData);
+  localStorage.setItem('saved_storyboards', JSON.stringify(saved));
+
+  renderSavedStoryboards();
+  renderFolderChips('storyboard');
+  showToast('Storyboard salvo!', 'success');
+}
+
+function getSavedStoryboards() {
+  try { return JSON.parse(localStorage.getItem('saved_storyboards') || '[]'); } catch { return []; }
+}
+
+function deleteSavedStoryboard(id) {
+  const saved = getSavedStoryboards().filter(s => s.id !== id);
+  localStorage.setItem('saved_storyboards', JSON.stringify(saved));
+  // Remove from folder map
+  const map = getFolderMap('storyboard');
+  delete map[id];
+  saveFolderMap('storyboard', map);
+  renderSavedStoryboards();
+  renderFolderChips('storyboard');
+}
+
+function renderSavedStoryboards() {
+  const grid = document.getElementById('storyboardSavedGrid');
+  const empty = document.getElementById('storyboardSavedEmpty');
+  if (!grid) return;
+
+  let saved = getSavedStoryboards();
+  const folderMap = getFolderMap('storyboard');
+
+  // Apply folder filter
+  if (currentFolderByPage.storyboard !== 'all') {
+    saved = saved.filter(s => folderMap[s.id] === currentFolderByPage.storyboard);
+  }
+
+  // Apply AI search filter
+  if (aiSearchResultsByPage.storyboard) {
+    saved = saved.filter(s => aiSearchResultsByPage.storyboard.has(String(s.id)));
+  }
+
+  if (saved.length === 0) {
+    grid.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+
+  grid.style.display = '';
+  empty.style.display = 'none';
+  grid.innerHTML = '';
+
+  saved.forEach(sb => {
+    const card = document.createElement('div');
+    card.className = 'sb-saved-card';
+
+    const thumbs = sb.panels.slice(0, 4).map(p =>
+      p.imageUrl ? `<img src="${p.imageUrl}" alt="" loading="lazy">` : `<div class="sb-thumb-placeholder"><i class="fas fa-image"></i></div>`
+    ).join('');
+
+    const timeStr = new Date(sb.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    const itemFolder = folderMap[sb.id];
+    const folder = itemFolder ? getFolders('storyboard').find(f => f.id === itemFolder) : null;
+    const folderBadge = folder ? `<span class="item-folder-badge" style="background:${folder.color}20;color:${folder.color};"><span class="badge-dot" style="background:${folder.color};"></span>${folder.name}</span>` : '';
+
+    card.innerHTML = `
+      <div class="sb-saved-card-thumb">${thumbs}</div>
+      <div class="sb-saved-card-info">
+        <div class="sb-saved-card-title">${sb.title}</div>
+        <div class="sb-saved-card-meta">
+          <span><i class="fas fa-film"></i> ${sb.panels.length} paineis</span>
+          <span><i class="fas fa-clock"></i> ${timeStr}</span>
+          ${folderBadge}
+        </div>
+      </div>
+      <div class="sb-saved-card-actions">
+        <button class="sb-saved-card-action" title="Mover para pasta"><i class="fas fa-folder"></i></button>
+        <button class="sb-saved-card-action" title="Carregar"><i class="fas fa-upload"></i></button>
+        <button class="sb-saved-card-action btn-delete" title="Excluir"><i class="fas fa-trash"></i></button>
+      </div>
+    `;
+
+    // Folder button
+    card.querySelector('.sb-saved-card-action:nth-child(1)').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMoveToFolderModal('storyboard', sb.id, folderMap[sb.id]);
+    });
+
+    // Load button
+    card.querySelector('.sb-saved-card-action:nth-child(2)').addEventListener('click', (e) => {
+      e.stopPropagation();
+      loadSavedStoryboard(sb);
+    });
+
+    // Delete button
+    card.querySelector('.sb-saved-card-action.btn-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Excluir este storyboard salvo?')) {
+        deleteSavedStoryboard(sb.id);
+        showToast('Storyboard excluido', 'success');
+      }
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function loadSavedStoryboard(sb) {
+  const promptEl = document.getElementById('storyboardPrompt');
+  if (promptEl) promptEl.value = sb.prompt || '';
+
+  // Set style
+  if (sb.style) {
+    document.querySelectorAll('.sb-pill.style-pill').forEach(p => {
+      p.classList.toggle('active', p.dataset.style === sb.style);
+    });
+  }
+
+  // Render panels
+  const grid = document.getElementById('storyboardGrid');
+  if (grid) {
+    grid.innerHTML = '';
+    sb.panels.forEach((panel, i) => {
+      const panelEl = document.createElement('div');
+      panelEl.className = 'storyboard-panel';
+      panelEl.innerHTML = `
+        <div class="sb-panel-header"><span>Painel ${i + 1}</span></div>
+        ${panel.imageUrl ? `<img src="${panel.imageUrl}" alt="Panel ${i + 1}" style="width:100%;border-radius:var(--radius-sm);">` : '<div style="aspect-ratio:16/9;background:var(--bg-input);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);"><i class="fas fa-image"></i></div>'}
+        <p style="font-size:0.78rem;color:var(--text-secondary);margin-top:8px;">${panel.description}</p>
+      `;
+      grid.appendChild(panelEl);
+    });
+  }
+
+  document.getElementById('storyboardEmpty').style.display = 'none';
+  showToast('Storyboard carregado!', 'success');
+}
