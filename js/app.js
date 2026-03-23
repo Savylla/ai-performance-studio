@@ -257,9 +257,80 @@ function initSidebar() {
 function initPrompt() {
   const textarea = document.getElementById('promptInput');
   textarea.addEventListener('input', () => {
-    textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    if (!textarea.dataset.manualResize) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
   });
+
+  // Prompt resize handle - drag to expand
+  const resizeHandle = document.getElementById('promptResizeHandle');
+  const promptWrap = document.querySelector('.prompt-input-wrap');
+  if (resizeHandle) {
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    resizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startY = e.clientY;
+      startHeight = textarea.offsetHeight;
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const diff = startY - e.clientY;
+      const newHeight = Math.max(36, Math.min(window.innerHeight * 0.5, startHeight + diff));
+      textarea.style.height = newHeight + 'px';
+      textarea.dataset.manualResize = 'true';
+      // Switch to rounded corners when expanded
+      if (newHeight > 60) {
+        promptWrap.style.borderRadius = 'var(--radius-lg)';
+      } else {
+        promptWrap.style.borderRadius = '';
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    });
+
+    // Touch support
+    resizeHandle.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startHeight = textarea.offsetHeight;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const diff = startY - e.touches[0].clientY;
+      const newHeight = Math.max(36, Math.min(window.innerHeight * 0.5, startHeight + diff));
+      textarea.style.height = newHeight + 'px';
+      textarea.dataset.manualResize = 'true';
+      if (newHeight > 60) {
+        promptWrap.style.borderRadius = 'var(--radius-lg)';
+      } else {
+        promptWrap.style.borderRadius = '';
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => { isDragging = false; });
+
+    // Double-click to reset
+    resizeHandle.addEventListener('dblclick', () => {
+      textarea.style.height = '';
+      textarea.dataset.manualResize = '';
+      promptWrap.style.borderRadius = '';
+    });
+  }
 
   // Enhance button (bilingual for image tab)
   document.getElementById('enhanceBtn').addEventListener('click', () => {
@@ -274,31 +345,53 @@ function initPrompt() {
     biArea.classList.remove('collapsed');
   }
 
-  document.getElementById('langPT').addEventListener('click', () => {
-    document.getElementById('langPT').classList.add('active');
-    document.getElementById('langEN').classList.remove('active');
+  document.getElementById('langPT').addEventListener('click', async () => {
+    const langPT = document.getElementById('langPT');
+    const langEN = document.getElementById('langEN');
+    const promptInput = document.getElementById('promptInput');
+    const mainText = promptInput.value.trim();
+    langPT.classList.add('active');
+    langEN.classList.remove('active');
     showBilingualArea();
-    const ptText = document.getElementById('promptPT').value.trim();
-    const mainText = document.getElementById('promptInput').value.trim();
-    // If PT is empty but main prompt has text, populate PT and trigger translation
-    if (!ptText && mainText) {
-      document.getElementById('promptPT').value = mainText;
-      syncPTtoEN();
+    // Translate prompt to Portuguese if there's text
+    if (mainText) {
+      langPT.disabled = true;
+      langPT.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      try {
+        const translated = await translateText(mainText, 'en-pt');
+        if (translated) {
+          promptInput.value = translated;
+          document.getElementById('promptPT').value = translated;
+          document.getElementById('promptEN').value = mainText;
+        }
+      } catch (e) { console.warn('Translation failed:', e); }
+      langPT.disabled = false;
+      langPT.textContent = 'PT';
     }
-    // Don't overwrite main prompt - user controls it
   });
-  document.getElementById('langEN').addEventListener('click', () => {
-    document.getElementById('langEN').classList.add('active');
-    document.getElementById('langPT').classList.remove('active');
+  document.getElementById('langEN').addEventListener('click', async () => {
+    const langPT = document.getElementById('langPT');
+    const langEN = document.getElementById('langEN');
+    const promptInput = document.getElementById('promptInput');
+    const mainText = promptInput.value.trim();
+    langEN.classList.add('active');
+    langPT.classList.remove('active');
     showBilingualArea();
-    const enText = document.getElementById('promptEN').value.trim();
-    const mainText = document.getElementById('promptInput').value.trim();
-    // If EN is empty but main prompt has text, populate EN and trigger translation
-    if (!enText && mainText) {
-      document.getElementById('promptEN').value = mainText;
-      syncENtoPT();
+    // Translate prompt to English if there's text
+    if (mainText) {
+      langEN.disabled = true;
+      langEN.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      try {
+        const translated = await translateText(mainText, 'pt-en');
+        if (translated) {
+          promptInput.value = translated;
+          document.getElementById('promptEN').value = translated;
+          document.getElementById('promptPT').value = mainText;
+        }
+      } catch (e) { console.warn('Translation failed:', e); }
+      langEN.disabled = false;
+      langEN.textContent = 'EN';
     }
-    // Don't overwrite main prompt - user controls it
   });
 
   // PT textarea edit -> auto sync to EN only (never touch main prompt)

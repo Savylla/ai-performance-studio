@@ -692,12 +692,39 @@ h1, h2, h3, h4, h5, h6 {
   flex: 1;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   padding: 6px 8px 6px 16px;
   transition: border-color var(--transition);
+  position: relative;
+}
+
+.prompt-resize-handle {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.prompt-resize-handle::after {
+  content: '';
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.2s;
+}
+.prompt-resize-handle:hover::after {
+  background: var(--accent);
 }
 
 .prompt-input-wrap:focus-within {
@@ -721,7 +748,7 @@ h1, h2, h3, h4, h5, h6 {
   resize: none;
   outline: none;
   line-height: 1.4;
-  max-height: 120px;
+  max-height: 50vh;
   overflow-y: auto;
 }
 
