@@ -746,9 +746,7 @@ async function enhancePromptBilingual(original) {
   enhanceBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
   enhanceBtn.disabled = true;
 
-  try {
-    const result = await pollinationsText(
-      `You are a prompt engineer. Improve the prompt below for AI image generation, making it more detailed and professional.
+  const enhanceInstruction = `You are a prompt engineer. Improve the prompt below for AI image generation, making it more detailed and professional.
 
 Return the result in EXACTLY this format (nothing else):
 ---PT---
@@ -762,12 +760,47 @@ STRICT RULES:
 - Do NOT repeat or duplicate sentences within each version
 - Keep the original intent, just make it more detailed
 
-Original prompt: ${original}`,
-      'openai',
-      { temperature: 0.4 }
-    );
+Original prompt: ${original}`;
 
-    if (!result) throw new Error('Resposta vazia');
+  try {
+    let result = null;
+
+    // Provider 1: Pollinations
+    try {
+      result = await pollinationsText(enhanceInstruction, 'openai', { temperature: 0.4 });
+    } catch (e) { console.warn('Enhance: Pollinations failed:', e.message); }
+
+    // Provider 2: Gemini (if key available)
+    if (!result) {
+      const geminiKey = getApiKey('gemini_api_key');
+      if (geminiKey) {
+        try {
+          result = await callGemini(enhanceInstruction, geminiKey);
+        } catch (e) { console.warn('Enhance: Gemini failed:', e.message); }
+      }
+    }
+
+    // Provider 3: Groq (if key available)
+    if (!result) {
+      const groqKey = getApiKey('groq_api_key');
+      if (groqKey) {
+        try {
+          result = await groqText(enhanceInstruction, groqKey, 'llama-3.3-70b-versatile');
+        } catch (e) { console.warn('Enhance: Groq failed:', e.message); }
+      }
+    }
+
+    // Provider 4: OpenRouter (if key available)
+    if (!result) {
+      const orKey = getApiKey('openrouter_api_key');
+      if (orKey) {
+        try {
+          result = await openRouterText(enhanceInstruction, orKey, 'google/gemini-2.0-flash-001');
+        } catch (e) { console.warn('Enhance: OpenRouter failed:', e.message); }
+      }
+    }
+
+    if (!result) throw new Error('Nenhum provedor conseguiu melhorar o prompt. Tente novamente.');
 
     let ptText = '', enText = '';
     const ptMatch = result.match(/---PT---\s*([\s\S]*?)\s*---EN---/);
@@ -880,6 +913,25 @@ async function translateText(text, direction) {
       }
     }
   } catch (e) { console.warn('translateText: GET fallback failed:', e.message); }
+
+  // Strategy 3: Gemini fallback (if key available)
+  const geminiKey = getApiKey('gemini_api_key');
+  if (geminiKey) {
+    try {
+      const geminiResult = await callGemini(`${systemPrompt}\n\n${text}`, geminiKey);
+      if (geminiResult) {
+        const result = cleanTranslationResponse(geminiResult);
+        if (result) {
+          if (translationCache.size >= TRANSLATION_CACHE_MAX) {
+            const firstKey = translationCache.keys().next().value;
+            translationCache.delete(firstKey);
+          }
+          translationCache.set(cacheKey, result);
+          return result;
+        }
+      }
+    } catch (e) { console.warn('translateText: Gemini fallback failed:', e.message); }
+  }
 
   throw new Error('Translation failed');
 }
