@@ -140,4 +140,21 @@
   .topbar-link span { display: none; }
   .topbar-link i { display: inline; }
   .topbar-link { padding: 6px 10px; font-size: 0.8rem; }
+
+  .gallery-preview-content {
+    flex-direction: column;
+  }
+  .gallery-preview-sidebar {
+    width: 100%;
+    max-height: 45vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+  .gallery-preview-media {
+    padding: 10px;
+  }
+  .gallery-preview-media img,
+  .gallery-preview-media video {
+    max-height: 50vh;
+  }
 }

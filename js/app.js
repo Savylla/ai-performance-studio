@@ -5061,11 +5061,15 @@ function openGalleryPreview(item) {
   const timeStr = new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   mediaEl.innerHTML = mediaHTML;
+  const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto' };
   infoEl.innerHTML = `
-    <div class="preview-prompt">${item.prompt || ''}</div>
+    <div class="preview-section-label"><i class="fas fa-quote-left"></i> PROMPT</div>
+    <div class="preview-prompt">${item.prompt || 'Sem prompt'}</div>
+    <div class="preview-section-label"><i class="fas fa-info-circle"></i> INFORMACOES</div>
     <div class="preview-meta">
-      <span><i class="fas fa-robot"></i> ${item.provider || ''}</span>
-      <span><i class="fas fa-clock"></i> ${timeStr}</span>
+      <span><i class="fas fa-robot"></i> Modelo: <strong>${item.provider || '—'}</strong></span>
+      <span><i class="fas fa-tag"></i> Tipo: <strong>${typeLabels[item.type] || item.type}</strong></span>
+      <span><i class="fas fa-clock"></i> Criado: <strong>${timeStr}</strong></span>
     </div>
     <div class="preview-actions">
       ${item.type !== 'text' ? `<button class="preview-action-btn" onclick="downloadGalleryItem(${item.id})"><i class="fas fa-download"></i> Download</button>` : `<button class="preview-action-btn" onclick="copyGalleryText(this)"><i class="fas fa-copy"></i> Copiar</button>`}
