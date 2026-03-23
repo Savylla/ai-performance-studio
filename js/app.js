@@ -4139,8 +4139,10 @@ function renderMoodboard() {
   let itemsToRender = [...moodboardItems];
 
   // Apply folder filter
-  if (currentFolderByPage.moodboard !== 'all') {
-    const folderMap = getFolderMap('moodboard');
+  const folderMap = getFolderMap('moodboard');
+  if (currentFolderByPage.moodboard === 'all') {
+    itemsToRender = itemsToRender.filter(item => !folderMap[String(item.id)]);
+  } else {
     itemsToRender = itemsToRender.filter(item => folderMap[String(item.id)] === currentFolderByPage.moodboard);
   }
 
@@ -4750,8 +4752,10 @@ async function renderGallery() {
     let items = await getGalleryItems(galleryCurrentFilter);
 
     // Apply folder filter
-    if (currentFolderByPage.gallery !== 'all') {
-      const folderMap = getFolderMap('gallery');
+    const folderMap = getFolderMap('gallery');
+    if (currentFolderByPage.gallery === 'all') {
+      items = items.filter(item => !folderMap[String(item.id)]);
+    } else {
       items = items.filter(item => folderMap[String(item.id)] === currentFolderByPage.gallery);
     }
 
@@ -5268,8 +5272,10 @@ async function renderHistory() {
     let items = await getHistoryItems(historyCurrentFilter);
 
     // Apply folder filter
-    if (currentFolderByPage.history !== 'all') {
-      const folderMap = getFolderMap('history');
+    const folderMap = getFolderMap('history');
+    if (currentFolderByPage.history === 'all') {
+      items = items.filter(item => !folderMap[String(item.id)]);
+    } else {
       items = items.filter(item => folderMap[String(item.id)] === currentFolderByPage.history);
     }
 
@@ -5925,7 +5931,9 @@ function renderSavedStoryboards() {
   const folderMap = getFolderMap('storyboard');
 
   // Apply folder filter
-  if (currentFolderByPage.storyboard !== 'all') {
+  if (currentFolderByPage.storyboard === 'all') {
+    saved = saved.filter(s => !folderMap[s.id]);
+  } else {
     saved = saved.filter(s => folderMap[s.id] === currentFolderByPage.storyboard);
   }
 
