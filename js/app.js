@@ -307,7 +307,7 @@ function initPrompt() {
     const syncStatus = document.getElementById('syncStatus');
     syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando PT...';
     syncStatus.className = 'bilingual-sync';
-    syncTimeout = setTimeout(() => syncPTtoEN(), 2000);
+    syncTimeout = setTimeout(() => syncPTtoEN(), 3000);
   });
 
   // EN textarea edit -> auto sync to PT only (never touch main prompt)
@@ -316,7 +316,7 @@ function initPrompt() {
     const syncStatus = document.getElementById('syncStatus');
     syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando EN...';
     syncStatus.className = 'bilingual-sync';
-    syncTimeout = setTimeout(() => syncENtoPT(), 2000);
+    syncTimeout = setTimeout(() => syncENtoPT(), 3000);
   });
 
   // Prompt field edit -> mirror to active language field + translate other (no write-back)
@@ -333,10 +333,10 @@ function initPrompt() {
     syncStatus.className = 'bilingual-sync';
     if (isPT) {
       document.getElementById('promptPT').value = promptText;
-      promptSyncTimeout = setTimeout(() => syncPTtoEN(), 2000);
+      promptSyncTimeout = setTimeout(() => syncPTtoEN(), 3000);
     } else {
       document.getElementById('promptEN').value = promptText;
-      promptSyncTimeout = setTimeout(() => syncENtoPT(), 2000);
+      promptSyncTimeout = setTimeout(() => syncENtoPT(), 3000);
     }
   });
 
@@ -701,6 +701,8 @@ Original prompt: ${original}`,
 }
 
 let syncRequestId = 0;
+const translationCache = new Map();
+const TRANSLATION_CACHE_MAX = 50;
 
 function cleanTranslationResponse(text) {
   if (!text) return '';
@@ -714,79 +716,145 @@ function cleanTranslationResponse(text) {
   return cleaned.trim();
 }
 
-async function syncPTtoEN() {
+// Dedicated translation function with multiple providers and smart fallback
+async function translateText(text, direction) {
+  const cacheKey = `${direction}:${text}`;
+  if (translationCache.has(cacheKey)) return translationCache.get(cacheKey);
+
+  const isPTtoEN = direction === 'pt-en';
+  const systemPrompt = isPTtoEN
+    ? 'Translate Brazilian Portuguese to English. Output ONLY the translation. Keep the same tone and style. Maintain AI/technical terms.'
+    : 'Traduza ingles para portugues brasileiro. Retorne SOMENTE a traducao. Mantenha o mesmo tom e estilo. Mantenha termos tecnicos de IA.';
+
+  // Strategy 1: Pollinations OpenAI-compatible endpoint (multiple models)
+  const models = ['openai', 'mistral', 'llama'];
+  for (const model of models) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      const response = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: text }
+          ],
+          temperature: 0.15
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          const result = cleanTranslationResponse(content);
+          if (result) {
+            // Cache the result
+            if (translationCache.size >= TRANSLATION_CACHE_MAX) {
+              const firstKey = translationCache.keys().next().value;
+              translationCache.delete(firstKey);
+            }
+            translationCache.set(cacheKey, result);
+            return result;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`translateText: model=${model} failed:`, err.message);
+    }
+  }
+
+  // Strategy 2: Pollinations GET fallback
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const fullPrompt = `${systemPrompt}\n\n${text}`;
+    const encoded = encodeURIComponent(fullPrompt.slice(0, 2000));
+    const response = await fetch(`https://text.pollinations.ai/${encoded}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (response.ok) {
+      const result = cleanTranslationResponse(await response.text());
+      if (result) {
+        if (translationCache.size >= TRANSLATION_CACHE_MAX) {
+          const firstKey = translationCache.keys().next().value;
+          translationCache.delete(firstKey);
+        }
+        translationCache.set(cacheKey, result);
+        return result;
+      }
+    }
+  } catch (e) { console.warn('translateText: GET fallback failed:', e.message); }
+
+  throw new Error('Translation failed');
+}
+
+async function syncPTtoEN(autoRetry = 2) {
   const ptText = document.getElementById('promptPT').value.trim();
   if (!ptText) return;
   const currentRequest = ++syncRequestId;
   const syncStatus = document.getElementById('syncStatus');
   syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo PT→EN...';
   syncStatus.className = 'bilingual-sync syncing';
-  try {
-    const rawEN = await pollinationsText(
-      `You are a precise translator. Translate the following Brazilian Portuguese text to English. Rules:
-- Output ONLY the translated text, nothing else
-- Do NOT add explanations, notes, or introductions
-- Do NOT add information that is not in the original
-- Keep the same tone, style, and length as the original
-- This is a prompt for AI generation, maintain technical terms
-
-Text to translate:
-${ptText}`,
-      'openai',
-      { temperature: 0.2 }
-    );
-    // Ignore if a newer request was made
-    if (currentRequest !== syncRequestId) return;
-    const enText = cleanTranslationResponse(rawEN);
-    if (enText) {
-      document.getElementById('promptEN').value = enText;
-      // Never update promptInput here - user controls it
-      syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
-      syncStatus.className = 'bilingual-sync';
+  for (let attempt = 0; attempt <= autoRetry; attempt++) {
+    try {
+      if (currentRequest !== syncRequestId) return;
+      const enText = await translateText(ptText, 'pt-en');
+      if (currentRequest !== syncRequestId) return;
+      if (enText) {
+        document.getElementById('promptEN').value = enText;
+        syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
+        syncStatus.className = 'bilingual-sync';
+        return;
+      }
+    } catch (error) {
+      if (currentRequest !== syncRequestId) return;
+      console.warn(`syncPTtoEN attempt ${attempt + 1}/${autoRetry + 1} failed:`, error.message);
+      if (attempt < autoRetry) {
+        syncStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Tentando novamente (${attempt + 2}/${autoRetry + 1})...`;
+        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
     }
-  } catch (error) {
-    if (currentRequest !== syncRequestId) return;
-    console.error('syncPTtoEN error:', error);
-    syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro - clique para tentar';
-    syncStatus.className = 'bilingual-sync';
   }
+  if (currentRequest !== syncRequestId) return;
+  syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro - clique para tentar';
+  syncStatus.className = 'bilingual-sync error';
 }
 
-async function syncENtoPT() {
+async function syncENtoPT(autoRetry = 2) {
   const enText = document.getElementById('promptEN').value.trim();
   if (!enText) return;
   const currentRequest = ++syncRequestId;
   const syncStatus = document.getElementById('syncStatus');
   syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo EN→PT...';
   syncStatus.className = 'bilingual-sync syncing';
-  try {
-    const rawPT = await pollinationsText(
-      `Voce e um tradutor preciso. Traduza o texto abaixo do ingles para portugues brasileiro. Regras:
-- Retorne SOMENTE o texto traduzido, nada mais
-- NAO adicione explicacoes, notas ou introducoes
-- NAO adicione informacoes que nao estao no original
-- Mantenha o mesmo tom, estilo e tamanho do original
-- Este e um prompt para geracao com IA, mantenha termos tecnicos
-
-Texto para traduzir:
-${enText}`,
-      'openai',
-      { temperature: 0.2 }
-    );
-    if (currentRequest !== syncRequestId) return;
-    const ptText = cleanTranslationResponse(rawPT);
-    if (ptText) {
-      document.getElementById('promptPT').value = ptText;
-      // Never update promptInput here - user controls it
-      syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
-      syncStatus.className = 'bilingual-sync';
+  for (let attempt = 0; attempt <= autoRetry; attempt++) {
+    try {
+      if (currentRequest !== syncRequestId) return;
+      const ptText = await translateText(enText, 'en-pt');
+      if (currentRequest !== syncRequestId) return;
+      if (ptText) {
+        document.getElementById('promptPT').value = ptText;
+        syncStatus.innerHTML = '<i class="fas fa-check"></i> Sincronizado';
+        syncStatus.className = 'bilingual-sync';
+        return;
+      }
+    } catch (error) {
+      if (currentRequest !== syncRequestId) return;
+      console.warn(`syncENtoPT attempt ${attempt + 1}/${autoRetry + 1} failed:`, error.message);
+      if (attempt < autoRetry) {
+        syncStatus.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Tentando novamente (${attempt + 2}/${autoRetry + 1})...`;
+        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
     }
-  } catch (error) {
-    if (currentRequest !== syncRequestId) return;
-    console.error('syncENtoPT error:', error);
-    syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro - clique para tentar';
-    syncStatus.className = 'bilingual-sync';
   }
+  if (currentRequest !== syncRequestId) return;
+  syncStatus.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro - clique para tentar';
+  syncStatus.className = 'bilingual-sync error';
 }
 
 // =============================================

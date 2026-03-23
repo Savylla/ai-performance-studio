@@ -922,6 +922,17 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--accent);
 }
 
+.bilingual-sync.error {
+  color: #ff6b6b;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.bilingual-sync.error:hover {
+  color: #ff4444;
+  text-decoration: underline;
+}
+
 .bilingual-textarea {
   width: 100%;
   background: var(--bg-input);
