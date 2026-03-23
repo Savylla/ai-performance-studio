@@ -4912,7 +4912,7 @@ async function renderGallery() {
     empty.style.display = 'none';
     grid.innerHTML = '';
 
-    const allFolders = getFolders('gallery');
+    const allFolders = getFolders();
 
     items.forEach(item => {
       const card = document.createElement('div');
@@ -5440,7 +5440,7 @@ async function renderHistory() {
       text: 'Texto', moodboard: 'Moodboard'
     };
 
-    const allFolders = getFolders('history');
+    const allFolders = getFolders();
     let lastDate = '';
 
     items.forEach(item => {
@@ -5560,10 +5560,9 @@ document.addEventListener('DOMContentLoaded', () => {
 const FOLDERS_KEY = 'app_folders';
 const FOLDER_MAP_PREFIX = 'folder_map_';
 
-function getFolders(page) {
+function getFolders() {
   try {
-    const all = JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]');
-    return page ? all.filter(f => f.page === page) : all;
+    return JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]');
   } catch { return []; }
 }
 
@@ -5573,7 +5572,7 @@ function saveAllFolders(folders) {
 
 function createFolder(page, name, color) {
   const folders = getFolders();
-  const folder = { id: 'fld_' + Date.now(), name, color: color || '#AD39FB', page, createdAt: Date.now() };
+  const folder = { id: 'fld_' + Date.now(), name, color: color || '#AD39FB', createdAt: Date.now() };
   folders.push(folder);
   saveAllFolders(folders);
   return folder;
@@ -5675,7 +5674,7 @@ function renderFolderChips(page) {
   const container = document.getElementById(page + 'FolderChips');
   if (!container) return;
 
-  const folders = getFolders(page);
+  const folders = getFolders();
   const folderMap = getFolderMap(page);
   const currentFolder = currentFolderByPage[page] || 'all';
 
@@ -5716,6 +5715,10 @@ function renderFolderChips(page) {
   container.querySelector('[data-folder="all"]').addEventListener('click', () => setCurrentFolder(page, 'all'));
 }
 
+function renderAllFolderChips() {
+  FOLDER_PAGES.forEach(p => renderFolderChips(p));
+}
+
 function setCurrentFolder(page, folderId) {
   currentFolderByPage[page] = folderId;
   PAGE_RENDER_FN[page]?.();
@@ -5740,7 +5743,7 @@ function showFolderContextMenu(e, folder, page) {
     const newName = prompt('Novo nome da pasta:', folder.name);
     if (newName && newName.trim()) {
       renameFolder(folder.id, newName.trim());
-      renderFolderChips(page);
+      renderAllFolderChips();
       showToast('Pasta renomeada!', 'success');
     }
   });
@@ -5809,7 +5812,7 @@ function saveFolderFromModal() {
   }
 
   closeFolderModal();
-  renderFolderChips(page);
+  renderAllFolderChips();
   showToast(isEditing ? 'Pasta atualizada!' : 'Pasta criada!', 'success');
 }
 
@@ -5819,7 +5822,7 @@ let moveToFolderCallback = null;
 function openMoveToFolderModal(page, itemId, currentFolderId) {
   const modal = document.getElementById('moveToFolderModal');
   const list = document.getElementById('moveFolderList');
-  const folders = getFolders(page);
+  const folders = getFolders();
 
   list.innerHTML = '';
 
@@ -6105,7 +6108,7 @@ function renderSavedStoryboards() {
 
     const timeStr = new Date(sb.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const itemFolder = folderMap[sb.id];
-    const folder = itemFolder ? getFolders('storyboard').find(f => f.id === itemFolder) : null;
+    const folder = itemFolder ? getFolders().find(f => f.id === itemFolder) : null;
     const folderBadge = folder ? `<span class="item-folder-badge" style="background:${folder.color}20;color:${folder.color};"><span class="badge-dot" style="background:${folder.color};"></span>${folder.name}</span>` : '';
 
     card.innerHTML = `
