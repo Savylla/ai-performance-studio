@@ -4912,7 +4912,6 @@ async function renderGallery() {
     empty.style.display = 'none';
     grid.innerHTML = '';
 
-    const folderMap = getFolderMap('gallery');
     const allFolders = getFolders('gallery');
 
     items.forEach(item => {
@@ -5441,7 +5440,6 @@ async function renderHistory() {
       text: 'Texto', moodboard: 'Moodboard'
     };
 
-    const folderMap = getFolderMap('history');
     const allFolders = getFolders('history');
     let lastDate = '';
 
