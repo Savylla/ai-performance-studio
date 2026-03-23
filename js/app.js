@@ -3292,10 +3292,11 @@ function addToStoryboard(imageUrl, caption) {
   card.innerHTML = `
     <div class="sb-panel-number">${panelNum}</div>
     <button class="sb-panel-remove" title="Remover painel"><i class="fas fa-times"></i></button>
-    <div class="sb-panel-image"><img src="${imageUrl}" alt="Panel ${panelNum}"></div>
+    <div class="sb-panel-image"><img src="${imageUrl}" alt="Panel ${panelNum}" style="cursor:pointer;"></div>
     <div class="sb-panel-caption">${caption || ''}</div>
   `;
-  card.querySelector('.sb-panel-remove').addEventListener('click', () => removeSbPanel(card));
+  card.querySelector('.sb-panel-remove').addEventListener('click', (e) => { e.stopPropagation(); removeSbPanel(card); });
+  card.querySelector('.sb-panel-image img')?.addEventListener('click', () => openLightbox(imageUrl, caption || '', '', 'image'));
   grid.appendChild(card);
   showToast('Adicionado ao Story Board!', 'success');
 }
@@ -3356,17 +3357,49 @@ function initLightbox() {
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
 }
 
-function openLightbox(src, prompt, ratio) {
+function openLightbox(src, prompt, ratio, type) {
   const lightbox = document.getElementById('lightbox');
-  document.getElementById('lightboxImg').src = src;
-  document.getElementById('lightboxInfo').innerHTML = `<p><strong>Prompt:</strong> ${prompt}</p><p><strong>Ratio:</strong> ${ratio}</p>`;
-  document.getElementById('lightboxDownload').onclick = () => downloadImage(src, `ai-image-${Date.now()}.png`);
+  const imgEl = document.getElementById('lightboxImg');
+  const vidEl = document.getElementById('lightboxVideo');
+  const infoEl = document.getElementById('lightboxInfo');
+  const dlBtn = document.getElementById('lightboxDownload');
+
+  // Reset
+  imgEl.style.display = 'none';
+  imgEl.src = '';
+  vidEl.style.display = 'none';
+  vidEl.src = '';
+  vidEl.pause();
+
+  if (type === 'video') {
+    vidEl.src = src;
+    vidEl.style.display = 'block';
+    dlBtn.onclick = () => {
+      const a = document.createElement('a');
+      a.href = src; a.download = `ai-video-${Date.now()}.mp4`;
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+  } else {
+    imgEl.src = src;
+    imgEl.style.display = 'block';
+    dlBtn.onclick = () => downloadImage(src, `ai-image-${Date.now()}.png`);
+  }
+
+  let infoHTML = '';
+  if (prompt) infoHTML += `<p><strong>Prompt:</strong> ${prompt}</p>`;
+  if (ratio) infoHTML += `<p><strong>Ratio:</strong> ${ratio}</p>`;
+  infoEl.innerHTML = infoHTML;
+
   lightbox.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
+  const lightbox = document.getElementById('lightbox');
+  const vidEl = document.getElementById('lightboxVideo');
+  vidEl.pause();
+  vidEl.src = '';
+  lightbox.classList.remove('open');
   document.body.style.overflow = '';
 }
 
@@ -4191,9 +4224,12 @@ function renderMoodboard() {
       `;
     } else if (item.type === 'video') {
       el.innerHTML = `
-        <video controls style="width:100%; border-radius: var(--radius-sm);">
-          <source src="${item.url}" type="video/mp4">
-        </video>
+        <div class="moodboard-video-thumb" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;">
+          <video src="${item.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">
+            <i class="fas fa-play-circle" style="font-size:2.5rem;color:#fff;opacity:0.9;"></i>
+          </div>
+        </div>
         <div class="moodboard-item-info">
           <span><i class="fas fa-video"></i> ${item.provider || 'Video'}</span>
         </div>
@@ -4226,7 +4262,7 @@ function renderMoodboard() {
       `;
     }
 
-    el.querySelector('.moodboard-item-remove').addEventListener('click', () => removeFromBoard(item.id));
+    el.querySelector('.moodboard-item-remove').addEventListener('click', (e) => { e.stopPropagation(); removeFromBoard(item.id); });
 
     // Folder button for all moodboard items
     const folderBtn = el.querySelector('.moodboard-item-folder-btn');
@@ -4236,6 +4272,13 @@ function renderMoodboard() {
         const folderMap = getFolderMap('moodboard');
         openMoveToFolderModal('moodboard', item.id, folderMap[String(item.id)]);
       });
+    }
+
+    // Click to open fullscreen for images and videos
+    if (item.type === 'image') {
+      el.addEventListener('click', () => openLightbox(item.url, item.photographer || '', '', 'image'));
+    } else if (item.type === 'video') {
+      el.addEventListener('click', () => openLightbox(item.url, item.provider || '', '', 'video'));
     }
 
     // Download & Gallery buttons for images
@@ -5362,6 +5405,15 @@ async function renderHistory() {
         </div>
       `;
 
+      // Click to open fullscreen for items with thumbnail
+      if (item.thumbnail instanceof Blob) {
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => {
+          const url = URL.createObjectURL(item.thumbnail);
+          openLightbox(url, item.prompt || '', item.detail || '', item.type === 'video' ? 'video' : 'image');
+        });
+      }
+
       // Folder button (first action)
       const actionBtns = el.querySelectorAll('.history-item-action');
       actionBtns[0]?.addEventListener('click', (e) => {
@@ -6027,9 +6079,12 @@ function loadSavedStoryboard(sb) {
       panelEl.className = 'storyboard-panel';
       panelEl.innerHTML = `
         <div class="sb-panel-header"><span>Painel ${i + 1}</span></div>
-        ${panel.imageUrl ? `<img src="${panel.imageUrl}" alt="Panel ${i + 1}" style="width:100%;border-radius:var(--radius-sm);">` : '<div style="aspect-ratio:16/9;background:var(--bg-input);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);"><i class="fas fa-image"></i></div>'}
+        ${panel.imageUrl ? `<img src="${panel.imageUrl}" alt="Panel ${i + 1}" style="width:100%;border-radius:var(--radius-sm);cursor:pointer;">` : '<div style="aspect-ratio:16/9;background:var(--bg-input);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);"><i class="fas fa-image"></i></div>'}
         <p style="font-size:0.78rem;color:var(--text-secondary);margin-top:8px;">${panel.description}</p>
       `;
+      if (panel.imageUrl) {
+        panelEl.querySelector('img')?.addEventListener('click', () => openLightbox(panel.imageUrl, panel.description || '', '', 'image'));
+      }
       grid.appendChild(panelEl);
     });
   }
