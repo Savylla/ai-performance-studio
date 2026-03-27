@@ -5123,19 +5123,14 @@ function openGalleryPreview(item) {
   const infoEl = document.getElementById('galleryPreviewInfo');
 
   let mediaHTML = '';
-  if (item.type === 'image' && item.data instanceof Blob) {
-    const url = URL.createObjectURL(item.data);
+  if (item.type === 'image') {
+    const url = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
     mediaHTML = `<img src="${url}" alt="Preview">`;
   } else if (item.type === 'video') {
-    let src;
-    if (item.data instanceof Blob) {
-      src = URL.createObjectURL(item.data);
-    } else {
-      src = item.data; // URL string
-    }
-    mediaHTML = `<video controls autoplay style="max-width:100%;max-height:70vh;border-radius:var(--radius-md);"><source src="${src}" type="video/mp4"></video>`;
-  } else if (item.type === 'audio' && item.data instanceof Blob) {
-    const url = URL.createObjectURL(item.data);
+    const src = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
+    mediaHTML = `<video controls autoplay style="max-width:100%;max-height:70vh;border-radius:var(--radius-md);"><source src="${src}" type="${item.mimeType || 'video/mp4'}"></video>`;
+  } else if (item.type === 'audio') {
+    const url = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
     mediaHTML = `<audio controls autoplay src="${url}" style="width:100%;min-width:300px;"></audio>`;
   } else if (item.type === 'text') {
     const escaped = (typeof item.data === 'string' ? item.data : '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -6340,9 +6335,11 @@ async function renderFoldersPage() {
     const name = (item.prompt || item.name || 'Sem titulo').substring(0, 40);
 
     let thumbHTML = '';
-    if (item.type === 'image' && item.data instanceof Blob) {
-      const url = URL.createObjectURL(item.data);
+    if (item.type === 'image') {
+      const url = item.data instanceof Blob ? URL.createObjectURL(item.data) : item.data;
       thumbHTML = `<img src="${url}" alt="">`;
+    } else if (item.type === 'video') {
+      thumbHTML = `<i class="fas fa-play-circle" style="color:${color};font-size:2rem;"></i>`;
     } else {
       thumbHTML = `<i class="fas ${icon}" style="color:${color};"></i>`;
     }
@@ -6351,15 +6348,19 @@ async function renderFoldersPage() {
       <div class="fe-file-thumb">${thumbHTML}</div>
       <div class="fe-name" title="${(item.prompt || item.name || '').replace(/"/g, '&quot;')}">${name}</div>
       <div class="fe-type" style="color:${color};">${typeLabels[item.type] || ''}</div>
-      <button class="fe-action" title="Mover"><i class="fas fa-folder-open"></i></button>
+      <button class="fe-action fe-file-menu" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
     `;
 
-    card.querySelector('.fe-action')?.addEventListener('click', (e) => {
+    // 3-dot menu
+    card.querySelector('.fe-file-menu')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      openMoveToFolderModal(item._source, item.id, currentParent);
+      showFileContextMenu(e, item, currentParent);
     });
-    card.addEventListener('dblclick', () => {
-      switchTab({ gallery: 'gallery', history: 'history', storyboard: 'storyboard' }[item._source] || 'gallery');
+
+    // Click to preview
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.fe-file-menu')) return;
+      openGalleryPreview(item);
     });
 
     grid.appendChild(card);
@@ -6384,6 +6385,68 @@ async function renderFoldersPage() {
   if (statusbar) statusbar.textContent = statusText;
   const countEl = document.getElementById('foldersItemCount');
   if (countEl) countEl.textContent = statusText;
+}
+
+function showFileContextMenu(e, item, currentParent) {
+  document.querySelectorAll('.file-context-menu').forEach(m => m.remove());
+  const menu = document.createElement('div');
+  menu.className = 'file-context-menu';
+
+  const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto' };
+  const viewLabel = item.type === 'video' ? 'Reproduzir' : item.type === 'audio' ? 'Ouvir' : 'Visualizar';
+  const viewIcon = item.type === 'video' ? 'fa-play' : item.type === 'audio' ? 'fa-headphones' : 'fa-eye';
+
+  menu.innerHTML = `
+    <div class="fcm-item" data-action="preview"><i class="fas ${viewIcon}"></i> ${viewLabel}</div>
+    <div class="fcm-item" data-action="move"><i class="fas fa-folder-open"></i> Mover para pasta</div>
+    <div class="fcm-item" data-action="download"><i class="fas fa-download"></i> Baixar</div>
+    <div class="fcm-item" data-action="moodboard"><i class="fas fa-palette"></i> Moodboard</div>
+    <div class="fcm-divider"></div>
+    <div class="fcm-item fcm-danger" data-action="delete"><i class="fas fa-trash"></i> Excluir</div>
+  `;
+
+  document.body.appendChild(menu);
+
+  // Position
+  const rect = e.target.closest('.fe-action').getBoundingClientRect();
+  let top = rect.bottom + 4;
+  let left = rect.left;
+  if (top + menu.offsetHeight > window.innerHeight) top = rect.top - menu.offsetHeight - 4;
+  if (left + menu.offsetWidth > window.innerWidth) left = window.innerWidth - menu.offsetWidth - 8;
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+
+  menu.addEventListener('click', async (ev) => {
+    const action = ev.target.closest('.fcm-item')?.dataset.action;
+    if (!action) return;
+    menu.remove();
+    switch (action) {
+      case 'preview':
+        openGalleryPreview(item);
+        break;
+      case 'move':
+        openMoveToFolderModal(item._source, item.id, currentParent);
+        break;
+      case 'download':
+        downloadGalleryItem(item.id);
+        break;
+      case 'moodboard':
+        addGalleryItemToMoodboard(item);
+        break;
+      case 'delete':
+        if (confirm('Mover para lixeira?')) {
+          await moveToTrash(item.id);
+          renderFoldersPage();
+          showToast('Item movido para lixeira', 'success');
+        }
+        break;
+    }
+  });
+
+  const closeMenu = (ev) => {
+    if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', closeMenu); }
+  };
+  setTimeout(() => document.addEventListener('click', closeMenu), 0);
 }
 
 function renderFoldersBreadcrumb(currentId, folders) {

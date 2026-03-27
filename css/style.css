@@ -4769,6 +4769,37 @@ h1, h2, h3, h4, h5, h6 {
   flex-shrink: 0;
 }
 
+/* File context menu (3-dot) */
+.file-context-menu {
+  position: fixed;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 10001;
+  min-width: 180px;
+  padding: 4px;
+  animation: fadeIn 0.12s ease;
+}
+.fcm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.fcm-item:hover { background: var(--bg-card-hover); }
+.fcm-item i { width: 16px; text-align: center; font-size: 0.78rem; color: var(--text-secondary); }
+.fcm-item:hover i { color: var(--accent); }
+.fcm-danger { color: var(--red); }
+.fcm-danger:hover { background: rgba(239,68,68,0.1); }
+.fcm-danger i { color: var(--red) !important; }
+.fcm-divider { height: 1px; background: var(--border); margin: 4px 8px; }
+
 /* Responsive folder bar */
 @media (max-width: 600px) {
   .folder-bar { flex-direction: column; align-items: stretch; gap: 8px; }
