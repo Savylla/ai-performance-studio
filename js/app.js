@@ -136,7 +136,7 @@ function switchTab(tab) {
   enhanceBtn.style.display = isGenTab ? '' : 'none';
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
-  if (['gallery', 'history', 'storyboard', 'trash'].includes(tab)) {
+  if (['gallery', 'history', 'storyboard', 'trash', 'folders'].includes(tab)) {
     bottomBar.style.display = 'none';
   } else {
     bottomBar.style.display = '';
@@ -144,7 +144,7 @@ function switchTab(tab) {
   // Show/hide shared bottom row for generation tabs
   const sharedRow = document.getElementById('sharedBottomRow');
   if (sharedRow) {
-    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash'].includes(tab) ? 'none' : '';
+    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash', 'folders'].includes(tab) ? 'none' : '';
   }
   // Render trash when switching to it
   if (tab === 'trash') renderTrash();
@@ -174,6 +174,7 @@ function switchTab(tab) {
   // Load gallery when switching to gallery tab
   if (tab === 'gallery') renderGallery();
   if (tab === 'history') renderHistory();
+  if (tab === 'folders') renderFoldersPage();
 }
 
 function showTTSProviders() {
@@ -5606,6 +5607,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initGallery();
   initHistory();
   initFolderSystem();
+  initFoldersPage();
+  initFoldersPageDrop();
   initAiSearch();
   initStoryboardSave();
 });
@@ -5952,6 +5955,7 @@ function saveFolderFromModal() {
 
   closeFolderModal();
   renderAllFolderChips();
+  if (currentTab === 'folders') renderFoldersPage();
   showToast(isEditing ? 'Pasta atualizada!' : 'Pasta criada!', 'success');
 }
 
@@ -6076,6 +6080,280 @@ function closeMoveToFolderModal() {
 function refreshPageAfterFolderChange(page) {
   renderFolderChips(page);
   PAGE_RENDER_FN[page]?.();
+  if (currentTab === 'folders') renderFoldersPage();
+}
+
+// =============================================
+// === FOLDERS PAGE (Central Directory) ===
+// =============================================
+
+let foldersPageCurrentId = null; // null = root
+
+function initFoldersPage() {
+  document.getElementById('foldersPageNewBtn')?.addEventListener('click', () => {
+    openFolderModal('gallery'); // page doesn't matter for creation
+  });
+}
+
+async function renderFoldersPage() {
+  const container = document.getElementById('foldersPageContent');
+  const emptyEl = document.getElementById('foldersPageEmpty');
+  if (!container) return;
+
+  const folders = getFolders();
+  const currentParent = foldersPageCurrentId;
+
+  // Update breadcrumb
+  renderFoldersBreadcrumb(currentParent, folders);
+
+  // Get subfolders of current parent
+  const subfolders = folders.filter(f => (f.parentId || null) === currentParent);
+
+  // Get all items across all pages that belong to folders at this level
+  let allItems = [];
+  try {
+    const galleryItems = await getGalleryItems('all');
+    const historyItems = await getHistoryItems('all');
+    const storyboards = getSavedStoryboards();
+
+    const galleryMap = getFolderMap('gallery');
+    const historyMap = getFolderMap('history');
+    const storyboardMap = getFolderMap('storyboard');
+
+    // Items directly in the current folder (or unfiled items at root)
+    galleryItems.forEach(item => {
+      const fid = galleryMap[String(item.id)] || null;
+      if (currentParent === null) {
+        // At root: show items that are in root-level folders or unfiled
+        if (!fid) allItems.push({ ...item, _source: 'gallery', _sourceLabel: 'Galeria' });
+      } else {
+        if (fid === currentParent) allItems.push({ ...item, _source: 'gallery', _sourceLabel: 'Galeria' });
+      }
+    });
+
+    historyItems.forEach(item => {
+      const fid = historyMap[String(item.id)] || null;
+      if (currentParent === null) {
+        if (!fid) allItems.push({ ...item, _source: 'history', _sourceLabel: 'Historico' });
+      } else {
+        if (fid === currentParent) allItems.push({ ...item, _source: 'history', _sourceLabel: 'Historico' });
+      }
+    });
+
+    storyboards.forEach(item => {
+      const fid = storyboardMap[String(item.id)] || null;
+      if (currentParent === null) {
+        if (!fid) allItems.push({ ...item, type: 'storyboard', _source: 'storyboard', _sourceLabel: 'Storyboard' });
+      } else {
+        if (fid === currentParent) allItems.push({ ...item, type: 'storyboard', _source: 'storyboard', _sourceLabel: 'Storyboard' });
+      }
+    });
+  } catch (e) { console.error('Error loading items for folders page:', e); }
+
+  allItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  container.innerHTML = '';
+
+  if (subfolders.length === 0 && allItems.length === 0 && currentParent === null) {
+    emptyEl.style.display = '';
+    container.style.display = 'none';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  container.style.display = '';
+
+  // Render subfolders
+  if (subfolders.length > 0) {
+    const foldersSection = document.createElement('div');
+    foldersSection.className = 'folders-page-section';
+    foldersSection.innerHTML = `<div class="folders-page-section-title"><i class="fas fa-folder"></i> Pastas${currentParent ? '' : ''} <span class="folders-section-count">${subfolders.length}</span></div>`;
+    const foldersGrid = document.createElement('div');
+    foldersGrid.className = 'folders-page-grid';
+
+    subfolders.forEach(folder => {
+      // Count items in this folder and descendants across all pages
+      const descendantIds = getFolderAndDescendantIds(folder.id, folders);
+      let totalItems = 0;
+      FOLDER_PAGES.forEach(page => {
+        const map = getFolderMap(page);
+        Object.values(map).forEach(fid => { if (descendantIds.includes(fid)) totalItems++; });
+      });
+      const childCount = folders.filter(f => f.parentId === folder.id).length;
+
+      const card = document.createElement('div');
+      card.className = 'folders-page-folder-card';
+      card.draggable = true;
+      card.dataset.folderId = folder.id;
+      card.innerHTML = `
+        <div class="fpf-icon" style="background:${folder.color}20;color:${folder.color};"><i class="fas fa-folder"></i></div>
+        <div class="fpf-info">
+          <div class="fpf-name">${folder.name}</div>
+          <div class="fpf-meta">${totalItems} arquivo${totalItems !== 1 ? 's' : ''}${childCount > 0 ? ` · ${childCount} subpasta${childCount !== 1 ? 's' : ''}` : ''}</div>
+        </div>
+        <button class="fpf-options" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
+      `;
+
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.fpf-options')) return;
+        foldersPageCurrentId = folder.id;
+        renderFoldersPage();
+      });
+
+      card.querySelector('.fpf-options').addEventListener('click', (e) => {
+        e.stopPropagation();
+        showFolderContextMenu(e, folder, 'gallery');
+        // After context menu action, re-render folders page
+        const observer = new MutationObserver(() => {
+          if (!document.querySelector('.folder-context-menu')) {
+            observer.disconnect();
+            setTimeout(() => renderFoldersPage(), 100);
+          }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      });
+
+      // Drag and drop for nesting
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', folder.id);
+        card.classList.add('dragging');
+      });
+      card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.types.includes('text/plain') ? true : false;
+        if (draggedId) card.classList.add('drag-over');
+      });
+      card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId && draggedId !== folder.id) {
+          setFolderParent(draggedId, folder.id);
+          renderFoldersPage();
+          renderAllFolderChips();
+          const draggedFolder = folders.find(f => f.id === draggedId);
+          showToast(`"${draggedFolder?.name}" movida para "${folder.name}"`, 'success');
+        }
+      });
+
+      foldersGrid.appendChild(card);
+    });
+
+    foldersSection.appendChild(foldersGrid);
+    container.appendChild(foldersSection);
+  }
+
+  // Render files
+  if (allItems.length > 0) {
+    const filesSection = document.createElement('div');
+    filesSection.className = 'folders-page-section';
+    filesSection.innerHTML = `<div class="folders-page-section-title"><i class="fas fa-file"></i> Arquivos <span class="folders-section-count">${allItems.length}</span></div>`;
+    const filesList = document.createElement('div');
+    filesList.className = 'folders-page-files';
+
+    allItems.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'folders-page-file-row';
+
+      const typeIcons = { image: 'fa-image', video: 'fa-video', audio: 'fa-headphones', text: 'fa-font', storyboard: 'fa-book-open' };
+      const typeColors = { image: '#4a6cf7', video: '#ef4444', audio: '#34d399', text: '#f59e0b', storyboard: '#8b5cf6' };
+      const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto', storyboard: 'Storyboard' };
+      const icon = typeIcons[item.type] || 'fa-file';
+      const color = typeColors[item.type] || '#888';
+      const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+      const promptText = (item.prompt || item.name || 'Sem titulo').substring(0, 80);
+
+      row.innerHTML = `
+        <div class="fpfile-icon" style="color:${color};"><i class="fas ${icon}"></i></div>
+        <div class="fpfile-info">
+          <div class="fpfile-name">${promptText}</div>
+          <div class="fpfile-meta">
+            <span class="fpfile-type" style="color:${color};">${typeLabels[item.type] || item.type}</span>
+            <span>${item._sourceLabel || ''}</span>
+            <span>${item.provider || ''}</span>
+            <span>${timeStr}</span>
+          </div>
+        </div>
+        <button class="fpfile-move" title="Mover para pasta"><i class="fas fa-folder-open"></i></button>
+      `;
+
+      row.querySelector('.fpfile-move')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openMoveToFolderModal(item._source, item.id, currentParent);
+      });
+
+      // Click to navigate to source
+      row.addEventListener('click', () => {
+        const tabMap = { gallery: 'gallery', history: 'history', storyboard: 'storyboard' };
+        switchTab(tabMap[item._source] || 'gallery');
+      });
+
+      filesList.appendChild(row);
+    });
+
+    filesSection.appendChild(filesList);
+    container.appendChild(filesSection);
+  }
+
+  // If inside a folder but empty
+  if (subfolders.length === 0 && allItems.length === 0 && currentParent !== null) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px;color:var(--text-muted);">
+        <i class="fas fa-folder-open" style="font-size:2rem;opacity:0.3;margin-bottom:12px;display:block;"></i>
+        <p>Pasta vazia</p>
+        <p style="font-size:0.75rem;margin-top:4px;">Arraste pastas para cá ou mova arquivos usando o botão de pasta</p>
+      </div>
+    `;
+  }
+}
+
+function renderFoldersBreadcrumb(currentId, folders) {
+  const bc = document.getElementById('foldersBreadcrumb');
+  if (!bc) return;
+  bc.innerHTML = '';
+
+  const rootBtn = document.createElement('button');
+  rootBtn.className = `breadcrumb-item ${!currentId ? 'active' : ''}`;
+  rootBtn.innerHTML = '<i class="fas fa-home"></i> Raiz';
+  rootBtn.addEventListener('click', () => { foldersPageCurrentId = null; renderFoldersPage(); });
+  bc.appendChild(rootBtn);
+
+  if (currentId) {
+    const path = getFolderPath(currentId, folders);
+    path.forEach((folder, i) => {
+      const sep = document.createElement('span');
+      sep.className = 'breadcrumb-sep';
+      sep.innerHTML = '<i class="fas fa-chevron-right"></i>';
+      bc.appendChild(sep);
+
+      const btn = document.createElement('button');
+      btn.className = `breadcrumb-item ${i === path.length - 1 ? 'active' : ''}`;
+      btn.innerHTML = `<span class="breadcrumb-dot" style="background:${folder.color};"></span> ${folder.name}`;
+      btn.addEventListener('click', () => { foldersPageCurrentId = folder.id; renderFoldersPage(); });
+      bc.appendChild(btn);
+    });
+  }
+}
+
+// Allow dropping folders to root on the folders page background
+function initFoldersPageDrop() {
+  const content = document.getElementById('foldersPageContent');
+  if (!content) return;
+  content.addEventListener('dragover', (e) => {
+    if (e.target === content) e.preventDefault();
+  });
+  content.addEventListener('drop', (e) => {
+    if (e.target !== content) return;
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (draggedId) {
+      setFolderParent(draggedId, foldersPageCurrentId);
+      renderFoldersPage();
+      renderAllFolderChips();
+      showToast('Pasta movida', 'success');
+    }
+  });
 }
 
 // =============================================

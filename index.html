@@ -36,6 +36,7 @@
         </div>
       </div>
       <nav class="topbar-nav">
+        <a href="#" class="topbar-link" data-tab="folders"><i class="fas fa-folder-tree"></i> Pastas</a>
         <a href="#" class="topbar-link active" data-tab="image"><i class="fas fa-image"></i> Imagem</a>
         <a href="#" class="topbar-link" data-tab="video"><i class="fas fa-video"></i> Video</a>
         <a href="#" class="topbar-link" data-tab="audio"><i class="fas fa-headphones"></i> Audio</a>
@@ -66,6 +67,37 @@
     <!-- ==================== TAB CONTENTS ==================== -->
 
     <!-- IMAGE Tab -->
+    <!-- FOLDERS Tab -->
+    <div class="tab-content" id="tabFolders">
+      <div class="folders-page">
+        <div class="folders-page-header">
+          <div class="folders-page-title">
+            <i class="fas fa-folder-tree"></i>
+            <h2>Pastas</h2>
+            <span class="folders-page-subtitle">Organize todos os seus arquivos</span>
+          </div>
+          <div class="folders-page-actions">
+            <button class="folders-page-new-btn" id="foldersPageNewBtn"><i class="fas fa-folder-plus"></i> Nova Pasta</button>
+          </div>
+        </div>
+        <!-- Breadcrumb navigation -->
+        <div class="folders-breadcrumb" id="foldersBreadcrumb">
+          <button class="breadcrumb-item active" data-folder="root"><i class="fas fa-home"></i> Raiz</button>
+        </div>
+        <!-- Folder grid + file list -->
+        <div class="folders-page-content" id="foldersPageContent"></div>
+        <!-- Empty state -->
+        <div class="folders-page-empty" id="foldersPageEmpty" style="display:none;">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <h3>Nenhuma pasta ainda</h3>
+          <p>Crie pastas para organizar suas imagens, videos, audios e textos</p>
+        </div>
+      </div>
+    </div>
+
     <div class="tab-content active" id="tabImage">
       <div class="display-empty" id="displayEmpty">
         <div class="empty-illustration">
