@@ -685,7 +685,7 @@ function addRefFileToMoodboard(file, dataUrl) {
 }
 
 // === GEMINI API CALLS ===
-const GEMINI_TEXT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+const GEMINI_TEXT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
 
 async function callGemini(prompt) {
   const apiKey = getApiKey('gemini_api_key');
@@ -2899,8 +2899,6 @@ const GEMINI_TEXT_MODELS = {
   'gemini-text-2.5-flash': { model: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
   'gemini-text-2.0-flash': { model: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
   'gemini-text-2.0-flash-lite': { model: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite' },
-  'gemini-text-1.5-pro': { model: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-  'gemini-text-1.5-flash': { model: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
 };
 
 // Groq text models map
