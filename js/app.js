@@ -6104,33 +6104,6 @@ function initFoldersPage() {
   });
 }
 
-function renderFoldersSidebar() {
-  const sidebar = document.getElementById('foldersSidebar');
-  if (!sidebar) return;
-  const folders = getFolders();
-
-  sidebar.innerHTML = '<div class="folders-sidebar-title">Acesso rapido</div>';
-
-  // Root
-  const rootBtn = document.createElement('button');
-  rootBtn.className = `folders-sidebar-item ${foldersPageCurrentId === null ? 'active' : ''}`;
-  rootBtn.innerHTML = '<i class="fas fa-home"></i> Raiz';
-  rootBtn.addEventListener('click', () => { foldersPageCurrentId = null; renderFoldersPage(); });
-  sidebar.appendChild(rootBtn);
-
-  // All root folders with their children
-  function renderSidebarFolder(folder, depth) {
-    const btn = document.createElement('button');
-    btn.className = `folders-sidebar-item ${foldersPageCurrentId === folder.id ? 'active' : ''}`;
-    btn.style.paddingLeft = (10 + depth * 14) + 'px';
-    btn.innerHTML = `<span class="folders-sidebar-dot" style="background:${folder.color};"></span> ${folder.name}`;
-    btn.addEventListener('click', () => { foldersPageCurrentId = folder.id; renderFoldersPage(); });
-    sidebar.appendChild(btn);
-    folders.filter(f => f.parentId === folder.id).forEach(child => renderSidebarFolder(child, depth + 1));
-  }
-  folders.filter(f => !f.parentId).forEach(f => renderSidebarFolder(f, 0));
-}
-
 async function renderFoldersPage() {
   const container = document.getElementById('foldersPageContent');
   const emptyEl = document.getElementById('foldersPageEmpty');
@@ -6145,8 +6118,7 @@ async function renderFoldersPage() {
   document.getElementById('foldersViewGrid')?.classList.toggle('active', !isListView);
   document.getElementById('foldersViewList')?.classList.toggle('active', isListView);
 
-  // Update sidebar & breadcrumb
-  renderFoldersSidebar();
+  // Update breadcrumb
   renderFoldersBreadcrumb(currentParent, folders);
 
   const subfolders = folders.filter(f => (f.parentId || null) === currentParent);
@@ -6313,11 +6285,12 @@ async function renderFoldersPage() {
     `;
   }
 
-  // Status bar
-  if (statusbar) {
-    const total = subfolders.length + allItems.length;
-    statusbar.textContent = `${total} iten${total !== 1 ? 's' : ''}${subfolders.length ? ` · ${subfolders.length} pasta${subfolders.length !== 1 ? 's' : ''}` : ''}${allItems.length ? ` · ${allItems.length} arquivo${allItems.length !== 1 ? 's' : ''}` : ''}`;
-  }
+  // Status bar + item count
+  const total = subfolders.length + allItems.length;
+  const statusText = `${total} iten${total !== 1 ? 's' : ''}${subfolders.length ? ` · ${subfolders.length} pasta${subfolders.length !== 1 ? 's' : ''}` : ''}${allItems.length ? ` · ${allItems.length} arquivo${allItems.length !== 1 ? 's' : ''}` : ''}`;
+  if (statusbar) statusbar.textContent = statusText;
+  const countEl = document.getElementById('foldersItemCount');
+  if (countEl) countEl.textContent = statusText;
 }
 
 function renderFoldersBreadcrumb(currentId, folders) {

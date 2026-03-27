@@ -70,41 +70,34 @@
     <!-- FOLDERS Tab -->
     <div class="tab-content" id="tabFolders">
       <div class="folders-page">
-        <!-- Sidebar -->
-        <div class="folders-sidebar" id="foldersSidebar">
-          <div class="folders-sidebar-title">Acesso rapido</div>
+        <!-- Toolbar -->
+        <div class="folders-toolbar">
+          <div class="folders-toolbar-left">
+            <button class="folders-page-new-btn" id="foldersPageNewBtn"><i class="fas fa-plus"></i> Novo</button>
+            <span class="folders-item-count" id="foldersItemCount"></span>
+          </div>
+          <div class="folders-toolbar-right">
+            <button class="folders-view-btn active" id="foldersViewGrid" title="Icones"><i class="fas fa-th-large"></i></button>
+            <button class="folders-view-btn" id="foldersViewList" title="Lista"><i class="fas fa-list"></i></button>
+          </div>
         </div>
-        <!-- Main -->
-        <div class="folders-main">
-          <div class="folders-page-header">
-            <div class="folders-page-title">
-              <i class="fas fa-folder-tree"></i>
-              <h2>Pastas</h2>
-            </div>
-            <div class="folders-page-actions">
-              <button class="folders-page-new-btn" id="foldersPageNewBtn"><i class="fas fa-folder-plus"></i> Novo</button>
-              <button class="folders-page-view-btn" id="foldersViewGrid" title="Icones grandes"><i class="fas fa-th-large"></i></button>
-              <button class="folders-page-view-btn" id="foldersViewList" title="Lista"><i class="fas fa-list"></i></button>
-            </div>
-          </div>
-          <!-- Breadcrumb navigation -->
-          <div class="folders-breadcrumb" id="foldersBreadcrumb">
-            <button class="breadcrumb-item active" data-folder="root"><i class="fas fa-home"></i> Raiz</button>
-          </div>
-          <!-- Folder grid + file list -->
-          <div class="folders-page-content" id="foldersPageContent"></div>
-          <!-- Empty state -->
-          <div class="folders-page-empty" id="foldersPageEmpty" style="display:none;">
-            <div class="empty-illustration">
-              <div class="empty-glow"></div>
-              <i class="fas fa-folder-open"></i>
-            </div>
-            <h3>Nenhuma pasta ainda</h3>
-            <p>Crie pastas para organizar suas imagens, videos, audios e textos</p>
-          </div>
-          <!-- Status bar -->
-          <div class="folders-statusbar" id="foldersStatusbar"></div>
+        <!-- Breadcrumb -->
+        <div class="folders-breadcrumb" id="foldersBreadcrumb">
+          <button class="breadcrumb-item active"><i class="fas fa-home"></i> Raiz</button>
         </div>
+        <!-- Content grid -->
+        <div class="folders-page-content" id="foldersPageContent"></div>
+        <!-- Empty -->
+        <div class="folders-page-empty" id="foldersPageEmpty" style="display:none;">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <h3>Nenhuma pasta ainda</h3>
+          <p>Crie pastas para organizar suas imagens, videos, audios e textos</p>
+        </div>
+        <!-- Status bar -->
+        <div class="folders-statusbar" id="foldersStatusbar"></div>
       </div>
     </div>
 
