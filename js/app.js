@@ -6187,13 +6187,12 @@ async function renderFoldersPage() {
   emptyEl.style.display = 'none';
   container.style.display = '';
 
-  // --- Render subfolders ---
-  if (subfolders.length > 0) {
-    const section = document.createElement('div');
-    section.className = 'folders-page-section';
-    const grid = document.createElement('div');
-    grid.className = `folders-page-grid${isListView ? ' list-view' : ''}`;
+  // Single unified grid (folders + files, like Windows Explorer)
+  const grid = document.createElement('div');
+  grid.className = `folders-explorer-grid${isListView ? ' list-view' : ''}`;
 
+  // --- Folders ---
+  if (subfolders.length > 0) {
     subfolders.forEach(folder => {
       const descendantIds = getFolderAndDescendantIds(folder.id, folders);
       let totalItems = 0;
@@ -6201,34 +6200,29 @@ async function renderFoldersPage() {
         const map = getFolderMap(page);
         Object.values(map).forEach(fid => { if (descendantIds.includes(fid)) totalItems++; });
       });
-      const childCount = folders.filter(f => f.parentId === folder.id).length;
 
       const card = document.createElement('div');
-      card.className = 'folders-page-folder-card';
+      card.className = 'fe-card';
       card.draggable = true;
       card.dataset.folderId = folder.id;
       card.innerHTML = `
-        <div class="fpf-icon" style="color:${folder.color};"><i class="fas fa-folder"></i>${totalItems > 0 ? `<span class="fpf-badge">${totalItems}</span>` : ''}</div>
-        <div class="fpf-info">
-          <div class="fpf-name">${folder.name}</div>
-          <div class="fpf-meta">${totalItems} arquivo${totalItems !== 1 ? 's' : ''}${childCount > 0 ? ` · ${childCount} subpasta${childCount !== 1 ? 's' : ''}` : ''}</div>
-        </div>
-        <button class="fpf-options" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
+        <div class="fe-folder-icon" style="color:${folder.color};"><i class="fas fa-folder"></i>${totalItems > 0 ? `<span class="fe-folder-badge">${totalItems}</span>` : ''}</div>
+        <div class="fe-name">${folder.name}</div>
+        <button class="fe-action" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
       `;
 
-      // Double click to open, single click to select
       card.addEventListener('dblclick', (e) => {
-        if (e.target.closest('.fpf-options')) return;
+        if (e.target.closest('.fe-action')) return;
         foldersPageCurrentId = folder.id;
         renderFoldersPage();
       });
       card.addEventListener('click', (e) => {
-        if (e.target.closest('.fpf-options')) return;
-        grid.querySelectorAll('.folders-page-folder-card').forEach(c => c.classList.remove('selected'));
+        if (e.target.closest('.fe-action')) return;
+        grid.querySelectorAll('.fe-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
       });
 
-      card.querySelector('.fpf-options').addEventListener('click', (e) => {
+      card.querySelector('.fe-action').addEventListener('click', (e) => {
         e.stopPropagation();
         showFolderContextMenu(e, folder, 'gallery');
         const observer = new MutationObserver(() => {
@@ -6240,16 +6234,9 @@ async function renderFoldersPage() {
         observer.observe(document.body, { childList: true, subtree: true });
       });
 
-      // Drag and drop
-      card.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', folder.id);
-        card.classList.add('dragging');
-      });
+      card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', folder.id); card.classList.add('dragging'); });
       card.addEventListener('dragend', () => card.classList.remove('dragging'));
-      card.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (e.dataTransfer.types.includes('text/plain')) card.classList.add('drag-over');
-      });
+      card.addEventListener('dragover', (e) => { e.preventDefault(); card.classList.add('drag-over'); });
       card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
       card.addEventListener('drop', (e) => {
         e.preventDefault();
@@ -6259,87 +6246,77 @@ async function renderFoldersPage() {
           setFolderParent(draggedId, folder.id);
           renderFoldersPage();
           renderAllFolderChips();
-          const draggedFolder = folders.find(f => f.id === draggedId);
-          showToast(`"${draggedFolder?.name}" movida para "${folder.name}"`, 'success');
+          showToast(`Pasta movida para "${folder.name}"`, 'success');
         }
       });
 
       grid.appendChild(card);
     });
-
-    section.appendChild(grid);
-    container.appendChild(section);
   }
 
-  // --- Render files ---
-  if (allItems.length > 0) {
-    const section = document.createElement('div');
-    section.className = 'folders-page-section';
-    if (subfolders.length > 0) {
-      section.innerHTML = `<div class="folders-page-section-title"><i class="fas fa-file"></i> Arquivos <span class="folders-section-count">${allItems.length}</span></div>`;
+  // --- Section label for files ---
+  if (allItems.length > 0 && subfolders.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'fe-section-label';
+    label.innerHTML = `<i class="fas fa-file"></i> Arquivos <span class="fe-section-count">${allItems.length}</span>`;
+    grid.appendChild(label);
+  }
+
+  // --- Files ---
+  const typeIcons = { image: 'fa-image', video: 'fa-video', audio: 'fa-headphones', text: 'fa-font', storyboard: 'fa-book-open' };
+  const typeColors = { image: '#4a6cf7', video: '#ef4444', audio: '#34d399', text: '#f59e0b', storyboard: '#8b5cf6' };
+  const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto', storyboard: 'Storyboard' };
+
+  allItems.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'fe-card';
+    const icon = typeIcons[item.type] || 'fa-file';
+    const color = typeColors[item.type] || '#888';
+    const name = (item.prompt || item.name || 'Sem titulo').substring(0, 40);
+
+    let thumbHTML = '';
+    if (item.type === 'image' && item.data instanceof Blob) {
+      const url = URL.createObjectURL(item.data);
+      thumbHTML = `<img src="${url}" alt="">`;
+    } else {
+      thumbHTML = `<i class="fas ${icon}" style="color:${color};"></i>`;
     }
-    const filesGrid = document.createElement('div');
-    filesGrid.className = `folders-page-files-grid${isListView ? ' list-view' : ''}`;
 
-    const typeIcons = { image: 'fa-image', video: 'fa-video', audio: 'fa-headphones', text: 'fa-font', storyboard: 'fa-book-open' };
-    const typeColors = { image: '#4a6cf7', video: '#ef4444', audio: '#34d399', text: '#f59e0b', storyboard: '#8b5cf6' };
-    const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto', storyboard: 'Storyboard' };
+    card.innerHTML = `
+      <div class="fe-file-thumb">${thumbHTML}</div>
+      <div class="fe-name" title="${(item.prompt || item.name || '').replace(/"/g, '&quot;')}">${name}</div>
+      <div class="fe-type" style="color:${color};">${typeLabels[item.type] || ''}</div>
+      <button class="fe-action" title="Mover"><i class="fas fa-folder-open"></i></button>
+    `;
 
-    allItems.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'folders-page-file-card';
-      const icon = typeIcons[item.type] || 'fa-file';
-      const color = typeColors[item.type] || '#888';
-      const promptText = (item.prompt || item.name || 'Sem titulo').substring(0, 50);
-
-      // Thumbnail
-      let thumbHTML = '';
-      if (item.type === 'image' && item.data instanceof Blob) {
-        const url = URL.createObjectURL(item.data);
-        thumbHTML = `<img src="${url}" alt="">`;
-      } else {
-        thumbHTML = `<i class="fas ${icon}" style="color:${color};"></i>`;
-      }
-
-      card.innerHTML = `
-        <div class="fpfile-thumb">${thumbHTML}</div>
-        <div class="fpfile-card-name" title="${(item.prompt || item.name || '').replace(/"/g, '&quot;')}">${promptText}</div>
-        <div class="fpfile-card-type" style="color:${color};">${typeLabels[item.type] || ''}</div>
-        <button class="fpfile-card-move" title="Mover para pasta"><i class="fas fa-folder-open"></i></button>
-      `;
-
-      card.querySelector('.fpfile-card-move')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openMoveToFolderModal(item._source, item.id, currentParent);
-      });
-
-      card.addEventListener('dblclick', () => {
-        const tabMap = { gallery: 'gallery', history: 'history', storyboard: 'storyboard' };
-        switchTab(tabMap[item._source] || 'gallery');
-      });
-
-      filesGrid.appendChild(card);
+    card.querySelector('.fe-action')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openMoveToFolderModal(item._source, item.id, currentParent);
+    });
+    card.addEventListener('dblclick', () => {
+      switchTab({ gallery: 'gallery', history: 'history', storyboard: 'storyboard' }[item._source] || 'gallery');
     });
 
-    section.appendChild(filesGrid);
-    container.appendChild(section);
-  }
+    grid.appendChild(card);
+  });
 
-  // Empty folder state
+  container.appendChild(grid);
+
+  // Empty folder
   if (subfolders.length === 0 && allItems.length === 0 && currentParent !== null) {
     container.innerHTML = `
       <div style="text-align:center;padding:60px;color:var(--text-muted);">
         <i class="fas fa-folder-open" style="font-size:2.5rem;opacity:0.2;margin-bottom:12px;display:block;"></i>
         <p style="font-size:0.85rem;">Pasta vazia</p>
-        <p style="font-size:0.72rem;margin-top:4px;opacity:0.6;">Arraste pastas para ca ou mova arquivos usando o botao de pasta</p>
+        <p style="font-size:0.72rem;margin-top:4px;opacity:0.6;">Arraste pastas para ca ou mova arquivos</p>
       </div>
     `;
   }
 
   // Status bar
   if (statusbar) {
-    const totalCount = subfolders.length + allItems.length;
-    statusbar.textContent = `${totalCount} iten${totalCount !== 1 ? 's' : ''}${subfolders.length > 0 ? ` · ${subfolders.length} pasta${subfolders.length !== 1 ? 's' : ''}` : ''}${allItems.length > 0 ? ` · ${allItems.length} arquivo${allItems.length !== 1 ? 's' : ''}` : ''}`;
+    const total = subfolders.length + allItems.length;
+    statusbar.textContent = `${total} iten${total !== 1 ? 's' : ''}${subfolders.length ? ` · ${subfolders.length} pasta${subfolders.length !== 1 ? 's' : ''}` : ''}${allItems.length ? ` · ${allItems.length} arquivo${allItems.length !== 1 ? 's' : ''}` : ''}`;
   }
 }
 
