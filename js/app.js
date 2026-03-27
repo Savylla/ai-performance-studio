@@ -5874,10 +5874,63 @@ function showFolderContextMenu(e, folder, page) {
   menu.className = 'folder-context-menu';
   menu.style.left = e.clientX + 'px';
   menu.style.top = e.clientY + 'px';
+  // Build "Mover para" submenu items
+  const allFolders = getFolders();
+  const validTargets = allFolders.filter(f => {
+    if (f.id === folder.id) return false; // can't move to self
+    if (f.parentId === folder.id) return false; // already a direct child
+    const childIds = getChildFolderIds(folder.id, allFolders);
+    if (childIds.includes(f.id)) return false; // can't move to descendant
+    return true;
+  });
+
+  let moveItemsHTML = '';
+  if (folder.parentId) {
+    moveItemsHTML += `<button class="folder-context-item folder-context-sub" data-action="move-root"><i class="fas fa-arrow-up"></i> Raiz (remover de pasta)</button>`;
+  }
+  validTargets.forEach(t => {
+    moveItemsHTML += `<button class="folder-context-item folder-context-sub" data-move-target="${t.id}"><span class="folder-ctx-dot" style="background:${t.color};"></span> ${t.name}</button>`;
+  });
+
   menu.innerHTML = `
     <button class="folder-context-item" data-action="rename"><i class="fas fa-pen"></i> Renomear</button>
+    <button class="folder-context-item" data-action="move"><i class="fas fa-folder-open"></i> Mover para pasta <i class="fas fa-chevron-right" style="margin-left:auto;font-size:0.6rem;opacity:0.5;"></i></button>
+    <div class="folder-context-submenu" style="display:none;">
+      ${moveItemsHTML || '<div class="folder-context-item" style="opacity:0.5;cursor:default;font-size:0.75rem;">Nenhuma pasta disponivel</div>'}
+    </div>
     <button class="folder-context-item danger" data-action="delete"><i class="fas fa-trash"></i> Excluir pasta</button>
   `;
+
+  // Toggle submenu
+  menu.querySelector('[data-action="move"]').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const sub = menu.querySelector('.folder-context-submenu');
+    sub.style.display = sub.style.display === 'none' ? 'flex' : 'none';
+  });
+
+  // Move to root
+  menu.querySelector('[data-action="move-root"]')?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    menu.remove();
+    setFolderParent(folder.id, null);
+    renderAllFolderChips();
+    if (currentTab === 'folders') renderFoldersPage();
+    showToast(`"${folder.name}" movida para raiz`, 'success');
+  });
+
+  // Move to target folder
+  menu.querySelectorAll('[data-move-target]').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      menu.remove();
+      const targetId = btn.dataset.moveTarget;
+      const target = allFolders.find(f => f.id === targetId);
+      setFolderParent(folder.id, targetId);
+      renderAllFolderChips();
+      if (currentTab === 'folders') renderFoldersPage();
+      showToast(`"${folder.name}" movida para "${target?.name}"`, 'success');
+    });
+  });
 
   menu.querySelector('[data-action="rename"]').addEventListener('click', (ev) => {
     ev.stopPropagation();
@@ -5886,6 +5939,7 @@ function showFolderContextMenu(e, folder, page) {
     if (newName && newName.trim()) {
       renameFolder(folder.id, newName.trim());
       renderAllFolderChips();
+      if (currentTab === 'folders') renderFoldersPage();
       showToast('Pasta renomeada!', 'success');
     }
   });
@@ -5896,6 +5950,7 @@ function showFolderContextMenu(e, folder, page) {
     if (confirm(`Excluir a pasta "${folder.name}"? Os itens nao serao excluidos.`)) {
       deleteFolderById(folder.id);
       setCurrentFolder(page, 'all');
+      if (currentTab === 'folders') renderFoldersPage();
       showToast('Pasta excluida!', 'success');
     }
   });

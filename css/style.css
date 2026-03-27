@@ -4740,6 +4740,23 @@ h1, h2, h3, h4, h5, h6 {
 .folder-context-item.danger { color: var(--red); }
 .folder-context-item.danger:hover { background: rgba(239,68,68,0.1); }
 .folder-context-item i { width: 14px; text-align: center; font-size: 0.75rem; }
+.folder-context-submenu {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 2px 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.folder-context-sub { padding-left: 20px; font-size: 0.76rem; }
+.folder-ctx-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
 
 /* Responsive folder bar */
 @media (max-width: 600px) {
