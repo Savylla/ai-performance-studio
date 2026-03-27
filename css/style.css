@@ -2578,6 +2578,17 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-primary);
 }
 
+.gallery-upload-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.gallery-upload-btn:hover {
+  background: var(--accent-hover, #7c3aed);
+  border-color: var(--accent-hover, #7c3aed);
+  color: #fff;
+}
+
 .gallery-delete-all:hover {
   border-color: var(--red);
   color: var(--red);

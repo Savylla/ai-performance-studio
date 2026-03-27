@@ -4923,6 +4923,37 @@ function initGallery() {
     showToast('Itens movidos para lixeira', 'success');
   });
 
+  // Upload button
+  const uploadBtn = document.getElementById('galleryUploadBtn');
+  const fileInput = document.getElementById('galleryFileInput');
+  uploadBtn?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    for (const file of files) {
+      let type = 'text';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('video/')) type = 'video';
+      else if (file.type.startsWith('audio/')) type = 'audio';
+      const data = await new Promise((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.readAsDataURL(file);
+      });
+      await saveToGallery({
+        type,
+        prompt: file.name,
+        provider: 'Upload manual',
+        data,
+        mimeType: file.type || 'application/octet-stream',
+        timestamp: Date.now()
+      });
+    }
+    fileInput.value = '';
+    renderGallery();
+    showToast(`${files.length} arquivo(s) adicionado(s) à galeria`, 'success');
+  });
+
   // Preview close
   document.getElementById('galleryPreviewClose')?.addEventListener('click', closeGalleryPreview);
   document.getElementById('galleryPreview')?.addEventListener('click', (e) => {
