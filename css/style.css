@@ -4426,7 +4426,20 @@ h1, h2, h3, h4, h5, h6 {
 .storyboard-saved-empty i { color: var(--accent); margin-right: 4px; }
 
 /* ===== FOLDERS PAGE ===== */
-.folders-page { padding: 0; }
+#tabFolders.tab-content.active {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+.folders-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 
 /* Toolbar */
 .folders-toolbar {
@@ -4502,8 +4515,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Explorer grid content */
 .folders-page-content {
-  padding: 12px 20px;
-  min-height: calc(100vh - 180px);
+  padding: 16px 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .folders-explorer-grid {
@@ -4604,6 +4618,16 @@ h1, h2, h3, h4, h5, h6 {
 .fe-card:hover .fe-action { opacity: 1; }
 .fe-action:hover { background: rgba(0,0,0,0.9); }
 
+/* Folder card extra styling */
+.fe-card-folder { padding: 14px 10px 10px; }
+.fe-card-folder:hover { background: rgba(255,255,255,0.05); }
+.fe-folder-meta {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  margin-top: -2px;
+  opacity: 0.7;
+}
+
 /* Section divider */
 .fe-section-label {
   grid-column: 1 / -1;
@@ -4611,12 +4635,16 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 12px 4px 4px;
+  padding: 8px 4px 4px;
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.fe-section-label + .fe-section-label,
+.fe-card ~ .fe-section-label {
   border-top: 1px solid var(--border);
-  margin-top: 4px;
+  margin-top: 8px;
+  padding-top: 14px;
 }
 .fe-section-label i { font-size: 0.6rem; }
 .fe-section-count {

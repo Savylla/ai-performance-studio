@@ -6165,6 +6165,11 @@ async function renderFoldersPage() {
 
   // --- Folders ---
   if (subfolders.length > 0) {
+    const fLabel = document.createElement('div');
+    fLabel.className = 'fe-section-label';
+    fLabel.innerHTML = `<i class="fas fa-folder"></i> Pastas <span class="fe-section-count">${subfolders.length}</span>`;
+    grid.appendChild(fLabel);
+
     subfolders.forEach(folder => {
       const descendantIds = getFolderAndDescendantIds(folder.id, folders);
       let totalItems = 0;
@@ -6173,13 +6178,15 @@ async function renderFoldersPage() {
         Object.values(map).forEach(fid => { if (descendantIds.includes(fid)) totalItems++; });
       });
 
+      const childCount = folders.filter(f => f.parentId === folder.id).length;
       const card = document.createElement('div');
-      card.className = 'fe-card';
+      card.className = 'fe-card fe-card-folder';
       card.draggable = true;
       card.dataset.folderId = folder.id;
       card.innerHTML = `
-        <div class="fe-folder-icon" style="color:${folder.color};"><i class="fas fa-folder"></i>${totalItems > 0 ? `<span class="fe-folder-badge">${totalItems}</span>` : ''}</div>
+        <div class="fe-folder-icon" style="color:${folder.color};"><i class="fas fa-folder"></i></div>
         <div class="fe-name">${folder.name}</div>
+        <div class="fe-folder-meta">${totalItems} arquivo${totalItems !== 1 ? 's' : ''}${childCount > 0 ? ` · ${childCount} subpasta${childCount !== 1 ? 's' : ''}` : ''}</div>
         <button class="fe-action" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
       `;
 
