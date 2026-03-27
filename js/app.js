@@ -6088,67 +6088,91 @@ function refreshPageAfterFolderChange(page) {
 // =============================================
 
 let foldersPageCurrentId = null; // null = root
+let foldersPageViewMode = 'grid'; // 'grid' or 'list'
 
 function initFoldersPage() {
   document.getElementById('foldersPageNewBtn')?.addEventListener('click', () => {
-    openFolderModal('gallery'); // page doesn't matter for creation
+    openFolderModal('gallery');
   });
+  document.getElementById('foldersViewGrid')?.addEventListener('click', () => {
+    foldersPageViewMode = 'grid';
+    renderFoldersPage();
+  });
+  document.getElementById('foldersViewList')?.addEventListener('click', () => {
+    foldersPageViewMode = 'list';
+    renderFoldersPage();
+  });
+}
+
+function renderFoldersSidebar() {
+  const sidebar = document.getElementById('foldersSidebar');
+  if (!sidebar) return;
+  const folders = getFolders();
+
+  sidebar.innerHTML = '<div class="folders-sidebar-title">Acesso rapido</div>';
+
+  // Root
+  const rootBtn = document.createElement('button');
+  rootBtn.className = `folders-sidebar-item ${foldersPageCurrentId === null ? 'active' : ''}`;
+  rootBtn.innerHTML = '<i class="fas fa-home"></i> Raiz';
+  rootBtn.addEventListener('click', () => { foldersPageCurrentId = null; renderFoldersPage(); });
+  sidebar.appendChild(rootBtn);
+
+  // All root folders with their children
+  function renderSidebarFolder(folder, depth) {
+    const btn = document.createElement('button');
+    btn.className = `folders-sidebar-item ${foldersPageCurrentId === folder.id ? 'active' : ''}`;
+    btn.style.paddingLeft = (10 + depth * 14) + 'px';
+    btn.innerHTML = `<span class="folders-sidebar-dot" style="background:${folder.color};"></span> ${folder.name}`;
+    btn.addEventListener('click', () => { foldersPageCurrentId = folder.id; renderFoldersPage(); });
+    sidebar.appendChild(btn);
+    folders.filter(f => f.parentId === folder.id).forEach(child => renderSidebarFolder(child, depth + 1));
+  }
+  folders.filter(f => !f.parentId).forEach(f => renderSidebarFolder(f, 0));
 }
 
 async function renderFoldersPage() {
   const container = document.getElementById('foldersPageContent');
   const emptyEl = document.getElementById('foldersPageEmpty');
+  const statusbar = document.getElementById('foldersStatusbar');
   if (!container) return;
 
   const folders = getFolders();
   const currentParent = foldersPageCurrentId;
+  const isListView = foldersPageViewMode === 'list';
 
-  // Update breadcrumb
+  // Update view buttons
+  document.getElementById('foldersViewGrid')?.classList.toggle('active', !isListView);
+  document.getElementById('foldersViewList')?.classList.toggle('active', isListView);
+
+  // Update sidebar & breadcrumb
+  renderFoldersSidebar();
   renderFoldersBreadcrumb(currentParent, folders);
 
-  // Get subfolders of current parent
   const subfolders = folders.filter(f => (f.parentId || null) === currentParent);
 
-  // Get all items across all pages that belong to folders at this level
+  // Collect items
   let allItems = [];
   try {
-    const galleryItems = await getGalleryItems('all');
-    const historyItems = await getHistoryItems('all');
+    const [galleryItems, historyItems] = await Promise.all([getGalleryItems('all'), getHistoryItems('all')]);
     const storyboards = getSavedStoryboards();
-
     const galleryMap = getFolderMap('gallery');
     const historyMap = getFolderMap('history');
     const storyboardMap = getFolderMap('storyboard');
 
-    // Items directly in the current folder (or unfiled items at root)
-    galleryItems.forEach(item => {
-      const fid = galleryMap[String(item.id)] || null;
-      if (currentParent === null) {
-        // At root: show items that are in root-level folders or unfiled
-        if (!fid) allItems.push({ ...item, _source: 'gallery', _sourceLabel: 'Galeria' });
-      } else {
-        if (fid === currentParent) allItems.push({ ...item, _source: 'gallery', _sourceLabel: 'Galeria' });
-      }
-    });
+    const addItems = (items, map, source, label) => {
+      items.forEach(item => {
+        const fid = map[String(item.id)] || null;
+        if (currentParent === null ? !fid : fid === currentParent) {
+          allItems.push({ ...item, _source: source, _sourceLabel: label });
+        }
+      });
+    };
 
-    historyItems.forEach(item => {
-      const fid = historyMap[String(item.id)] || null;
-      if (currentParent === null) {
-        if (!fid) allItems.push({ ...item, _source: 'history', _sourceLabel: 'Historico' });
-      } else {
-        if (fid === currentParent) allItems.push({ ...item, _source: 'history', _sourceLabel: 'Historico' });
-      }
-    });
-
-    storyboards.forEach(item => {
-      const fid = storyboardMap[String(item.id)] || null;
-      if (currentParent === null) {
-        if (!fid) allItems.push({ ...item, type: 'storyboard', _source: 'storyboard', _sourceLabel: 'Storyboard' });
-      } else {
-        if (fid === currentParent) allItems.push({ ...item, type: 'storyboard', _source: 'storyboard', _sourceLabel: 'Storyboard' });
-      }
-    });
-  } catch (e) { console.error('Error loading items for folders page:', e); }
+    addItems(galleryItems, galleryMap, 'gallery', 'Galeria');
+    addItems(historyItems, historyMap, 'history', 'Historico');
+    addItems(storyboards.map(s => ({ ...s, type: s.type || 'storyboard' })), storyboardMap, 'storyboard', 'Storyboard');
+  } catch (e) { console.error('Folders page load error:', e); }
 
   allItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
@@ -6157,21 +6181,20 @@ async function renderFoldersPage() {
   if (subfolders.length === 0 && allItems.length === 0 && currentParent === null) {
     emptyEl.style.display = '';
     container.style.display = 'none';
+    if (statusbar) statusbar.textContent = '';
     return;
   }
   emptyEl.style.display = 'none';
   container.style.display = '';
 
-  // Render subfolders
+  // --- Render subfolders ---
   if (subfolders.length > 0) {
-    const foldersSection = document.createElement('div');
-    foldersSection.className = 'folders-page-section';
-    foldersSection.innerHTML = `<div class="folders-page-section-title"><i class="fas fa-folder"></i> Pastas${currentParent ? '' : ''} <span class="folders-section-count">${subfolders.length}</span></div>`;
-    const foldersGrid = document.createElement('div');
-    foldersGrid.className = 'folders-page-grid';
+    const section = document.createElement('div');
+    section.className = 'folders-page-section';
+    const grid = document.createElement('div');
+    grid.className = `folders-page-grid${isListView ? ' list-view' : ''}`;
 
     subfolders.forEach(folder => {
-      // Count items in this folder and descendants across all pages
       const descendantIds = getFolderAndDescendantIds(folder.id, folders);
       let totalItems = 0;
       FOLDER_PAGES.forEach(page => {
@@ -6185,7 +6208,7 @@ async function renderFoldersPage() {
       card.draggable = true;
       card.dataset.folderId = folder.id;
       card.innerHTML = `
-        <div class="fpf-icon" style="background:${folder.color}20;color:${folder.color};"><i class="fas fa-folder"></i></div>
+        <div class="fpf-icon" style="color:${folder.color};"><i class="fas fa-folder"></i>${totalItems > 0 ? `<span class="fpf-badge">${totalItems}</span>` : ''}</div>
         <div class="fpf-info">
           <div class="fpf-name">${folder.name}</div>
           <div class="fpf-meta">${totalItems} arquivo${totalItems !== 1 ? 's' : ''}${childCount > 0 ? ` · ${childCount} subpasta${childCount !== 1 ? 's' : ''}` : ''}</div>
@@ -6193,16 +6216,21 @@ async function renderFoldersPage() {
         <button class="fpf-options" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
       `;
 
-      card.addEventListener('click', (e) => {
+      // Double click to open, single click to select
+      card.addEventListener('dblclick', (e) => {
         if (e.target.closest('.fpf-options')) return;
         foldersPageCurrentId = folder.id;
         renderFoldersPage();
+      });
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.fpf-options')) return;
+        grid.querySelectorAll('.folders-page-folder-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
       });
 
       card.querySelector('.fpf-options').addEventListener('click', (e) => {
         e.stopPropagation();
         showFolderContextMenu(e, folder, 'gallery');
-        // After context menu action, re-render folders page
         const observer = new MutationObserver(() => {
           if (!document.querySelector('.folder-context-menu')) {
             observer.disconnect();
@@ -6212,7 +6240,7 @@ async function renderFoldersPage() {
         observer.observe(document.body, { childList: true, subtree: true });
       });
 
-      // Drag and drop for nesting
+      // Drag and drop
       card.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/plain', folder.id);
         card.classList.add('dragging');
@@ -6220,8 +6248,7 @@ async function renderFoldersPage() {
       card.addEventListener('dragend', () => card.classList.remove('dragging'));
       card.addEventListener('dragover', (e) => {
         e.preventDefault();
-        const draggedId = e.dataTransfer.types.includes('text/plain') ? true : false;
-        if (draggedId) card.classList.add('drag-over');
+        if (e.dataTransfer.types.includes('text/plain')) card.classList.add('drag-over');
       });
       card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
       card.addEventListener('drop', (e) => {
@@ -6237,74 +6264,82 @@ async function renderFoldersPage() {
         }
       });
 
-      foldersGrid.appendChild(card);
+      grid.appendChild(card);
     });
 
-    foldersSection.appendChild(foldersGrid);
-    container.appendChild(foldersSection);
+    section.appendChild(grid);
+    container.appendChild(section);
   }
 
-  // Render files
+  // --- Render files ---
   if (allItems.length > 0) {
-    const filesSection = document.createElement('div');
-    filesSection.className = 'folders-page-section';
-    filesSection.innerHTML = `<div class="folders-page-section-title"><i class="fas fa-file"></i> Arquivos <span class="folders-section-count">${allItems.length}</span></div>`;
-    const filesList = document.createElement('div');
-    filesList.className = 'folders-page-files';
+    const section = document.createElement('div');
+    section.className = 'folders-page-section';
+    if (subfolders.length > 0) {
+      section.innerHTML = `<div class="folders-page-section-title"><i class="fas fa-file"></i> Arquivos <span class="folders-section-count">${allItems.length}</span></div>`;
+    }
+    const filesGrid = document.createElement('div');
+    filesGrid.className = `folders-page-files-grid${isListView ? ' list-view' : ''}`;
+
+    const typeIcons = { image: 'fa-image', video: 'fa-video', audio: 'fa-headphones', text: 'fa-font', storyboard: 'fa-book-open' };
+    const typeColors = { image: '#4a6cf7', video: '#ef4444', audio: '#34d399', text: '#f59e0b', storyboard: '#8b5cf6' };
+    const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto', storyboard: 'Storyboard' };
 
     allItems.forEach(item => {
-      const row = document.createElement('div');
-      row.className = 'folders-page-file-row';
-
-      const typeIcons = { image: 'fa-image', video: 'fa-video', audio: 'fa-headphones', text: 'fa-font', storyboard: 'fa-book-open' };
-      const typeColors = { image: '#4a6cf7', video: '#ef4444', audio: '#34d399', text: '#f59e0b', storyboard: '#8b5cf6' };
-      const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto', storyboard: 'Storyboard' };
+      const card = document.createElement('div');
+      card.className = 'folders-page-file-card';
       const icon = typeIcons[item.type] || 'fa-file';
       const color = typeColors[item.type] || '#888';
-      const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-      const promptText = (item.prompt || item.name || 'Sem titulo').substring(0, 80);
+      const promptText = (item.prompt || item.name || 'Sem titulo').substring(0, 50);
 
-      row.innerHTML = `
-        <div class="fpfile-icon" style="color:${color};"><i class="fas ${icon}"></i></div>
-        <div class="fpfile-info">
-          <div class="fpfile-name">${promptText}</div>
-          <div class="fpfile-meta">
-            <span class="fpfile-type" style="color:${color};">${typeLabels[item.type] || item.type}</span>
-            <span>${item._sourceLabel || ''}</span>
-            <span>${item.provider || ''}</span>
-            <span>${timeStr}</span>
-          </div>
-        </div>
-        <button class="fpfile-move" title="Mover para pasta"><i class="fas fa-folder-open"></i></button>
+      // Thumbnail
+      let thumbHTML = '';
+      if (item.type === 'image' && item.data instanceof Blob) {
+        const url = URL.createObjectURL(item.data);
+        thumbHTML = `<img src="${url}" alt="">`;
+      } else {
+        thumbHTML = `<i class="fas ${icon}" style="color:${color};"></i>`;
+      }
+
+      card.innerHTML = `
+        <div class="fpfile-thumb">${thumbHTML}</div>
+        <div class="fpfile-card-name" title="${(item.prompt || item.name || '').replace(/"/g, '&quot;')}">${promptText}</div>
+        <div class="fpfile-card-type" style="color:${color};">${typeLabels[item.type] || ''}</div>
+        <button class="fpfile-card-move" title="Mover para pasta"><i class="fas fa-folder-open"></i></button>
       `;
 
-      row.querySelector('.fpfile-move')?.addEventListener('click', (e) => {
+      card.querySelector('.fpfile-card-move')?.addEventListener('click', (e) => {
         e.stopPropagation();
         openMoveToFolderModal(item._source, item.id, currentParent);
       });
 
-      // Click to navigate to source
-      row.addEventListener('click', () => {
+      card.addEventListener('dblclick', () => {
         const tabMap = { gallery: 'gallery', history: 'history', storyboard: 'storyboard' };
         switchTab(tabMap[item._source] || 'gallery');
       });
 
-      filesList.appendChild(row);
+      filesGrid.appendChild(card);
     });
 
-    filesSection.appendChild(filesList);
-    container.appendChild(filesSection);
+    section.appendChild(filesGrid);
+    container.appendChild(section);
   }
 
-  // If inside a folder but empty
+  // Empty folder state
   if (subfolders.length === 0 && allItems.length === 0 && currentParent !== null) {
     container.innerHTML = `
-      <div style="text-align:center;padding:40px;color:var(--text-muted);">
-        <i class="fas fa-folder-open" style="font-size:2rem;opacity:0.3;margin-bottom:12px;display:block;"></i>
-        <p>Pasta vazia</p>
-        <p style="font-size:0.75rem;margin-top:4px;">Arraste pastas para cá ou mova arquivos usando o botão de pasta</p>
+      <div style="text-align:center;padding:60px;color:var(--text-muted);">
+        <i class="fas fa-folder-open" style="font-size:2.5rem;opacity:0.2;margin-bottom:12px;display:block;"></i>
+        <p style="font-size:0.85rem;">Pasta vazia</p>
+        <p style="font-size:0.72rem;margin-top:4px;opacity:0.6;">Arraste pastas para ca ou mova arquivos usando o botao de pasta</p>
       </div>
     `;
+  }
+
+  // Status bar
+  if (statusbar) {
+    const totalCount = subfolders.length + allItems.length;
+    statusbar.textContent = `${totalCount} iten${totalCount !== 1 ? 's' : ''}${subfolders.length > 0 ? ` · ${subfolders.length} pasta${subfolders.length !== 1 ? 's' : ''}` : ''}${allItems.length > 0 ? ` · ${allItems.length} arquivo${allItems.length !== 1 ? 's' : ''}` : ''}`;
   }
 }
 
@@ -6336,7 +6371,6 @@ function renderFoldersBreadcrumb(currentId, folders) {
   }
 }
 
-// Allow dropping folders to root on the folders page background
 function initFoldersPageDrop() {
   const content = document.getElementById('foldersPageContent');
   if (!content) return;
