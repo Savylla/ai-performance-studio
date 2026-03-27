@@ -4314,12 +4314,13 @@ function renderMoodboard() {
 
   let itemsToRender = [...moodboardItems];
 
-  // Apply folder filter
+  // Apply folder filter (includes subfolders)
   const folderMap = getFolderMap('moodboard');
   if (currentFolderByPage.moodboard === 'all') {
     itemsToRender = itemsToRender.filter(item => !folderMap[String(item.id)]);
   } else {
-    itemsToRender = itemsToRender.filter(item => folderMap[String(item.id)] === currentFolderByPage.moodboard);
+    const validIds = getFolderAndDescendantIds(currentFolderByPage.moodboard, getFolders());
+    itemsToRender = itemsToRender.filter(item => validIds.includes(folderMap[String(item.id)]));
   }
 
   // Apply AI search filter
@@ -4937,12 +4938,13 @@ async function renderGallery() {
   try {
     let items = await getGalleryItems(galleryCurrentFilter);
 
-    // Apply folder filter
+    // Apply folder filter (includes subfolders)
     const folderMap = getFolderMap('gallery');
     if (currentFolderByPage.gallery === 'all') {
       items = items.filter(item => !folderMap[String(item.id)]);
     } else {
-      items = items.filter(item => folderMap[String(item.id)] === currentFolderByPage.gallery);
+      const validIds = getFolderAndDescendantIds(currentFolderByPage.gallery, getFolders());
+      items = items.filter(item => validIds.includes(folderMap[String(item.id)]));
     }
 
     // Apply AI search filter
@@ -5460,12 +5462,13 @@ async function renderHistory() {
   try {
     let items = await getHistoryItems(historyCurrentFilter);
 
-    // Apply folder filter
+    // Apply folder filter (includes subfolders)
     const folderMap = getFolderMap('history');
     if (currentFolderByPage.history === 'all') {
       items = items.filter(item => !folderMap[String(item.id)]);
     } else {
-      items = items.filter(item => folderMap[String(item.id)] === currentFolderByPage.history);
+      const validIds = getFolderAndDescendantIds(currentFolderByPage.history, getFolders());
+      items = items.filter(item => validIds.includes(folderMap[String(item.id)]));
     }
 
     // Apply AI search filter
@@ -5624,9 +5627,9 @@ function saveAllFolders(folders) {
   localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
 }
 
-function createFolder(page, name, color) {
+function createFolder(page, name, color, parentId) {
   const folders = getFolders();
-  const folder = { id: 'fld_' + Date.now(), name, color: color || '#AD39FB', createdAt: Date.now() };
+  const folder = { id: 'fld_' + Date.now(), name, color: color || '#AD39FB', createdAt: Date.now(), parentId: parentId || null };
   folders.push(folder);
   saveAllFolders(folders);
   return folder;
@@ -5638,15 +5641,56 @@ function renameFolder(folderId, newName) {
   if (f) { f.name = newName; saveAllFolders(folders); }
 }
 
+function getChildFolderIds(folderId, folders) {
+  const children = [];
+  const queue = [folderId];
+  while (queue.length) {
+    const pid = queue.shift();
+    folders.filter(f => f.parentId === pid).forEach(f => {
+      children.push(f.id);
+      queue.push(f.id);
+    });
+  }
+  return children;
+}
+
 function deleteFolderById(folderId) {
-  const folders = getFolders().filter(f => f.id !== folderId);
+  const allFolders = getFolders();
+  const idsToDelete = [folderId, ...getChildFolderIds(folderId, allFolders)];
+  const folders = allFolders.filter(f => !idsToDelete.includes(f.id));
   saveAllFolders(folders);
-  // Remove folder mappings for this folder
+  // Remove folder mappings for deleted folders
   FOLDER_PAGES.forEach(page => {
     const map = getFolderMap(page);
-    Object.keys(map).forEach(key => { if (map[key] === folderId) delete map[key]; });
+    Object.keys(map).forEach(key => { if (idsToDelete.includes(map[key])) delete map[key]; });
     saveFolderMap(page, map);
   });
+}
+
+function setFolderParent(folderId, newParentId) {
+  const folders = getFolders();
+  const folder = folders.find(f => f.id === folderId);
+  if (!folder) return;
+  // Prevent circular: can't set parent to self or to a descendant
+  if (newParentId === folderId) return;
+  const childIds = getChildFolderIds(folderId, folders);
+  if (childIds.includes(newParentId)) return;
+  folder.parentId = newParentId || null;
+  saveAllFolders(folders);
+}
+
+function getFolderPath(folderId, folders) {
+  const path = [];
+  let current = folders.find(f => f.id === folderId);
+  while (current) {
+    path.unshift(current);
+    current = current.parentId ? folders.find(f => f.id === current.parentId) : null;
+  }
+  return path;
+}
+
+function getFolderAndDescendantIds(folderId, folders) {
+  return [folderId, ...getChildFolderIds(folderId, folders)];
 }
 
 function getFolderMap(page) {
@@ -5736,40 +5780,77 @@ function renderFolderChips(page) {
   const folderMap = getFolderMap(page);
   const currentFolder = currentFolderByPage[page] || 'all';
 
-  // Count items per folder
+  // Count items per folder (including descendants)
   const folderCounts = {};
   Object.values(folderMap).forEach(fid => { folderCounts[fid] = (folderCounts[fid] || 0) + 1; });
 
+  // Get total count including subfolders
+  function getTotalCount(fid) {
+    const descendantIds = getFolderAndDescendantIds(fid, folders);
+    return descendantIds.reduce((sum, id) => sum + (folderCounts[id] || 0), 0);
+  }
+
   container.innerHTML = `<button class="folder-chip ${currentFolder === 'all' ? 'active' : ''}" data-folder="all"><i class="fas fa-layer-group"></i> Todos</button>`;
 
-  folders.forEach(folder => {
-    const count = folderCounts[folder.id] || 0;
+  // Only show root folders + active folder path in chips
+  const rootFolders = folders.filter(f => !f.parentId);
+
+  rootFolders.forEach(folder => {
+    const count = getTotalCount(folder.id);
+    const hasChildren = folders.some(f => f.parentId === folder.id);
     const chip = document.createElement('button');
     chip.className = `folder-chip ${currentFolder === folder.id ? 'active' : ''}`;
+    // Also highlight if a descendant is selected
+    const descendantIds = getChildFolderIds(folder.id, folders);
+    if (descendantIds.includes(currentFolder)) chip.classList.add('active');
     chip.dataset.folder = folder.id;
     chip.innerHTML = `
       <span class="folder-chip-dot" style="background:${folder.color};"></span>
       ${folder.name}
+      ${hasChildren ? '<i class="fas fa-caret-down" style="font-size:0.65rem;opacity:0.5;margin-left:-2px;"></i>' : ''}
       <span class="folder-chip-count">${count}</span>
       <span class="folder-chip-delete" title="Opcoes"><i class="fas fa-ellipsis-v"></i></span>
     `;
 
-    // Click to filter
     chip.addEventListener('click', (e) => {
       if (e.target.closest('.folder-chip-delete')) return;
       setCurrentFolder(page, folder.id);
     });
 
-    // Options button
     chip.querySelector('.folder-chip-delete').addEventListener('click', (e) => {
       e.stopPropagation();
       showFolderContextMenu(e, folder, page);
     });
 
     container.appendChild(chip);
+
+    // Show child folders as sub-chips if parent or child is active
+    if (currentFolder === folder.id || descendantIds.includes(currentFolder)) {
+      const children = folders.filter(f => f.parentId === folder.id);
+      children.forEach(child => {
+        const cCount = getTotalCount(child.id);
+        const subChip = document.createElement('button');
+        subChip.className = `folder-chip folder-chip-sub ${currentFolder === child.id ? 'active' : ''}`;
+        subChip.dataset.folder = child.id;
+        subChip.innerHTML = `
+          <span class="folder-chip-dot" style="background:${child.color};width:6px;height:6px;"></span>
+          ${child.name}
+          <span class="folder-chip-count">${cCount}</span>
+          <span class="folder-chip-delete" title="Opcoes"><i class="fas fa-ellipsis-v"></i></span>
+        `;
+        subChip.addEventListener('click', (e) => {
+          if (e.target.closest('.folder-chip-delete')) return;
+          setCurrentFolder(page, child.id);
+        });
+        subChip.querySelector('.folder-chip-delete').addEventListener('click', (e) => {
+          e.stopPropagation();
+          showFolderContextMenu(e, child, page);
+        });
+        container.appendChild(subChip);
+      });
+    }
   });
 
-  // "All" click handler
   container.querySelector('[data-folder="all"]').addEventListener('click', () => setCurrentFolder(page, 'all'));
 }
 
@@ -5876,6 +5957,7 @@ function saveFolderFromModal() {
 
 // Move to Folder Modal
 let moveToFolderCallback = null;
+let _moveFolderDragId = null;
 
 function openMoveToFolderModal(page, itemId, currentFolderId) {
   const modal = document.getElementById('moveToFolderModal');
@@ -5894,20 +5976,91 @@ function openMoveToFolderModal(page, itemId, currentFolderId) {
     refreshPageAfterFolderChange(page);
     showToast('Item removido da pasta', 'success');
   });
+  // Drop on "Sem pasta" to move folder to root
+  noneItem.addEventListener('dragover', (e) => { e.preventDefault(); noneItem.classList.add('drag-over'); });
+  noneItem.addEventListener('dragleave', () => noneItem.classList.remove('drag-over'));
+  noneItem.addEventListener('drop', (e) => {
+    e.preventDefault();
+    noneItem.classList.remove('drag-over');
+    if (_moveFolderDragId) {
+      setFolderParent(_moveFolderDragId, null);
+      _moveFolderDragId = null;
+      openMoveToFolderModal(page, itemId, currentFolderId); // Re-render
+      renderAllFolderChips();
+      showToast('Pasta movida para raiz', 'success');
+    }
+  });
   list.appendChild(noneItem);
 
-  folders.forEach(folder => {
-    const item = document.createElement('button');
-    item.className = `move-folder-item ${currentFolderId === folder.id ? 'active' : ''}`;
-    item.innerHTML = `<span class="move-folder-item-dot" style="background:${folder.color};"></span> ${folder.name}`;
-    item.addEventListener('click', () => {
-      setItemFolder(page, itemId, folder.id);
-      closeMoveToFolderModal();
-      refreshPageAfterFolderChange(page);
-      showToast(`Movido para "${folder.name}"`, 'success');
+  // Render folders hierarchically
+  function renderFolderItems(parentId, depth) {
+    const children = folders.filter(f => (f.parentId || null) === parentId);
+    children.forEach(folder => {
+      const item = document.createElement('div');
+      item.className = `move-folder-item ${currentFolderId === folder.id ? 'active' : ''}`;
+      item.draggable = true;
+      item.dataset.folderId = folder.id;
+      item.style.paddingLeft = (12 + depth * 20) + 'px';
+
+      const hasChildren = folders.some(f => f.parentId === folder.id);
+      item.innerHTML = `
+        <i class="fas fa-grip-vertical move-folder-drag-handle"></i>
+        <span class="move-folder-item-dot" style="background:${folder.color};"></span>
+        <span class="move-folder-item-name">${folder.name}</span>
+        ${hasChildren ? '<i class="fas fa-folder-open" style="margin-left:auto;font-size:0.65rem;opacity:0.4;"></i>' : ''}
+      `;
+
+      // Click to select folder for item
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.move-folder-drag-handle')) return;
+        setItemFolder(page, itemId, folder.id);
+        closeMoveToFolderModal();
+        refreshPageAfterFolderChange(page);
+        showToast(`Movido para "${folder.name}"`, 'success');
+      });
+
+      // Drag start
+      item.addEventListener('dragstart', (e) => {
+        _moveFolderDragId = folder.id;
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragend', () => {
+        item.classList.remove('dragging');
+        _moveFolderDragId = null;
+        list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      });
+
+      // Drop target
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (_moveFolderDragId && _moveFolderDragId !== folder.id) {
+          item.classList.add('drag-over');
+        }
+      });
+      item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        item.classList.remove('drag-over');
+        if (_moveFolderDragId && _moveFolderDragId !== folder.id) {
+          const draggedId = _moveFolderDragId;
+          _moveFolderDragId = null;
+          setFolderParent(draggedId, folder.id);
+          openMoveToFolderModal(page, itemId, currentFolderId); // Re-render
+          renderAllFolderChips();
+          const draggedFolder = folders.find(f => f.id === draggedId);
+          showToast(`"${draggedFolder?.name}" agora é subpasta de "${folder.name}"`, 'success');
+        }
+      });
+
+      list.appendChild(item);
+
+      // Render children recursively
+      renderFolderItems(folder.id, depth + 1);
     });
-    list.appendChild(item);
-  });
+  }
+
+  renderFolderItems(null, 0);
 
   if (folders.length === 0) {
     list.innerHTML += '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:0.8rem;"><i class="fas fa-folder-plus"></i><br>Crie uma pasta primeiro</div>';
@@ -6134,11 +6287,12 @@ function renderSavedStoryboards() {
   let saved = getSavedStoryboards();
   const folderMap = getFolderMap('storyboard');
 
-  // Apply folder filter
+  // Apply folder filter (includes subfolders)
   if (currentFolderByPage.storyboard === 'all') {
     saved = saved.filter(s => !folderMap[s.id]);
   } else {
-    saved = saved.filter(s => folderMap[s.id] === currentFolderByPage.storyboard);
+    const validIds = getFolderAndDescendantIds(currentFolderByPage.storyboard, getFolders());
+    saved = saved.filter(s => validIds.includes(folderMap[s.id]));
   }
 
   // Apply AI search filter
