@@ -5719,6 +5719,10 @@ function initFolderSystem() {
   // Move to folder modal
   document.getElementById('moveToFolderClose')?.addEventListener('click', closeMoveToFolderModal);
   document.getElementById('moveToFolderModal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) closeMoveToFolderModal(); });
+  document.getElementById('moveToFolderNewBtn')?.addEventListener('click', () => {
+    closeMoveToFolderModal();
+    document.getElementById('folderModal').style.display = 'flex';
+  });
 
   // Close context menu on click elsewhere
   document.addEventListener('click', () => {

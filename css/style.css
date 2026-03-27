@@ -4205,6 +4205,30 @@ h1, h2, h3, h4, h5, h6 {
 }
 .move-folder-item i { color: var(--text-muted); font-size: 0.75rem; }
 
+.move-folder-actions {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.move-folder-new-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--accent);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.move-folder-new-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+}
+
 /* Gallery/History card folder button */
 .gallery-card-folder, .history-item-folder {
   position: absolute;
