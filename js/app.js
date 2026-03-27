@@ -6387,6 +6387,49 @@ async function renderFoldersPage() {
   if (countEl) countEl.textContent = statusText;
 }
 
+function openEditItemModal(item) {
+  const modal = document.getElementById('editItemModal');
+  const promptInput = document.getElementById('editItemPrompt');
+  const providerInput = document.getElementById('editItemProvider');
+  if (!modal) return;
+
+  promptInput.value = item.prompt || '';
+  providerInput.value = item.provider || '';
+  modal.style.display = 'flex';
+
+  const close = () => { modal.style.display = 'none'; };
+  document.getElementById('editItemModalClose').onclick = close;
+  document.getElementById('editItemCancelBtn').onclick = close;
+  modal.onclick = (e) => { if (e.target === modal) close(); };
+
+  document.getElementById('editItemSaveBtn').onclick = async () => {
+    const newPrompt = promptInput.value.trim();
+    const newProvider = providerInput.value.trim();
+    try {
+      const db = await openGalleryDB();
+      const tx = db.transaction(GALLERY_STORE, 'readwrite');
+      const store = tx.objectStore(GALLERY_STORE);
+      const req = store.get(item.id);
+      req.onsuccess = () => {
+        const data = req.result;
+        if (!data) return;
+        data.prompt = newPrompt || data.prompt;
+        data.provider = newProvider || data.provider;
+        store.put(data);
+        tx.oncomplete = () => {
+          close();
+          renderFoldersPage();
+          renderGallery();
+          showToast('Informacoes atualizadas!', 'success');
+        };
+      };
+    } catch (err) {
+      console.error('Edit item error:', err);
+      showToast('Erro ao salvar', 'error');
+    }
+  };
+}
+
 function showFileContextMenu(e, item, currentParent) {
   document.querySelectorAll('.file-context-menu').forEach(m => m.remove());
   const menu = document.createElement('div');
@@ -6398,6 +6441,7 @@ function showFileContextMenu(e, item, currentParent) {
 
   menu.innerHTML = `
     <div class="fcm-item" data-action="preview"><i class="fas ${viewIcon}"></i> ${viewLabel}</div>
+    <div class="fcm-item" data-action="edit"><i class="fas fa-edit"></i> Editar info</div>
     <div class="fcm-item" data-action="move"><i class="fas fa-folder-open"></i> Mover para pasta</div>
     <div class="fcm-item" data-action="download"><i class="fas fa-download"></i> Baixar</div>
     <div class="fcm-item" data-action="moodboard"><i class="fas fa-palette"></i> Moodboard</div>
@@ -6423,6 +6467,9 @@ function showFileContextMenu(e, item, currentParent) {
     switch (action) {
       case 'preview':
         openGalleryPreview(item);
+        break;
+      case 'edit':
+        openEditItemModal(item);
         break;
       case 'move':
         openMoveToFolderModal(item._source, item.id, currentParent);

@@ -714,16 +714,6 @@
           <p>Gere imagens, videos, audios ou textos e eles aparecerão aqui automaticamente</p>
         </div>
       </div>
-      <!-- Gallery Preview Modal -->
-      <div class="gallery-preview-overlay" id="galleryPreview" style="display:none;">
-        <div class="gallery-preview-content">
-          <div class="gallery-preview-media" id="galleryPreviewMedia"></div>
-          <div class="gallery-preview-sidebar">
-            <button class="gallery-preview-close" id="galleryPreviewClose"><i class="fas fa-times"></i></button>
-            <div class="gallery-preview-info" id="galleryPreviewInfo"></div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- HISTORY Tab -->
@@ -1170,6 +1160,41 @@
       <div class="move-folder-list" id="moveFolderList"></div>
       <div class="move-folder-actions">
         <button class="move-folder-new-btn" id="moveToFolderNewBtn"><i class="fas fa-plus"></i> Nova Pasta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gallery Preview Modal (global, outside tabs) -->
+  <div class="gallery-preview-overlay" id="galleryPreview" style="display:none;">
+    <div class="gallery-preview-content">
+      <div class="gallery-preview-media" id="galleryPreviewMedia"></div>
+      <div class="gallery-preview-sidebar">
+        <button class="gallery-preview-close" id="galleryPreviewClose"><i class="fas fa-times"></i></button>
+        <div class="gallery-preview-info" id="galleryPreviewInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Item Info Modal -->
+  <div class="folder-modal-overlay" id="editItemModal" style="display:none;">
+    <div class="folder-modal" style="max-width:420px;">
+      <div class="folder-modal-header">
+        <h3><i class="fas fa-edit"></i> Editar Informacoes</h3>
+        <button class="folder-modal-close" id="editItemModalClose"><i class="fas fa-times"></i></button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Prompt / Descricao</label>
+          <input type="text" id="editItemPrompt" class="folder-modal-input" placeholder="Descreva o conteudo...">
+        </div>
+        <div>
+          <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Modelo / Provider</label>
+          <input type="text" id="editItemProvider" class="folder-modal-input" placeholder="Ex: Gemini, Pollinations...">
+        </div>
+      </div>
+      <div class="folder-modal-actions" style="margin-top:18px;">
+        <button class="folder-modal-cancel" id="editItemCancelBtn">Cancelar</button>
+        <button class="folder-modal-save" id="editItemSaveBtn"><i class="fas fa-check"></i> Salvar</button>
       </div>
     </div>
   </div>
