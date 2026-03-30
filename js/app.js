@@ -6296,11 +6296,24 @@ async function renderFoldersPage() {
 
       card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', folder.id); card.classList.add('dragging'); });
       card.addEventListener('dragend', () => card.classList.remove('dragging'));
-      card.addEventListener('dragover', (e) => { e.preventDefault(); card.classList.add('drag-over'); });
+      card.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; card.classList.add('drag-over'); });
       card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
       card.addEventListener('drop', (e) => {
         e.preventDefault();
         card.classList.remove('drag-over');
+        // Check if dropping a file item
+        const fileData = e.dataTransfer.getData('application/x-file-item');
+        if (fileData) {
+          try {
+            const { id, source } = JSON.parse(fileData);
+            const page = source === 'storyboard' ? 'storyboard' : source === 'history' ? 'history' : 'gallery';
+            setItemFolder(page, id, folder.id);
+            renderFoldersPage();
+            showToast(`Arquivo movido para "${folder.name}"`, 'success');
+          } catch(err) { console.error('Drop file error:', err); }
+          return;
+        }
+        // Otherwise it's a folder drag
         const draggedId = e.dataTransfer.getData('text/plain');
         if (draggedId && draggedId !== folder.id) {
           setFolderParent(draggedId, folder.id);
@@ -6344,6 +6357,7 @@ async function renderFoldersPage() {
   allItems.forEach(item => {
     const card = document.createElement('div');
     card.className = 'fe-card';
+    card.draggable = true;
     const icon = typeIcons[item.type] || 'fa-file';
     const color = typeColors[item.type] || '#888';
     const name = (item.prompt || item.name || 'Sem titulo').substring(0, 40);
@@ -6364,6 +6378,14 @@ async function renderFoldersPage() {
       <div class="fe-type" style="color:${color};">${typeLabels[item.type] || ''}</div>
       <button class="fe-action fe-file-menu" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
     `;
+
+    // Drag file to folder
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('application/x-file-item', JSON.stringify({ id: item.id, source: item._source }));
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
 
     // 3-dot menu
     card.querySelector('.fe-file-menu')?.addEventListener('click', (e) => {
