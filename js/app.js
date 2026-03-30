@@ -6318,8 +6318,22 @@ async function renderFoldersPage() {
   if (allItems.length > 0 && subfolders.length > 0) {
     const label = document.createElement('div');
     label.className = 'fe-section-label';
-    label.innerHTML = `<i class="fas fa-file"></i> Arquivos <span class="fe-section-count">${allItems.length}</span>`;
+    label.innerHTML = `<i class="fas fa-file"></i> Arquivos <span class="fe-section-count">${allItems.length}</span>
+      <button class="fe-add-file-btn" title="Adicionar arquivos"><i class="fas fa-plus"></i> Adicionar</button>`;
+    label.querySelector('.fe-add-file-btn')?.addEventListener('click', () => triggerFolderFileUpload(currentParent));
     grid.appendChild(label);
+  }
+
+  // --- Add file button card ---
+  if (currentParent !== null) {
+    const addCard = document.createElement('div');
+    addCard.className = 'fe-card fe-add-file-card';
+    addCard.innerHTML = `
+      <div class="fe-file-thumb"><i class="fas fa-plus" style="font-size:2rem;color:var(--accent-primary);opacity:0.7;"></i></div>
+      <div class="fe-name">Adicionar arquivo</div>
+    `;
+    addCard.addEventListener('click', () => triggerFolderFileUpload(currentParent));
+    grid.appendChild(addCard);
   }
 
   // --- Files ---
@@ -6385,6 +6399,42 @@ async function renderFoldersPage() {
   if (statusbar) statusbar.textContent = statusText;
   const countEl = document.getElementById('foldersItemCount');
   if (countEl) countEl.textContent = statusText;
+}
+
+function triggerFolderFileUpload(folderId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.accept = 'image/*,video/*,audio/*,.txt,.md,.json';
+  input.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    for (const file of files) {
+      let type = 'text';
+      if (file.type.startsWith('image/')) type = 'image';
+      else if (file.type.startsWith('video/')) type = 'video';
+      else if (file.type.startsWith('audio/')) type = 'audio';
+      const data = await new Promise((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.readAsDataURL(file);
+      });
+      const savedId = await saveToGallery({
+        type,
+        prompt: file.name,
+        provider: 'Upload manual',
+        data,
+        mimeType: file.type || 'application/octet-stream',
+        timestamp: Date.now()
+      });
+      if (savedId && folderId) {
+        setItemFolder('gallery', savedId, folderId);
+      }
+    }
+    renderFoldersPage();
+    showToast(`${files.length} arquivo(s) adicionado(s)`, 'success');
+  });
+  input.click();
 }
 
 function openEditItemModal(item) {

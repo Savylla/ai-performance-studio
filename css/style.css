@@ -4664,6 +4664,35 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 8px;
   font-size: 0.6rem;
 }
+.fe-add-file-btn {
+  margin-left: auto;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.2s;
+}
+.fe-add-file-btn:hover { background: var(--accent-hover, #6366f1); }
+.fe-add-file-card {
+  border: 2px dashed var(--border);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s, border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.fe-add-file-card:hover {
+  opacity: 1;
+  border-color: var(--accent-primary);
+}
 
 /* ---- LIST VIEW ---- */
 .folders-explorer-grid.list-view {
