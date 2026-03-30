@@ -6325,7 +6325,7 @@ async function renderFoldersPage() {
   }
 
   // --- Add file button card ---
-  if (currentParent !== null) {
+  {
     const addCard = document.createElement('div');
     addCard.className = 'fe-card fe-add-file-card';
     addCard.innerHTML = `
