@@ -7073,6 +7073,121 @@ const BIBLIOTECA_DATA = {
   ]
 };
 
+// Higgsfield CDN mapping — auto-populate video/thumb for each effect/transition
+const HIGGSFIELD_CDN = {
+  // === CAMERA CONTROLS ===
+  'zoom-in': { v: 'https://static.higgsfield.ai/a3a3db5d-d3c5-4d95-b429-235ae3d1ee82.mp4', t: 'https://static.higgsfield.ai/a3a3db5d-d3c5-4d95-b429-235ae3d1ee82.webp', mid: 'a3a3db5d-d3c5-4d95-b429-235ae3d1ee82' },
+  'zoom-out': { v: 'https://static.higgsfield.ai/f9e6792f-b385-4eca-87f6-f439e917a7aa.mp4', t: 'https://static.higgsfield.ai/f9e6792f-b385-4eca-87f6-f439e917a7aa.webp', mid: 'f9e6792f-b385-4eca-87f6-f439e917a7aa' },
+  'crash-zoom-in': { v: 'https://static.higgsfield.ai/a2dddb76-03fa-429e-9905-577bffdf9d38.mp4', t: 'https://static.higgsfield.ai/a2dddb76-03fa-429e-9905-577bffdf9d38.webp', mid: 'a2dddb76-03fa-429e-9905-577bffdf9d38' },
+  'crash-zoom-out': { v: 'https://static.higgsfield.ai/3972c090-a448-4fd4-b8f0-cb71b4b523ee.mp4', t: 'https://static.higgsfield.ai/3972c090-a448-4fd4-b8f0-cb71b4b523ee.webp', mid: '3972c090-a448-4fd4-b8f0-cb71b4b523ee' },
+  'rapid-zoom-in': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/981bda8a-d681-4b08-83fa-64cccdc1e6ec.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/2d80d680-b488-45a7-b442-b4fe247d0809.webp', mid: '3dee792a-3fb1-40e5-8f46-3a1db42d64b1' },
+  'rapid-zoom-out': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/bf33fd46-52bf-4326-8eff-2d6f314e68ae.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/e9a28fcc-e102-4dc9-8928-9166c51ebc86.webp', mid: '222b3cfc-5e24-44ee-b7f5-94deb2d2b514' },
+  'yoyo-zoom': { v: 'https://static.higgsfield.ai/702c6210-9798-4888-b7c9-e794c8fcaaef.mp4', t: 'https://static.higgsfield.ai/702c6210-9798-4888-b7c9-e794c8fcaaef.webp', mid: '702c6210-9798-4888-b7c9-e794c8fcaaef' },
+  'dolly-in': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/e42c01f2-ff4a-431b-82f1-87dba12b3082.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/234f0bcb-88e1-4d56-a1d4-609628fd34fd.webp', mid: '1438937c-a220-4859-93f4-f373da3f73fb' },
+  'dolly-left': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/60200af8-2c6a-401b-bdb1-04e1951faf28.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/bbf57f31-e69b-495b-bf65-b3615f5a6187.webp', mid: '6d7fbb57-6008-4db4-a65c-56a10fc37969' },
+  'dolly-right': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/58031d21-6ceb-4b00-a85b-25892a8a9a3e.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/6e05554a-65f2-4b59-b3f2-db892d8086fb.webp', mid: '1431d4b2-14d2-4576-876e-c8cec2f5f838' },
+  'super-dolly-in': { v: 'https://static.higgsfield.ai/6a6fb1b9-28ea-44c8-9be4-e5d8c6ab1f3a.mp4', t: 'https://static.higgsfield.ai/6a6fb1b9-28ea-44c8-9be4-e5d8c6ab1f3a.webp', mid: '6a6fb1b9-28ea-44c8-9be4-e5d8c6ab1f3a' },
+  'dolly-zoom-in': { v: 'https://static.higgsfield.ai/114245a3-93fb-434a-9299-44ca9e4656a3.mp4', t: 'https://static.higgsfield.ai/114245a3-93fb-434a-9299-44ca9e4656a3.webp', mid: '114245a3-93fb-434a-9299-44ca9e4656a3' },
+  'pan-left': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/6bff4a6e-bec1-4d32-84bf-6b4f9cb4df0d.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/2e49188f-46d0-4aab-8f40-8c91b5bd3740.webp', mid: '6f087874-24f3-4d48-9eb9-f4349ac6a105' },
+  'tilt-up': { v: 'https://static.higgsfield.ai/9f127dad-0db0-4e3d-a440-3cfbffca30b6.mp4', t: 'https://static.higgsfield.ai/9f127dad-0db0-4e3d-a440-3cfbffca30b6.webp', mid: '9f127dad-0db0-4e3d-a440-3cfbffca30b6' },
+  'tilt-down': { v: 'https://static.higgsfield.ai/1958a932-8ffb-4f1a-a5cd-480858f6ae84.mp4', t: 'https://static.higgsfield.ai/1958a932-8ffb-4f1a-a5cd-480858f6ae84.webp', mid: '1958a932-8ffb-4f1a-a5cd-480858f6ae84' },
+  'crane-up': { v: 'https://static.higgsfield.ai/2da63d27-94e0-48e0-8e2e-936274bd176e.mp4', t: 'https://static.higgsfield.ai/2da63d27-94e0-48e0-8e2e-936274bd176e.webp', mid: '45d7f47f-2c7b-4c5e-84b7-943758a39dcc' },
+  'crane-down': { v: 'https://static.higgsfield.ai/494db3c2-2297-4cf7-bef7-cba0cebe73ee.mp4', t: 'https://static.higgsfield.ai/494db3c2-2297-4cf7-bef7-cba0cebe73ee.webp', mid: '494db3c2-2297-4cf7-bef7-cba0cebe73ee' },
+  'jib-up': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/3f28e537-56b1-4f21-91e5-144f82d50dfb.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/2bf04bd9-f5d4-4f63-996b-d17c20c5c88e.webp', mid: '30a7fe68-0967-419a-b7cb-0d0bed480b09' },
+  'arc-left': { v: 'https://static.higgsfield.ai/2a5d8f86-aef3-4b34-b5ee-fb2020daa131.mp4', t: 'https://static.higgsfield.ai/2a5d8f86-aef3-4b34-b5ee-fb2020daa131.webp', mid: '2a5d8f86-aef3-4b34-b5ee-fb2020daa131' },
+  'arc-right': { v: 'https://static.higgsfield.ai/0bdbf318-f918-4f9b-829a-74cab681d806.mp4', t: 'https://static.higgsfield.ai/0bdbf318-f918-4f9b-829a-74cab681d806.webp', mid: '0bdbf318-f918-4f9b-829a-74cab681d806' },
+  '3d-rotation': { v: 'https://static.higgsfield.ai/6f06f47e-922e-4660-9fe9-754e4be69696.mp4', t: 'https://static.higgsfield.ai/6f06f47e-922e-4660-9fe9-754e4be69696.webp', mid: '6f06f47e-922e-4660-9fe9-754e4be69696' },
+  'lazy-susan': { v: 'https://static.higgsfield.ai/025866ff-677c-4af2-92ef-52d6ec3b035e.mp4', t: 'https://static.higgsfield.ai/025866ff-677c-4af2-92ef-52d6ec3b035e.webp', mid: '025866ff-677c-4af2-92ef-52d6ec3b035e' },
+  'dutch-angle': { v: 'https://static.higgsfield.ai/b593944e-ae3e-47ce-8c6d-ea8dd87fe01f.mp4', t: 'https://static.higgsfield.ai/b593944e-ae3e-47ce-8c6d-ea8dd87fe01f.webp', mid: 'b593944e-ae3e-47ce-8c6d-ea8dd87fe01f' },
+  'overhead': { v: 'https://static.higgsfield.ai/b6395b91-a356-4bc6-9cda-fc2793b3d706.mp4', t: 'https://static.higgsfield.ai/b6395b91-a356-4bc6-9cda-fc2793b3d706.webp', mid: 'b6395b91-a356-4bc6-9cda-fc2793b3d706' },
+  'incline': { v: 'https://static.higgsfield.ai/b120f292-74e3-4878-817b-626e203f8a92.mp4', t: 'https://static.higgsfield.ai/b120f292-74e3-4878-817b-626e203f8a92.webp', mid: 'b120f292-74e3-4878-817b-626e203f8a92' },
+  'aerial-pullback': { v: 'https://cdn.higgsfield.ai/kling_motion/a6fc0f13-7d44-4fd7-b6ca-1f27254bf62e.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/7e4590aa-f91c-4ff7-b7f7-f4387a78274d.webp', mid: 'a0bfa1b6-2dc7-4bbe-889f-fc04c27288ba' },
+  'handheld': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/395e90c6-9d78-47c8-b453-607921a418ba.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/2eaf5227-7df8-4838-838f-fc3e1875fc8d.webp', mid: 'cf529456-6478-4622-a572-052f0d8ae378' },
+  'snorricam': { v: 'https://static.higgsfield.ai/893cb65f-c528-40aa-83d8-c5aeb2bfe59f.mp4', t: 'https://static.higgsfield.ai/893cb65f-c528-40aa-83d8-c5aeb2bfe59f.webp', mid: '893cb65f-c528-40aa-83d8-c5aeb2bfe59f' },
+  'hero-cam': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/11c6d46d-0a52-407a-8823-ba1e498c2638.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/c910e446-5ccd-4f6d-9af5-ce95d6fa3b50.webp', mid: 'a8c54413-c991-416a-8ac8-32c6a42caa6c' },
+  'head-tracking': { v: 'https://static.higgsfield.ai/fe520e06-7971-4f28-9e10-e45911c57bb6.mp4', t: 'https://static.higgsfield.ai/fe520e06-7971-4f28-9e10-e45911c57bb6.webp', mid: 'fe520e06-7971-4f28-9e10-e45911c57bb6' },
+  'eyes-in': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/c5736a3e-0a77-45d7-8619-0b2868cb5231.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/50f3b4bf-cd66-44bd-b88b-522696f55d32.webp', mid: '3afdf962-2709-44a9-a41c-6565e6998529' },
+  'buckle-up': { v: 'https://static.higgsfield.ai/4ef72175-227a-418b-923d-2831dcdf7d4f.mp4', t: 'https://static.higgsfield.ai/4ef72175-227a-418b-923d-2831dcdf7d4f.webp', mid: '4ef72175-227a-418b-923d-2831dcdf7d4f' },
+  'car-chasing': { v: 'https://static.higgsfield.ai/a76f2e99-0a41-4fdf-934d-9c95b0ee85bf.mp4', t: 'https://static.higgsfield.ai/a76f2e99-0a41-4fdf-934d-9c95b0ee85bf.webp', mid: 'a76f2e99-0a41-4fdf-934d-9c95b0ee85bf' },
+  'car-grip': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/7b0dc7d1-588a-47da-a7f9-5419c27e4070.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/63ccc7eb-ca16-4e5c-a48a-c229cc8c28b3.webp', mid: '7c174c3f-7d11-451c-b7da-03be50f7d010' },
+  'static': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/d4f333fc-2302-4d95-b4a5-854673b2f37e.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/fb658a00-5327-48ed-85b8-7e7708391429.webp', mid: 'c43e6d97-a55a-45d7-b5bc-b3a55d3a6e8e' },
+  // === VISUAL EFFECTS ===
+  'bullet-time': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/5a595e55-8770-4885-9239-ad9524ace5be.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/d1369770-4f9b-4862-8b78-73f143d54aa4.webp', mid: 'bb341c21-9548-4efb-8a91-b6202167b344' },
+  'building-explosion': { v: 'https://static.higgsfield.ai/e974bca9-c9eb-4cc8-9318-5676cc110f17.mp4', t: 'https://static.higgsfield.ai/e974bca9-c9eb-4cc8-9318-5676cc110f17.webp', mid: 'e974bca9-c9eb-4cc8-9318-5676cc110f17' },
+  'disintegration': { v: 'https://static.higgsfield.ai/4e981984-1cdc-4b96-a2b1-1a7c1ecb822d.mp4', t: 'https://static.higgsfield.ai/4e981984-1cdc-4b96-a2b1-1a7c1ecb822d.webp', mid: '4e981984-1cdc-4b96-a2b1-1a7c1ecb822d' },
+  'clone-explosion': { v: 'https://static.higgsfield.ai/9680aaf0-c5db-4204-833f-56f825bb350b.mp4', t: 'https://static.higgsfield.ai/9680aaf0-c5db-4204-833f-56f825bb350b.webp', mid: '9680aaf0-c5db-4204-833f-56f825bb350b' },
+  'air-bending': { v: 'https://cdn.higgsfield.ai/kling_motion/79c7d439-b3e7-4f08-a8aa-300915611ecf.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/111df116-ce67-43b0-9b4a-309d3a20b9f2.webp', mid: 'c4dd8cc3-79a6-4366-b9a1-071ad848ddd2' },
+  'water-bending': { v: 'https://static.higgsfield.ai/b3c9d6c2-e1c9-4d92-8853-9d2d46e4b294.mp4', t: 'https://static.higgsfield.ai/b3c9d6c2-e1c9-4d92-8853-9d2d46e4b294.webp', mid: 'b3c9d6c2-e1c9-4d92-8853-9d2d46e4b294' },
+  'earth-wave': { v: 'https://static.higgsfield.ai/fb52e9a0-c6e2-498e-8adb-6611b80808e3.mp4', t: 'https://static.higgsfield.ai/fb52e9a0-c6e2-498e-8adb-6611b80808e3.webp', mid: 'fb52e9a0-c6e2-498e-8adb-6611b80808e3' },
+  'thunder-god': { v: 'https://static.higgsfield.ai/ca0568ee-6a0f-4134-a4ee-97dfe44753ba.mp4', t: 'https://static.higgsfield.ai/ca0568ee-6a0f-4134-a4ee-97dfe44753ba.webp', mid: 'ca0568ee-6a0f-4134-a4ee-97dfe44753ba' },
+  'levitation': { v: 'https://static.higgsfield.ai/52aa7be6-854f-45cb-930c-b98d64eb593c.mp4', t: 'https://static.higgsfield.ai/52aa7be6-854f-45cb-930c-b98d64eb593c.webp', mid: '52aa7be6-854f-45cb-930c-b98d64eb593c' },
+  'freezing': { v: 'https://static.higgsfield.ai/777f1604-afee-406d-a711-bf1e0ea23c86.mp4', t: 'https://static.higgsfield.ai/777f1604-afee-406d-a711-bf1e0ea23c86.webp', mid: '777f1604-afee-406d-a711-bf1e0ea23c86' },
+  'shadow-smoke': { v: 'https://cdn.higgsfield.ai/kling_motion/f5c1aa03-f1b0-4e42-98a7-7e7aec97c63a.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/d610e8c9-8e35-4018-821c-893f408a5cec.webp', mid: '881b5e78-e585-43fb-ac73-a4207d824c88' },
+  'sakura-petals': { v: 'https://cdn.higgsfield.ai/kling_motion/72717787-29b1-47b9-b421-6a36449092cd.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/eed3e692-ab0c-410e-a124-4111104626cd.webp', mid: 'cbc75d4d-2e42-4688-a384-0d6e03e375da' },
+  'money-rain': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/1309dc80-57d4-4e4f-926f-41664122d8af.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/9448c9a5-c9ba-44aa-988d-2a574b22cb37.webp', mid: '40a465df-3484-4130-bfd2-54f5cdcaf3bf' },
+  'x-ray': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/7b2ec3c6-81e4-443f-8aa3-e973c70de79c.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/12c3d661-1a2c-4ed6-8459-4f818172915c.webp', mid: '5819f36e-5b0a-44ca-800e-98e380266b2d' },
+  'wireframe': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/224c2393-11f7-4cac-9e97-1c740129b17d.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/5d6bd428-02ec-4e49-b511-35d0c0365d70.webp', mid: 'ea67acab-a7bf-4fff-b098-a0f1f1a6796c' },
+  'turning-metal': { v: 'https://static.higgsfield.ai/46e23a6b-1047-40f1-9cf5-33f5f55ddf2e.mp4', t: 'https://static.higgsfield.ai/46e23a6b-1047-40f1-9cf5-33f5f55ddf2e.webp', mid: '46e23a6b-1047-40f1-9cf5-33f5f55ddf2e' },
+  'werewolf': { v: 'https://cdn.higgsfield.ai/kling_motion/e3913abc-2f92-48f2-aa36-66a1c5941184.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/9106e8a2-4b20-4e98-99fc-6db13f00e8b7.webp', mid: '5f3f83b8-6a17-47ba-bcfd-f7f41d9997e3' },
+  'innerlight': { v: 'https://static.higgsfield.ai/30d58d76-3149-4dee-9ffa-920a7ca6eb9e.mp4', t: 'https://static.higgsfield.ai/30d58d76-3149-4dee-9ffa-920a7ca6eb9e.webp', mid: '30d58d76-3149-4dee-9ffa-920a7ca6eb9e' },
+  'glow-trace': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/2a01bed8-1871-4c39-aad5-1db86631ac1d.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/70c0f591-e13c-46a8-9efc-af1ac8a42a84.webp', mid: '519e724e-760f-4703-b6cd-d38223f27e53' },
+  'aquarium': { v: 'https://cdn.higgsfield.ai/kling_motion/76b74185-d6d5-4d05-9355-796659fa394e.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/88ca249a-8e95-4e4e-9a6e-ced88799dcf8.webp', mid: 'a5aad83f-c66b-44eb-a781-85132636253f' },
+  'gas-transformation': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/fa4ef01b-444c-4706-b3fd-e92bc8e915c7.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/ea86bc73-2c05-471e-a300-80519b6807c1.webp', mid: '1422c31c-7648-4b23-94ca-de200ad1bbc6' },
+  'low-shutter': { v: 'https://static.higgsfield.ai/f7949a2f-2bcd-459a-96c0-80eb222abcdc.mp4', t: 'https://static.higgsfield.ai/f7949a2f-2bcd-459a-96c0-80eb222abcdc.webp', mid: 'f7949a2f-2bcd-459a-96c0-80eb222abcdc' },
+  'fisheye': { v: 'https://static.higgsfield.ai/6c689fc3-e421-4ed5-892c-2092d1c60be0.mp4', t: 'https://static.higgsfield.ai/6c689fc3-e421-4ed5-892c-2092d1c60be0.webp', mid: '6c689fc3-e421-4ed5-892c-2092d1c60be0' },
+  'focus-change': { v: 'https://static.higgsfield.ai/390e084a-4a80-410b-a808-77411828c61d.mp4', t: 'https://static.higgsfield.ai/390e084a-4a80-410b-a808-77411828c61d.webp', mid: '390e084a-4a80-410b-a808-77411828c61d' },
+  'hyperlapse': { v: 'https://static.higgsfield.ai/f0f07997-34fe-4bef-84c1-ee9d4da94a1a.mp4', t: 'https://static.higgsfield.ai/f0f07997-34fe-4bef-84c1-ee9d4da94a1a.webp', mid: 'f0f07997-34fe-4bef-84c1-ee9d4da94a1a' },
+  'timelapse-landscape': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/a31a54ff-1028-4cb7-bddb-ac31d3c20290.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/70ae2e45-c34d-4a2a-ad31-8471bb966707.webp', mid: 'd45f0a80-62b8-4651-bd62-0373a09b8f11' },
+  'timelapse-glam': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/1e2a226b-4d82-4dd1-868a-57d21710fd1c.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/b8d622f6-573e-43cc-bf23-988420fbd08a.webp', mid: '4b2db33e-b163-484b-b33a-7b0a04d81ddf' },
+  'lava': { v: 'https://static.higgsfield.ai/eeaa42bc-d607-464e-b21f-b7fb8b1cb3fc.mp4', t: 'https://static.higgsfield.ai/eeaa42bc-d607-464e-b21f-b7fb8b1cb3fc.webp', mid: 'eeaa42bc-d607-464e-b21f-b7fb8b1cb3fc' },
+  'live-concert': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/393fedcf-0375-4f9c-b27e-3b5e6f19c28a.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/19ecfa7f-f24e-4805-a988-5ef481f13ceb.webp', mid: 'bf8444a7-c778-451f-b633-74f62aa23e98' },
+  'glam': { v: 'https://static.higgsfield.ai/ae4a319d-a06f-4b30-8b67-55a35a22f24a.mp4', t: 'https://static.higgsfield.ai/ae4a319d-a06f-4b30-8b67-55a35a22f24a.webp', mid: 'ae4a319d-a06f-4b30-8b67-55a35a22f24a' },
+  'wiggle': { v: 'https://static.higgsfield.ai/cfbe9732-1b5a-4f59-9dbc-801f85f5c702.mp4', t: 'https://static.higgsfield.ai/cfbe9732-1b5a-4f59-9dbc-801f85f5c702.webp', mid: 'cfbe9732-1b5a-4f59-9dbc-801f85f5c702' },
+  'ahegao': { v: 'https://cdn.higgsfield.ai/wan2_2_motion/22b6f9ca-5469-4086-8956-a2deb4944307.mp4', t: 'https://cdn.higgsfield.ai/wan2_2_motion/792e4782-a153-4cd6-a4dc-9470fa92a39a.webp', mid: '3322a2db-a59b-4e77-85fd-562d417b79d6' },
+  'black-tears': { v: 'https://static.higgsfield.ai/6b49273d-2164-4af4-8e38-971ad7ab6516.mp4', t: 'https://static.higgsfield.ai/6b49273d-2164-4af4-8e38-971ad7ab6516.webp', mid: '6b49273d-2164-4af4-8e38-971ad7ab6516' },
+  'garden-bloom': { v: 'https://static.higgsfield.ai/b25600ef-238e-448a-bb07-1ff74fd0207f.mp4', t: 'https://static.higgsfield.ai/b25600ef-238e-448a-bb07-1ff74fd0207f.webp', mid: 'b25600ef-238e-448a-bb07-1ff74fd0207f' },
+  'head-explosion': { v: 'https://static.higgsfield.ai/dbf3fbc1-f69c-4904-a063-104cf2998a40.mp4', t: 'https://static.higgsfield.ai/dbf3fbc1-f69c-4904-a063-104cf2998a40.webp', mid: 'dbf3fbc1-f69c-4904-a063-104cf2998a40' },
+  'head-off': { v: 'https://static.higgsfield.ai/645b3b79-f6f5-4e9b-83d7-f9dd526ac624.mp4', t: 'https://static.higgsfield.ai/645b3b79-f6f5-4e9b-83d7-f9dd526ac624.webp', mid: '645b3b79-f6f5-4e9b-83d7-f9dd526ac624' },
+  'hero-flight': { v: 'https://cdn.higgsfield.ai/seedance_motion/0b8935a7-1dd9-460b-a03b-b5e358c4ad28.mp4', t: 'https://cdn.higgsfield.ai/seedance_motion/ae4f5a84-76f8-4694-8287-96221bb9464c.webp', mid: '1df8be61-ddf7-4563-b12f-887d4c641698' },
+  'horror-face': { v: 'https://cdn.higgsfield.ai/kling_motion/368662ef-3ef3-4659-ab73-14ebf5c25205.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/e60ebf40-7bff-421f-95cb-38a355392f08.webp', mid: '41ed27a0-8d93-482a-b743-17bb68af9e94' },
+  'glowing-fish': { v: 'https://static.higgsfield.ai/cc0d5c9a-4047-459f-acce-75811f0ba729.mp4', t: 'https://static.higgsfield.ai/cc0d5c9a-4047-459f-acce-75811f0ba729.webp', mid: 'cc0d5c9a-4047-459f-acce-75811f0ba729' },
+  'gorilla-transfer': { v: 'https://cdn.higgsfield.ai/kling_motion/9f5929b9-5246-4856-9862-daa9b6b0fe53.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/06deaef7-b5f6-4c14-b30f-5658b264b863.webp', mid: '2f000456-93b5-482d-acb4-831f43095efa' },
+  'illustration-scene': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/6cf528be-5f99-4651-8358-68d8c61c8c5a.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/03e44541-8610-4dbe-b997-60aa5ce685f6.webp', mid: '3891c001-6191-4c33-bcd2-e518736ea923' },
+  'tattoo-animation': { v: 'https://cdn.higgsfield.ai/kling_motion/7c438afb-bc2a-443f-8140-a6173f62b486.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/3b4642fa-322a-43b4-91f2-87f79f4539ee.webp', mid: 'd5ff2bb8-d82d-4ade-b807-e075af15aae6' },
+  'saint-glow': { v: 'https://cdn.higgsfield.ai/kling_motion/31843bef-0821-47e1-8f3e-c499e9cd00d4.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/ae410d7d-5c3d-4053-96fe-1d7595bf5bd3.webp', mid: '5772cc26-730f-4fb2-945b-fa4c5313feca' },
+  'fast-sprint': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/e05ebca0-041f-45e2-9189-0a969b4cac2a.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/52096e6b-4cbf-4644-a1e9-f4f65174f09c.webp', mid: '5023b9bb-d528-48cd-add8-622e2999d7c6' },
+  'spiders-from-mouth': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/3d9906ac-44b5-47d3-b3c0-7fdccfe14f4a.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/1b2b1dde-a2db-469b-849e-055f6dd06e04.webp', mid: 'c5576bd6-2662-4b03-a20e-82dfc5e07da2' },
+  'buddy': { v: 'https://cdn.higgsfield.ai/seedance_motion/6d539e15-3de0-4992-b56e-7c688e4e70de.mp4', t: 'https://cdn.higgsfield.ai/seedance_motion/1ecc8b56-d13a-4b22-803e-fa21eb64c592.webp', mid: '12efd233-c7fa-445f-8eb9-f271c902cdbc' },
+  'collage': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/5a8f0f01-a4c5-4fdb-a141-7b6ab6ca6779.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/449f6d8f-399c-4bab-92df-5bf90c6de4de.webp', mid: '0d9830d2-4510-4472-9c70-98e1e314a86d' },
+  'diamond': { v: 'https://static.higgsfield.ai/8126eea1-263d-4e2a-9e27-da7296638522.mp4', t: 'https://static.higgsfield.ai/8126eea1-263d-4e2a-9e27-da7296638522.webp', mid: '8126eea1-263d-4e2a-9e27-da7296638522' },
+  'duplicate': { v: 'https://static.higgsfield.ai/20b46995-5991-48e0-8fcc-6b1f5dfb4c52.mp4', t: 'https://static.higgsfield.ai/20b46995-5991-48e0-8fcc-6b1f5dfb4c52.webp', mid: '20b46995-5991-48e0-8fcc-6b1f5dfb4c52' },
+  'set-on-fire': { v: 'https://static.higgsfield.ai/06b50d3a-65a9-432b-bf0b-493fc3dcc006.mp4', t: 'https://static.higgsfield.ai/06b50d3a-65a9-432b-bf0b-493fc3dcc006.webp', mid: '06b50d3a-65a9-432b-bf0b-493fc3dcc006' },
+  'timelapse-human': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/8e67500f-9453-4fb0-ac9a-b974049b46cd.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/95c3d330-f9d7-4f27-9e11-95b762ff23f6.webp', mid: 'b4ba822f-9171-4547-997e-c86de335385e' },
+  // === TRANSITIONS ===
+  'flying-cam-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/ecb6fc91-c4df-4133-95da-5e53108a7c6f.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/0fb7068a-f7f0-470b-8b81-3ee5f99da7c9.webp', mid: 'e43378b9-b20b-4158-a626-745bbbcacdbd' },
+  'raven-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/8c4795a8-e7ef-4272-8fb3-9d349192a013.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/94b61df4-fff8-4c97-8115-59d8f2fcd93d.webp', mid: 'bbab2a35-ccba-45df-8c37-8ea2bd9e395a' },
+  'splash-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/413e9bed-2fb7-4f61-b69f-e8c7466bfcf6.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/c55aaeff-aff4-4555-829e-3ffdc193df7f.webp', mid: '105c744b-05bf-44ae-ba34-5a7144f4ec46' },
+  'melt-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/a124bdd1-6c85-4a54-9d38-4c6a25e9eaba.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/a5478993-7f69-40ac-9e53-ee8643088007.webp', mid: 'f064aa72-eb21-4691-a827-5f0fa9f4246c' },
+  'roll-transition': { v: 'https://static.higgsfield.ai/a8e2bc3a-e78e-42aa-a0e6-79bc01141ed3.mp4', t: 'https://static.higgsfield.ai/a8e2bc3a-e78e-42aa-a0e6-79bc01141ed3.webp', mid: 'a8e2bc3a-e78e-42aa-a0e6-79bc01141ed3' },
+  'seamless-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/bc0678f9-dc5d-470c-8145-ff29303e2979.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/9fb08bc1-82da-4b2f-a165-6b88c3787804.webp', mid: '77ff4447-ab4c-4816-bb79-bff2f4a4f34f' },
+  'polygon-transition': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/b96f226b-469c-45e0-85fe-328d7e9789a4.mp4', t: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/fd904f40-a0d5-4164-87cc-9f124c2af2bd.webp', mid: 'fad73347-8c2d-4d96-a70a-155447406281' },
+  'trucksition': { v: 'https://cdn.higgsfield.ai/kling_motion/bb84ce87-ed51-4512-94cb-8852983a61dc.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/a8eda643-6ef5-4bb6-b83a-2f5e0ea5a1c2.webp', mid: '81c90748-7852-4bb1-a0ec-1649beb72024' },
+  'mouth-transition': { v: 'https://static.higgsfield.ai/7351a8ad-9754-4844-94f1-00baf293d588.mp4', t: 'https://static.higgsfield.ai/7351a8ad-9754-4844-94f1-00baf293d588.webp', mid: '7351a8ad-9754-4844-94f1-00baf293d588' },
+  'through-object-in': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/c4fbfcfd-08c6-46bd-b449-7977fb1fc5ea.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/1f631b4e-97d8-4dfe-a0c2-21c6884e1f7e.webp', mid: '7fd00618-aa73-4fae-adb7-98ed16773eaa' },
+};
+
+// Apply Higgsfield CDN data to BIBLIOTECA_DATA
+['efeitos', 'transicoes'].forEach(section => {
+  BIBLIOTECA_DATA[section].forEach(item => {
+    const cdn = HIGGSFIELD_CDN[item.id];
+    if (cdn) {
+      if (!item.video || item.video.trim() === '') item.video = cdn.v;
+      item.thumb = cdn.t;
+      item.higgsfield = 'https://higgsfield.ai/motion/' + cdn.mid;
+    }
+  });
+});
+
 let bibliotecaRendered = false;
 let bibliotecaCurrentSection = 'efeitos';
 
@@ -7097,14 +7212,17 @@ function renderBibliotecaGrid(section) {
     card.className = 'biblioteca-card';
     card.dataset.id = item.id;
     card.dataset.section = section;
+    const hasThumb = item.thumb && item.thumb.trim() !== '';
     const hasVideo = item.video && item.video.trim() !== '';
     card.innerHTML = `
       <div class="biblioteca-card-thumb">
-        ${hasVideo
-          ? `<video class="biblioteca-card-video" src="${item.video}" muted loop playsinline preload="metadata"></video>`
-          : `<div class="bib-anim-preview" data-anim="${item.anim}">
-              <div class="bib-anim-obj"></div>
-            </div>`
+        ${hasThumb
+          ? `<img class="biblioteca-card-img" src="${item.thumb}" alt="${item.name}" loading="lazy">`
+          : hasVideo
+            ? `<video class="biblioteca-card-video" src="${item.video}" muted loop playsinline preload="metadata"></video>`
+            : `<div class="bib-anim-preview" data-anim="${item.anim}">
+                <div class="bib-anim-obj"></div>
+              </div>`
         }
       </div>
       <div class="biblioteca-card-name">${item.name.toUpperCase()}</div>
@@ -7112,8 +7230,32 @@ function renderBibliotecaGrid(section) {
     card.addEventListener('click', () => openBibliotecaModal(item, section));
     grid.appendChild(card);
 
-    // Video hover play or CSS animation
-    if (hasVideo) {
+    // Hover: swap thumbnail to video for smooth preview
+    if (hasThumb && hasVideo) {
+      let vid = null;
+      card.addEventListener('mouseenter', () => {
+        if (!vid) {
+          vid = document.createElement('video');
+          vid.className = 'biblioteca-card-video';
+          vid.src = item.video;
+          vid.muted = true;
+          vid.loop = true;
+          vid.playsInline = true;
+          vid.preload = 'auto';
+          const thumbEl = card.querySelector('.biblioteca-card-thumb');
+          thumbEl.appendChild(vid);
+        }
+        const img = card.querySelector('.biblioteca-card-img');
+        if (img) img.style.opacity = '0';
+        vid.style.opacity = '1';
+        try { vid.currentTime = 0; vid.play(); } catch(e){}
+      });
+      card.addEventListener('mouseleave', () => {
+        const img = card.querySelector('.biblioteca-card-img');
+        if (img) img.style.opacity = '1';
+        if (vid) { vid.style.opacity = '0'; try { vid.pause(); } catch(e){} }
+      });
+    } else if (hasVideo) {
       const vid = card.querySelector('.biblioteca-card-video');
       card.addEventListener('mouseenter', () => { try { vid.currentTime = 0; vid.play(); } catch(e){} });
       card.addEventListener('mouseleave', () => { try { vid.pause(); vid.currentTime = 0; } catch(e){} });
@@ -7321,6 +7463,21 @@ function openBibliotecaModal(item, section) {
           <h4><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:6px;"></i>Quando usar</h4>
           <p>${item.usage}</p>
         </div>
+        ${item.higgsfield ? `<a href="${item.higgsfield}" target="_blank" rel="noopener" class="biblioteca-higgsfield-link">
+          <i class="fas fa-external-link-alt"></i> Ver no Higgsfield
+        </a>` : ''}
+        ${item.gallery && item.gallery.length > 0 ? `
+        <div class="biblioteca-modal-gallery">
+          <h4><i class="fas fa-images" style="color:var(--accent);margin-right:6px;"></i>Exemplos da Comunidade</h4>
+          <div class="biblioteca-gallery-grid">
+            ${item.gallery.map((g, i) => `
+              <div class="biblioteca-gallery-item" data-gallery-index="${i}">
+                ${g.thumb ? `<img src="${g.thumb}" alt="${g.title || ''}" loading="lazy">` : `<video src="${g.video}" muted preload="metadata"></video>`}
+                ${g.title ? `<span class="biblioteca-gallery-title">${g.title}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
       </div>
     </div>
   `;
@@ -7332,6 +7489,56 @@ function openBibliotecaModal(item, section) {
   overlay.querySelector('.biblioteca-modal-close').addEventListener('click', () => closeBibliotecaModal(overlay));
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeBibliotecaModal(overlay);
+  });
+
+  // Gallery item click events
+  if (item.gallery && item.gallery.length > 0) {
+    overlay.querySelectorAll('.biblioteca-gallery-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = parseInt(el.dataset.galleryIndex);
+        openBibliotecaGalleryDetail(item.gallery[idx], item.name);
+      });
+    });
+  }
+}
+
+function openBibliotecaGalleryDetail(galleryItem, effectName) {
+  document.querySelector('.biblioteca-gallery-detail-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'biblioteca-gallery-detail-overlay';
+  overlay.innerHTML = `
+    <div class="biblioteca-gallery-detail">
+      <div class="biblioteca-modal-header">
+        <h3><i class="fas fa-play-circle" style="color:var(--accent);margin-right:8px;"></i>${effectName}</h3>
+        <button class="biblioteca-modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="biblioteca-modal-body">
+        <video class="biblioteca-modal-video" controls autoplay muted loop>
+          <source src="${galleryItem.video}" type="video/mp4">
+        </video>
+        ${galleryItem.prompt ? `<div class="biblioteca-modal-prompt">
+          <h4><i class="fas fa-terminal" style="color:var(--accent);margin-right:6px;"></i>Prompt</h4>
+          <p>${galleryItem.prompt}</p>
+        </div>` : ''}
+        ${galleryItem.title ? `<div class="biblioteca-modal-desc">${galleryItem.title}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('active'));
+
+  overlay.querySelector('.biblioteca-modal-close').addEventListener('click', () => {
+    overlay.classList.remove('active');
+    setTimeout(() => overlay.remove(), 250);
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.classList.remove('active');
+      setTimeout(() => overlay.remove(), 250);
+    }
   });
 }
 

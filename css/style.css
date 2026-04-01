@@ -4954,6 +4954,19 @@ h1, h2, h3, h4, h5, h6 {
   object-fit: cover;
   display: block;
 }
+.biblioteca-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.3s ease;
+}
+.biblioteca-card-video {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
 
 /* CSS animation preview fallback */
 .bib-anim-preview {
@@ -5055,6 +5068,105 @@ h1, h2, h3, h4, h5, h6 {
 }
 .biblioteca-modal-usage h4 { font-size: 0.82rem; color: var(--text-primary); margin-bottom: 6px; font-family: 'Space Grotesk', sans-serif; }
 .biblioteca-modal-usage p { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+
+/* Higgsfield external link */
+.biblioteca-higgsfield-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: rgba(173, 57, 251, 0.12);
+  border: 1px solid rgba(173, 57, 251, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+.biblioteca-higgsfield-link:hover {
+  background: rgba(173, 57, 251, 0.22);
+  transform: translateY(-1px);
+}
+
+/* Gallery Section in Modal */
+.biblioteca-modal-gallery {
+  margin-top: 20px;
+}
+.biblioteca-modal-gallery > h4 {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+.biblioteca-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.biblioteca-gallery-item {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #111;
+  border: 1px solid var(--border);
+  transition: transform 0.2s, border-color 0.2s;
+}
+.biblioteca-gallery-item:hover {
+  transform: scale(1.04);
+  border-color: var(--accent);
+}
+.biblioteca-gallery-item img,
+.biblioteca-gallery-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.biblioteca-gallery-title {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 8px 6px 8px;
+  background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+  font-size: 0.65rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Gallery Detail Overlay */
+.biblioteca-gallery-detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.biblioteca-gallery-detail-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.biblioteca-gallery-detail {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+}
 
 /* Responsive */
 @media (max-width: 1200px) {
