@@ -1296,6 +1296,14 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: flex-start;
 }
 
+#tabBiblioteca.tab-content.active {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+
 /* === PROVIDER PILLS === */
 .provider-selector {
   flex-wrap: wrap;
@@ -4837,8 +4845,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ==================== BIBLIOTECA PAGE ==================== */
 .biblioteca-page {
-  padding: 20px 24px;
-  max-width: 100%;
+  padding: 16px 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Search */
