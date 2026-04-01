@@ -5027,7 +5027,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 .biblioteca-modal-close:hover { color: var(--text-primary); }
 .biblioteca-modal-body { padding: 20px; }
-.biblioteca-modal-video { width: 100%; border-radius: var(--radius-md); background: #000; max-height: 400px; }
+.biblioteca-modal-video { width: 100%; max-height: 70vh; border-radius: var(--radius-md); background: #000; object-fit: contain; }
 .biblioteca-modal-desc { margin-top: 16px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; }
 .biblioteca-modal-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .biblioteca-modal-usage {
