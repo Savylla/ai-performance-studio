@@ -7174,6 +7174,37 @@ const HIGGSFIELD_CDN = {
   'trucksition': { v: 'https://cdn.higgsfield.ai/kling_motion/bb84ce87-ed51-4512-94cb-8852983a61dc.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/a8eda643-6ef5-4bb6-b83a-2f5e0ea5a1c2.webp', mid: '81c90748-7852-4bb1-a0ec-1649beb72024' },
   'mouth-transition': { v: 'https://static.higgsfield.ai/7351a8ad-9754-4844-94f1-00baf293d588.mp4', t: 'https://static.higgsfield.ai/7351a8ad-9754-4844-94f1-00baf293d588.webp', mid: '7351a8ad-9754-4844-94f1-00baf293d588' },
   'through-object-in': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/c4fbfcfd-08c6-46bd-b449-7977fb1fc5ea.mp4', t: 'https://cdn.higgsfield.ai/wan2_5_motion/1f631b4e-97d8-4dfe-a0c2-21c6884e1f7e.webp', mid: '7fd00618-aa73-4fae-adb7-98ed16773eaa' },
+  // === BATCH 2 — Previously missing items ===
+  // Camera controls
+  'dolly-out': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/ce75e22b-1680-4cd4-a3de-a1696672b6c1.webp', mid: 'c1a8c847-4ea8-4d31-9cec-ef62897a2d17' },
+  'super-dolly-out': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/ee9451aa-da82-4c44-9cb4-f903c88ab800.webp', mid: 'd66685ce-8c2b-4aeb-8d4a-195d474c7eca' },
+  'double-dolly': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/886cac42-6af9-4a71-a9db-e40705acbef7.webp', mid: 'e522bff4-da3b-4f7d-8c6e-f925b60979c5' },
+  'dolly-zoom-out': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/cedab22a-fa43-4060-9c2b-822685d50d59.webp', mid: 'e057dbd5-1734-4462-bb4c-7d64fe20795e' },
+  'pan-right': { v: 'https://cdn.higgsfield.ai/wan2_5_motion/6357b686-6793-41a9-86b1-0df38b6a6cee.mp4', t: '', mid: 'ce0b3d96-be4c-4b2d-962a-340dd386d910' },
+  'jib-down': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/ee646153-2f1f-431d-9e02-55bad908e640.webp', mid: '2057206c-09ef-40b2-9cc9-049e41a0b8bb' },
+  'crane-over-head': { v: '', t: '', mid: 'cc664502-7fdc-412e-8fd7-6af310c8891b' },
+  'whip-pan': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/7c1aa41a-939c-483e-b4fb-eeab96a3fc0e.webp', mid: '7a144766-cdd2-4b73-8a27-67b35f2d4ba2' },
+  // Visual effects
+  'glitch': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/d8320e8a-da48-4fcb-a613-cb200f949589.mp4', t: '', mid: 'abcf4cae-51d6-413c-95bf-a586cd48391b' },
+  'explosion': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/66410c35-7a12-4dd4-8ecd-f50402ceb781.mp4', t: '', mid: 'bc2725cf-4195-4139-881f-f01a71940bea' },
+  'plasma-explosion': { v: '', t: '', mid: 'fda25365-9d4e-4f0f-9bd4-ed2cc5ae6981' },
+  'portal': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/4594acd6-0e50-4d41-830d-3c61c6f5e29b.mp4', t: '', mid: '2391dbfb-edc3-4982-b5b0-bf3746a25359' },
+  'point-cloud': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/d4d8779c-f3e5-4014-995f-1867ad139201.mp4', t: '', mid: '569ea796-2a19-4ccc-9281-29179e96ebf3' },
+  'cyborg': { v: 'https://cdn.higgsfield.ai/kling_motion/840a3d93-564b-43ea-bf5d-46f0a61f12df.mp4', t: '', mid: '1f96bfce-ebca-4eb5-a521-0ccd4f1d73d9' },
+  'multiverse': { v: 'https://cdn.higgsfield.ai/kling_motion/25c233ae-26a6-4037-8eb8-e0a65fa8ea11.mp4', t: '', mid: '5949fec9-f70e-45d5-8ab9-5544bb18dd72' },
+  'cotton-cloud': { v: 'https://cdn.higgsfield.ai/kling_motion/b297103b-26e2-4c94-8134-0e8f74dddbe8.mp4', t: '', mid: '588486b6-f303-4e2a-b8b0-2b74b01a5f50' },
+  'i-can-fly': { v: 'https://cdn.higgsfield.ai/kling_motion/dd160cc5-cc59-48bd-b67e-9c9d7b7b19ba.mp4', t: '', mid: '929856d2-448b-40ad-8781-297e02af0ae7' },
+  // Transitions
+  'flame-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/8dd17be3-1ba7-4ce0-bede-be5a0159fcfc.mp4', t: '', mid: '6641ebf5-1e07-4a8a-a435-b0ea374861e8' },
+  'hand-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/5ce96e11-d02c-4096-843a-972487971c3c.mp4', t: '', mid: '7e9ac07e-703b-4b48-a466-d561d3d9c536' },
+  'jump-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/24f2abc3-ccf9-4a73-9e0a-ebf9d37975d7.mp4', t: '', mid: '38f4643a-581b-40d8-bcd6-983aecf12430' },
+  'display-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/bf105e54-a39b-42dd-9034-303a8fae6b82.mp4', t: '', mid: 'cf852c5b-8e2a-45b7-807e-2a35b2636a3f' },
+  'hole-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/22875b3c-6301-44ea-b1e0-47ad6a4db5b8.mp4', t: '', mid: 'b03d3554-d088-49a4-8050-bda4bd2e456e' },
+  'stranger-transition': { v: 'https://cdn.higgsfield.ai/kling_motion/45aada3d-d7a7-4722-923a-0e1f8cbe8bf3.mp4', t: 'https://cdn.higgsfield.ai/kling_motion/89d05584-6e62-462b-a82a-61ea3169d3cb.webp', mid: '2d1f292c-d0d8-4481-8eb9-fb113f64f193' },
+  'column-wipe': { v: 'https://cdn.higgsfield.ai/kling_motion/df839982-50b1-4808-bc47-14b747899f1b.mp4', t: '', mid: '0b316480-075a-4999-bfde-c9710c0c6804' },
+  'pizza-fall': { v: 'https://cdn.higgsfield.ai/kling_motion/bdc0986b-31e2-4f48-ba8a-349320acfc92.mp4', t: '', mid: '3c3a1331-3524-47da-b956-688595c295b7' },
+  'censorship': { v: 'https://cdn.higgsfield.ai/minimax_hailuo_motion/b5ce84b1-abf5-47de-a8e2-e7c94d321e84.mp4', t: '', mid: 'd3c3692f-1aec-4274-9aaf-5f461ad71b6a' },
+  'through-object-out': { v: '', t: 'https://d1xarpci4ikg0w.cloudfront.net/84dea938-1f04-4783-9716-69c41f85cb83.webp', mid: '3e217f3c-5133-4e83-ab6c-afb35d1c5852' },
 };
 
 // Apply Higgsfield CDN data to BIBLIOTECA_DATA
@@ -7181,9 +7212,9 @@ const HIGGSFIELD_CDN = {
   BIBLIOTECA_DATA[section].forEach(item => {
     const cdn = HIGGSFIELD_CDN[item.id];
     if (cdn) {
-      if (!item.video || item.video.trim() === '') item.video = cdn.v;
-      item.thumb = cdn.t;
-      item.higgsfield = 'https://higgsfield.ai/motion/' + cdn.mid;
+      if (cdn.v && (!item.video || item.video.trim() === '')) item.video = cdn.v;
+      if (cdn.t) item.thumb = cdn.t;
+      if (cdn.mid) item.higgsfield = 'https://higgsfield.ai/motion/' + cdn.mid;
     }
   });
 });
