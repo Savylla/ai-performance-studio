@@ -45,6 +45,7 @@
         <a href="#" class="topbar-link" data-tab="gallery"><i class="fas fa-th-large"></i> Galeria</a>
         <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Historico</a>
         <a href="#" class="topbar-link" data-tab="folders"><i class="fas fa-folder-tree"></i> Pastas</a>
+        <a href="#" class="topbar-link" data-tab="biblioteca"><i class="fas fa-book"></i> Biblioteca</a>
         <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i></a>
       </nav>
       <div class="topbar-actions">
@@ -793,6 +794,56 @@
           </div>
           <h3>Lixeira vazia</h3>
           <p>Itens excluidos aparecerão aqui e podem ser recuperados</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- BIBLIOTECA Tab -->
+    <div class="tab-content" id="tabBiblioteca">
+      <div class="biblioteca-page">
+        <!-- Search Bar with LLM -->
+        <div class="biblioteca-search-wrap">
+          <div class="biblioteca-search-box">
+            <i class="fas fa-wand-magic-sparkles biblioteca-search-icon"></i>
+            <input type="text" id="bibliotecaSearchInput" class="biblioteca-search-input" placeholder="Descreva o efeito que procura... Ex: 'camera girando em volta do objeto'">
+            <button class="biblioteca-search-btn" id="bibliotecaSearchBtn" title="Buscar com IA">
+              <i class="fas fa-search"></i>
+            </button>
+            <button class="biblioteca-clear-btn" id="bibliotecaClearBtn" title="Limpar busca" style="display:none;">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="biblioteca-search-hint">Busca inteligente por IA — descreva com suas palavras o que precisa</div>
+          <div class="biblioteca-search-loading" id="bibliotecaSearchLoading" style="display:none;">
+            <div class="biblioteca-spinner"></div>
+            <span>Analisando com IA...</span>
+          </div>
+        </div>
+
+        <!-- Section Tabs -->
+        <div class="biblioteca-tabs">
+          <button class="biblioteca-tab active" data-section="efeitos"><i class="fas fa-magic"></i> Efeitos</button>
+          <button class="biblioteca-tab" data-section="transicoes"><i class="fas fa-shuffle"></i> Transições</button>
+        </div>
+
+        <!-- Efeitos Section -->
+        <div class="biblioteca-section active" id="bibliotecaEfeitos">
+          <div class="biblioteca-grid" id="bibliotecaEfeitosGrid"></div>
+        </div>
+
+        <!-- Transições Section -->
+        <div class="biblioteca-section" id="bibliotecaTransicoes">
+          <div class="biblioteca-grid" id="bibliotecaTransicoesGrid"></div>
+        </div>
+
+        <!-- Empty search result -->
+        <div class="biblioteca-empty" id="bibliotecaEmpty" style="display:none;">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-search"></i>
+          </div>
+          <h3>Nenhum resultado encontrado</h3>
+          <p>Tente descrever de outra forma ou limpe a busca</p>
         </div>
       </div>
     </div>

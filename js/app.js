@@ -136,7 +136,7 @@ function switchTab(tab) {
   enhanceBtn.style.display = isGenTab ? '' : 'none';
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
-  if (['gallery', 'history', 'storyboard', 'trash', 'folders'].includes(tab)) {
+  if (['gallery', 'history', 'storyboard', 'trash', 'folders', 'biblioteca'].includes(tab)) {
     bottomBar.style.display = 'none';
   } else {
     bottomBar.style.display = '';
@@ -144,7 +144,11 @@ function switchTab(tab) {
   // Show/hide shared bottom row for generation tabs
   const sharedRow = document.getElementById('sharedBottomRow');
   if (sharedRow) {
-    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash', 'folders'].includes(tab) ? 'none' : '';
+    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash', 'folders', 'biblioteca'].includes(tab) ? 'none' : '';
+  }
+  // Render biblioteca when switching to it
+  if (tab === 'biblioteca' && typeof renderBiblioteca === 'function') {
+    renderBiblioteca();
   }
   // Render trash when switching to it
   if (tab === 'trash') renderTrash();
@@ -6934,4 +6938,584 @@ function loadSavedStoryboard(sb) {
 
   document.getElementById('storyboardEmpty').style.display = 'none';
   showToast('Storyboard carregado!', 'success');
+}
+
+// ==================== BIBLIOTECA ====================
+
+const BIBLIOTECA_DATA = {
+  efeitos: [
+    {
+      id: 'zoom-in',
+      name: 'Zoom In',
+      desc: 'Camera se aproxima gradualmente do objeto central, criando sensação de foco e intimidade.',
+      tags: ['camera', 'zoom', 'aproximação', 'foco'],
+      usage: 'Use para destacar detalhes, criar tensão dramática ou revelar elementos importantes.',
+      anim: 'zoomIn',
+      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+zoom+in+on+a+colorful+flower+close+up+cinematic&width=512&height=288&duration=3&seed=101'
+    },
+    {
+      id: 'zoom-out',
+      name: 'Zoom Out',
+      desc: 'Camera se afasta revelando mais do cenário ao redor, dando contexto ao espectador.',
+      tags: ['camera', 'zoom', 'afastamento', 'revelar'],
+      usage: 'Use para revelar localização, mostrar escala ou finalizar uma cena.',
+      anim: 'zoomOut',
+      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+zoom+out+revealing+a+beautiful+mountain+landscape+cinematic&width=512&height=288&duration=3&seed=102'
+    },
+    {
+      id: 'pan-left',
+      name: 'Pan Esquerda',
+      desc: 'Movimento horizontal da camera para a esquerda, acompanhando ação ou revelando cenário.',
+      tags: ['camera', 'pan', 'horizontal', 'movimento'],
+      usage: 'Use para seguir um personagem, revelar ambiente ou criar continuidade entre elementos.',
+      anim: 'panLeft',
+      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+pan+left+across+a+city+skyline+at+sunset+cinematic&width=512&height=288&duration=3&seed=103'
+    },
+    {
+      id: 'pan-right',
+      name: 'Pan Direita',
+      desc: 'Movimento horizontal da camera para a direita, acompanhando ação ou revelando cenário.',
+      tags: ['camera', 'pan', 'horizontal', 'direita'],
+      usage: 'Use para acompanhar movimento, transição entre cenas ou revelar novos elementos.',
+      anim: 'panRight',
+      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+pan+right+across+a+beautiful+garden+cinematic&width=512&height=288&duration=3&seed=104'
+    },
+    {
+      id: 'tilt-up',
+      name: 'Tilt Up',
+      desc: 'Camera se inclina para cima, revelando altura e grandiosidade de um objeto ou cenário.',
+      tags: ['camera', 'tilt', 'vertical', 'cima'],
+      usage: 'Use para mostrar a grandiosidade de prédios, árvores ou personagens imponentes.',
+      anim: 'tiltUp',
+      video: 'https://video.pollinations.ai/generate?prompt=camera+tilt+up+revealing+a+tall+skyscraper+from+ground+to+top+cinematic&width=512&height=288&duration=3&seed=105'
+    },
+    {
+      id: 'tilt-down',
+      name: 'Tilt Down',
+      desc: 'Camera se inclina para baixo, revelando o que está abaixo ou criando sensação de queda.',
+      tags: ['camera', 'tilt', 'vertical', 'baixo'],
+      usage: 'Use para revelar o chão, criar vertigem ou mostrar perspectiva de cima.',
+      anim: 'tiltDown',
+      video: 'https://video.pollinations.ai/generate?prompt=camera+tilt+down+from+sky+to+a+peaceful+lake+below+cinematic&width=512&height=288&duration=3&seed=106'
+    },
+    {
+      id: 'orbit',
+      name: 'Orbit / Giro 360',
+      desc: 'Camera gira ao redor do objeto em movimento circular, mostrando todos os ângulos.',
+      tags: ['camera', 'orbit', 'giro', '360', 'circular', 'rotação'],
+      usage: 'Use para apresentar produtos, personagens ou objetos de todos os ângulos.',
+      anim: 'orbit',
+      video: 'https://video.pollinations.ai/generate?prompt=camera+orbiting+around+a+golden+trophy+on+a+pedestal+360+rotation+cinematic&width=512&height=288&duration=3&seed=107'
+    },
+    {
+      id: 'dolly-zoom',
+      name: 'Dolly Zoom (Vertigo)',
+      desc: 'Efeito Hitchcock — camera se afasta enquanto faz zoom in, distorcendo a perspectiva.',
+      tags: ['camera', 'dolly', 'vertigo', 'hitchcock', 'perspectiva', 'distorção'],
+      usage: 'Use para momentos de choque, revelação dramática ou desconforto visual.',
+      anim: 'dollyZoom',
+      video: 'https://video.pollinations.ai/generate?prompt=dolly+zoom+vertigo+effect+on+a+long+hallway+hitchcock+style+cinematic&width=512&height=288&duration=3&seed=108'
+    },
+    {
+      id: 'shake',
+      name: 'Camera Shake',
+      desc: 'Tremor na camera simulando impacto, explosão ou ação intensa.',
+      tags: ['camera', 'shake', 'tremor', 'impacto', 'ação'],
+      usage: 'Use para cenas de ação, impactos, explosões ou momentos de tensão.',
+      anim: 'shake',
+      video: 'https://video.pollinations.ai/generate?prompt=camera+shake+effect+during+an+explosion+action+scene+cinematic&width=512&height=288&duration=3&seed=109'
+    },
+    {
+      id: 'slow-motion',
+      name: 'Câmera Lenta',
+      desc: 'Redução de velocidade do vídeo para destacar detalhes e criar drama.',
+      tags: ['velocidade', 'slow-motion', 'câmera lenta', 'drama', 'detalhe'],
+      usage: 'Use para momentos épicos, detalhes de ação ou transições emocionais.',
+      anim: 'slowMo',
+      video: 'https://video.pollinations.ai/generate?prompt=slow+motion+water+droplets+falling+into+a+pool+cinematic+detail&width=512&height=288&duration=3&seed=110'
+    },
+    {
+      id: 'time-lapse',
+      name: 'Time Lapse',
+      desc: 'Aceleração do tempo mostrando horas ou dias em segundos.',
+      tags: ['velocidade', 'time-lapse', 'acelerado', 'tempo'],
+      usage: 'Use para mostrar passagem do tempo, construções, pôr do sol ou mudanças climáticas.',
+      anim: 'timeLapse',
+      video: 'https://video.pollinations.ai/generate?prompt=time+lapse+of+clouds+moving+fast+over+mountains+sunset+cinematic&width=512&height=288&duration=3&seed=111'
+    },
+    {
+      id: 'blur-focus',
+      name: 'Blur / Desfoque',
+      desc: 'Transição entre desfocado e focado, guiando a atenção do espectador.',
+      tags: ['foco', 'blur', 'desfoque', 'profundidade', 'bokeh'],
+      usage: 'Use para revelar elementos, mudar foco de atenção ou criar efeito cinematográfico.',
+      anim: 'blurFocus',
+      video: 'https://video.pollinations.ai/generate?prompt=rack+focus+blur+to+sharp+on+a+red+rose+with+bokeh+background+cinematic&width=512&height=288&duration=3&seed=112'
+    },
+    {
+      id: 'glitch',
+      name: 'Glitch',
+      desc: 'Distorção digital simulando erro de transmissão, estilo cyberpunk.',
+      tags: ['digital', 'glitch', 'distorção', 'cyberpunk', 'erro'],
+      usage: 'Use para estética futurista, transições de impacto ou narrativas tecnológicas.',
+      anim: 'glitch',
+      video: 'https://video.pollinations.ai/generate?prompt=digital+glitch+effect+on+a+neon+cyberpunk+cityscape+distortion&width=512&height=288&duration=3&seed=113'
+    },
+    {
+      id: 'color-grade',
+      name: 'Color Grading',
+      desc: 'Mudança de paleta de cores do vídeo para criar atmosfera específica.',
+      tags: ['cor', 'color-grade', 'paleta', 'atmosfera', 'mood'],
+      usage: 'Use para definir o tom emocional: quente para nostalgia, frio para suspense, saturado para energia.',
+      anim: 'colorGrade',
+      video: 'https://video.pollinations.ai/generate?prompt=cinematic+color+grading+warm+to+cold+tones+on+a+forest+scene&width=512&height=288&duration=3&seed=114'
+    },
+    {
+      id: 'parallax',
+      name: 'Parallax 2.5D',
+      desc: 'Efeito de profundidade onde camadas se movem em velocidades diferentes.',
+      tags: ['parallax', '2.5D', 'profundidade', 'camadas', '3D'],
+      usage: 'Use para dar vida a imagens estáticas ou criar sensação de profundidade.',
+      anim: 'parallax',
+      video: 'https://video.pollinations.ai/generate?prompt=parallax+2.5D+effect+on+a+layered+mountain+landscape+depth+cinematic&width=512&height=288&duration=3&seed=115'
+    },
+    {
+      id: 'lens-flare',
+      name: 'Lens Flare',
+      desc: 'Reflexo de luz na lente criando halos e raios luminosos.',
+      tags: ['luz', 'lens-flare', 'reflexo', 'brilho', 'sol'],
+      usage: 'Use para adicionar dramaticidade, sensação de calor ou estilo cinematográfico.',
+      anim: 'lensFlare',
+      video: 'https://video.pollinations.ai/generate?prompt=golden+lens+flare+sun+rays+through+trees+cinematic+warm+light&width=512&height=288&duration=3&seed=116'
+    },
+    {
+      id: 'vignette',
+      name: 'Vinheta',
+      desc: 'Escurecimento das bordas do quadro, focando atenção no centro.',
+      tags: ['vinheta', 'borda', 'escuro', 'foco', 'centro'],
+      usage: 'Use para direcionar atenção, criar atmosfera íntima ou estilo vintage.',
+      anim: 'vignette',
+      video: 'https://video.pollinations.ai/generate?prompt=vignette+effect+portrait+with+dark+edges+focus+on+center+cinematic&width=512&height=288&duration=3&seed=117'
+    },
+    {
+      id: 'split-screen',
+      name: 'Split Screen',
+      desc: 'Divisão da tela em duas ou mais partes mostrando cenas simultâneas.',
+      tags: ['tela', 'split', 'divisão', 'múltiplo', 'simultâneo'],
+      usage: 'Use para comparações, ações paralelas ou antes/depois.',
+      anim: 'splitScreen',
+      video: 'https://video.pollinations.ai/generate?prompt=split+screen+two+scenes+city+day+vs+night+comparison+cinematic&width=512&height=288&duration=3&seed=118'
+    },
+    {
+      id: 'freeze-frame',
+      name: 'Freeze Frame',
+      desc: 'Congelamento momentâneo da imagem para destacar um instante.',
+      tags: ['congelar', 'freeze', 'pausa', 'destaque', 'momento'],
+      usage: 'Use para introduções de personagens, momentos cômicos ou finalizações.',
+      anim: 'freezeFrame',
+      video: 'https://video.pollinations.ai/generate?prompt=freeze+frame+moment+of+a+dancer+mid+jump+cinematic+dramatic&width=512&height=288&duration=3&seed=119'
+    },
+    {
+      id: 'ken-burns',
+      name: 'Ken Burns',
+      desc: 'Pan e zoom lento sobre imagem estática, dando vida a fotos.',
+      tags: ['ken-burns', 'foto', 'pan', 'zoom', 'documentário'],
+      usage: 'Use para documentários, slideshows ou dar movimento a fotografias.',
+      anim: 'kenBurns',
+      video: 'https://video.pollinations.ai/generate?prompt=ken+burns+effect+slow+zoom+and+pan+on+a+vintage+photograph+documentary+style&width=512&height=288&duration=3&seed=120'
+    }
+  ],
+  transicoes: [
+    {
+      id: 'fade',
+      name: 'Fade In / Out',
+      desc: 'Transição suave de/para preto ou branco, a mais clássica e elegante.',
+      tags: ['fade', 'suave', 'preto', 'branco', 'clássico'],
+      usage: 'Use para aberturas, encerramentos ou mudanças de tempo significativas.',
+      anim: 'fade',
+      video: 'https://video.pollinations.ai/generate?prompt=smooth+fade+transition+from+black+to+a+sunrise+landscape+cinematic&width=512&height=288&duration=3&seed=201'
+    },
+    {
+      id: 'crossfade',
+      name: 'Crossfade / Dissolve',
+      desc: 'Uma cena se dissolve gradualmente na próxima, misturando as duas.',
+      tags: ['crossfade', 'dissolve', 'mistura', 'suave'],
+      usage: 'Use para conexões temáticas, passagem de tempo ou transições oníricas.',
+      anim: 'crossfade',
+      video: 'https://video.pollinations.ai/generate?prompt=crossfade+dissolve+transition+between+forest+and+ocean+dreamy+cinematic&width=512&height=288&duration=3&seed=202'
+    },
+    {
+      id: 'wipe-left',
+      name: 'Wipe Lateral',
+      desc: 'Uma cena empurra a outra para fora da tela horizontalmente.',
+      tags: ['wipe', 'lateral', 'empurrar', 'horizontal'],
+      usage: 'Use para mudanças de localização, comparações ou estilo dinâmico.',
+      anim: 'wipeLeft',
+      video: 'https://video.pollinations.ai/generate?prompt=wipe+transition+from+left+scene+change+city+to+beach+cinematic&width=512&height=288&duration=3&seed=203'
+    },
+    {
+      id: 'wipe-up',
+      name: 'Wipe Vertical',
+      desc: 'Transição que revela a nova cena de baixo para cima ou de cima para baixo.',
+      tags: ['wipe', 'vertical', 'revelar', 'cima', 'baixo'],
+      usage: 'Use para revelar cenários, mudanças dramáticas de perspectiva.',
+      anim: 'wipeUp',
+      video: 'https://video.pollinations.ai/generate?prompt=vertical+wipe+transition+underwater+to+above+water+cinematic&width=512&height=288&duration=3&seed=204'
+    },
+    {
+      id: 'zoom-transition',
+      name: 'Zoom Transition',
+      desc: 'Zoom rápido para dentro/fora conectando duas cenas como se fossem contínuas.',
+      tags: ['zoom', 'transição', 'rápido', 'contínuo', 'seamless'],
+      usage: 'Use para vídeos de viagem, vlogs ou transições energéticas e modernas.',
+      anim: 'zoomTransition',
+      video: 'https://video.pollinations.ai/generate?prompt=zoom+transition+from+eye+closeup+into+galaxy+seamless+cinematic&width=512&height=288&duration=3&seed=205'
+    },
+    {
+      id: 'whip-pan',
+      name: 'Whip Pan',
+      desc: 'Movimento ultra rápido da camera criando blur de movimento entre cenas.',
+      tags: ['whip', 'pan', 'rápido', 'blur', 'dinâmico'],
+      usage: 'Use para transições energéticas, cenas de ação ou montagens rápidas.',
+      anim: 'whipPan',
+      video: 'https://video.pollinations.ai/generate?prompt=whip+pan+fast+camera+movement+blur+between+two+scenes+cinematic&width=512&height=288&duration=3&seed=206'
+    },
+    {
+      id: 'morph',
+      name: 'Morph / Metamorfose',
+      desc: 'Uma forma se transforma gradualmente em outra de maneira fluida.',
+      tags: ['morph', 'metamorfose', 'transformação', 'fluido'],
+      usage: 'Use para mostrar transformações, evolução ou conexões entre objetos.',
+      anim: 'morph',
+      video: 'https://video.pollinations.ai/generate?prompt=morph+transition+face+transforming+into+another+face+smooth+cinematic&width=512&height=288&duration=3&seed=207'
+    },
+    {
+      id: 'iris',
+      name: 'Iris / Círculo',
+      desc: 'Abertura ou fechamento circular revelando a nova cena, estilo cinema clássico.',
+      tags: ['iris', 'círculo', 'abertura', 'clássico', 'retro'],
+      usage: 'Use para finalizações, estilo retrô ou revelações dramáticas.',
+      anim: 'iris',
+      video: 'https://video.pollinations.ai/generate?prompt=iris+circle+transition+opening+to+reveal+a+new+scene+vintage+cinema&width=512&height=288&duration=3&seed=208'
+    },
+    {
+      id: 'glitch-transition',
+      name: 'Glitch Transition',
+      desc: 'Distorção digital entre cenas com efeito de erro/interferência.',
+      tags: ['glitch', 'digital', 'distorção', 'erro', 'tech'],
+      usage: 'Use para estética cyberpunk, vídeos tech ou transições de impacto.',
+      anim: 'glitchTrans',
+      video: 'https://video.pollinations.ai/generate?prompt=glitch+digital+distortion+transition+between+two+neon+scenes+cyberpunk&width=512&height=288&duration=3&seed=209'
+    },
+    {
+      id: 'spin',
+      name: 'Spin Transition',
+      desc: 'Rotação da cena inteira como transição para a próxima.',
+      tags: ['spin', 'rotação', 'giro', 'dinâmico'],
+      usage: 'Use para transições divertidas, montagens ou mudanças energéticas.',
+      anim: 'spin',
+      video: 'https://video.pollinations.ai/generate?prompt=spin+rotation+transition+scene+rotating+into+new+scene+energetic+cinematic&width=512&height=288&duration=3&seed=210'
+    },
+    {
+      id: 'slide-push',
+      name: 'Slide / Push',
+      desc: 'A nova cena desliza por cima ou empurra a anterior para fora.',
+      tags: ['slide', 'push', 'deslizar', 'empurrar'],
+      usage: 'Use para apresentações, comparações lado a lado ou troca de informações.',
+      anim: 'slidePush',
+      video: 'https://video.pollinations.ai/generate?prompt=slide+push+transition+one+scene+pushing+another+off+screen+cinematic&width=512&height=288&duration=3&seed=211'
+    },
+    {
+      id: 'light-leak',
+      name: 'Light Leak',
+      desc: 'Vazamento de luz colorida cobrindo a tela durante a transição.',
+      tags: ['luz', 'light-leak', 'vazamento', 'colorido', 'filme'],
+      usage: 'Use para estilo vintage, transições quentes ou efeito de filme analógico.',
+      anim: 'lightLeak',
+      video: 'https://video.pollinations.ai/generate?prompt=light+leak+warm+colorful+lens+flare+transition+vintage+film+cinematic&width=512&height=288&duration=3&seed=212'
+    },
+    {
+      id: 'mask-shape',
+      name: 'Máscara / Shape',
+      desc: 'Revelação através de uma forma geométrica (estrela, coração, diamante).',
+      tags: ['máscara', 'shape', 'forma', 'geométrico', 'revelar'],
+      usage: 'Use para revelações criativas, intros de personagem ou estilo motion graphics.',
+      anim: 'maskShape',
+      video: 'https://video.pollinations.ai/generate?prompt=shape+mask+transition+star+shape+revealing+new+scene+motion+graphics&width=512&height=288&duration=3&seed=213'
+    },
+    {
+      id: 'ink-bleed',
+      name: 'Ink Bleed / Tinta',
+      desc: 'Mancha de tinta se espalha cobrindo a cena e revelando a próxima.',
+      tags: ['tinta', 'ink', 'mancha', 'orgânico', 'artístico'],
+      usage: 'Use para estilo artístico, revelações orgânicas ou vídeos criativos.',
+      anim: 'inkBleed',
+      video: 'https://video.pollinations.ai/generate?prompt=ink+bleed+paint+spread+transition+artistic+watercolor+revealing+new+scene&width=512&height=288&duration=3&seed=214'
+    },
+    {
+      id: 'pixelate',
+      name: 'Pixelate',
+      desc: 'Pixelização crescente que dissolve a cena atual e revela a próxima.',
+      tags: ['pixel', 'pixelate', 'digital', 'retro', '8bit'],
+      usage: 'Use para estilo retro/gaming, transições tech ou efeitos nostálgicos.',
+      anim: 'pixelate',
+      video: 'https://video.pollinations.ai/generate?prompt=pixelate+transition+scene+breaking+into+pixels+then+forming+new+scene+retro&width=512&height=288&duration=3&seed=215'
+    }
+  ]
+};
+
+let bibliotecaRendered = false;
+let bibliotecaCurrentSection = 'efeitos';
+
+function renderBiblioteca() {
+  if (bibliotecaRendered) return;
+  bibliotecaRendered = true;
+
+  renderBibliotecaGrid('efeitos');
+  renderBibliotecaGrid('transicoes');
+  setupBibliotecaEvents();
+}
+
+function renderBibliotecaGrid(section) {
+  const gridId = section === 'efeitos' ? 'bibliotecaEfeitosGrid' : 'bibliotecaTransicoesGrid';
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const items = BIBLIOTECA_DATA[section];
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'biblioteca-card';
+    card.dataset.id = item.id;
+    card.dataset.section = section;
+    card.innerHTML = `
+      <div class="biblioteca-card-preview">
+        <div class="bib-anim-preview" data-anim="${item.anim}">
+          <div class="bib-anim-obj"></div>
+          <span class="bib-anim-label">preview</span>
+        </div>
+      </div>
+      <div class="biblioteca-card-info">
+        <div class="biblioteca-card-name">${item.name}</div>
+        <div class="biblioteca-card-desc">${item.desc}</div>
+        <div class="biblioteca-card-tags">
+          ${item.tags.slice(0, 3).map(t => `<span class="biblioteca-tag">${t}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    card.addEventListener('click', () => openBibliotecaModal(item, section));
+    grid.appendChild(card);
+
+    // Activate CSS animation on hover
+    const preview = card.querySelector('.bib-anim-preview');
+    card.addEventListener('mouseenter', () => preview.classList.add('playing'));
+    card.addEventListener('mouseleave', () => preview.classList.remove('playing'));
+  });
+}
+
+function setupBibliotecaEvents() {
+  // Section tabs
+  document.querySelectorAll('.biblioteca-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.biblioteca-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const section = tab.dataset.section;
+      bibliotecaCurrentSection = section;
+      document.querySelectorAll('.biblioteca-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(section === 'efeitos' ? 'bibliotecaEfeitos' : 'bibliotecaTransicoes').classList.add('active');
+      document.getElementById('bibliotecaEmpty').style.display = 'none';
+    });
+  });
+
+  // Search
+  const searchInput = document.getElementById('bibliotecaSearchInput');
+  const searchBtn = document.getElementById('bibliotecaSearchBtn');
+  const clearBtn = document.getElementById('bibliotecaClearBtn');
+
+  searchBtn.addEventListener('click', () => bibliotecaSearch());
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') bibliotecaSearch();
+  });
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearBtn.style.display = 'none';
+    // Show all cards
+    document.querySelectorAll('.biblioteca-card').forEach(c => {
+      c.style.display = '';
+      c.classList.remove('highlight');
+    });
+    document.querySelectorAll('.biblioteca-section').forEach(s => {
+      if (s.id === (bibliotecaCurrentSection === 'efeitos' ? 'bibliotecaEfeitos' : 'bibliotecaTransicoes')) {
+        s.classList.add('active');
+      }
+    });
+    document.getElementById('bibliotecaEmpty').style.display = 'none';
+  });
+}
+
+async function bibliotecaSearch() {
+  const query = document.getElementById('bibliotecaSearchInput').value.trim();
+  if (!query) return;
+
+  const loading = document.getElementById('bibliotecaSearchLoading');
+  const clearBtn = document.getElementById('bibliotecaClearBtn');
+  const emptyEl = document.getElementById('bibliotecaEmpty');
+
+  loading.style.display = 'flex';
+  emptyEl.style.display = 'none';
+
+  // Build the list of all effects and transitions for the LLM
+  const allItems = [
+    ...BIBLIOTECA_DATA.efeitos.map(e => `EFEITO: ${e.id} - ${e.name}: ${e.desc} [tags: ${e.tags.join(', ')}]`),
+    ...BIBLIOTECA_DATA.transicoes.map(t => `TRANSICAO: ${t.id} - ${t.name}: ${t.desc} [tags: ${t.tags.join(', ')}]`)
+  ].join('\n');
+
+  const systemPrompt = `Voce e um assistente de busca de efeitos e transicoes de video. O usuario vai descrever o que precisa e voce deve retornar APENAS os IDs dos efeitos/transicoes que correspondem, separados por virgula. Nao retorne nada alem dos IDs. Se nenhum corresponder, retorne "NENHUM".
+
+Lista disponivel:
+${allItems}`;
+
+  let matchedIds = [];
+
+  try {
+    // Try Pollinations OpenAI endpoint (free)
+    const models = ['openai', 'mistral', 'llama'];
+    let found = false;
+
+    for (const model of models) {
+      if (found) break;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: query }
+            ],
+            temperature: 0.1
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content?.trim();
+          if (content && content !== 'NENHUM') {
+            matchedIds = content.split(',').map(id => id.trim().toLowerCase()).filter(Boolean);
+            found = true;
+          } else if (content === 'NENHUM') {
+            found = true;
+          }
+        }
+      } catch (err) {
+        console.warn(`Biblioteca search: model=${model} failed:`, err.message);
+      }
+    }
+
+    // Fallback: local fuzzy search if LLM fails
+    if (!found || matchedIds.length === 0) {
+      matchedIds = bibliotecaLocalSearch(query);
+    }
+  } catch (err) {
+    console.warn('Biblioteca LLM search failed, using local:', err);
+    matchedIds = bibliotecaLocalSearch(query);
+  }
+
+  loading.style.display = 'none';
+  clearBtn.style.display = '';
+
+  // Apply filter
+  applyBibliotecaFilter(matchedIds);
+}
+
+function bibliotecaLocalSearch(query) {
+  const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const words = q.split(/\s+/).filter(w => w.length > 2);
+  const results = [];
+
+  const allItems = [...BIBLIOTECA_DATA.efeitos, ...BIBLIOTECA_DATA.transicoes];
+  allItems.forEach(item => {
+    const searchText = `${item.name} ${item.desc} ${item.tags.join(' ')}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const score = words.reduce((acc, w) => acc + (searchText.includes(w) ? 1 : 0), 0);
+    if (score > 0) results.push({ id: item.id, score });
+  });
+
+  results.sort((a, b) => b.score - a.score);
+  return results.map(r => r.id);
+}
+
+function applyBibliotecaFilter(matchedIds) {
+  const emptyEl = document.getElementById('bibliotecaEmpty');
+  let anyVisible = false;
+
+  // Show both sections when filtering
+  document.querySelectorAll('.biblioteca-section').forEach(s => s.classList.add('active'));
+
+  document.querySelectorAll('.biblioteca-card').forEach(card => {
+    const id = card.dataset.id;
+    if (matchedIds.includes(id)) {
+      card.style.display = '';
+      card.classList.add('highlight');
+      anyVisible = true;
+    } else {
+      card.style.display = 'none';
+      card.classList.remove('highlight');
+    }
+  });
+
+  emptyEl.style.display = anyVisible ? 'none' : '';
+  if (!anyVisible) {
+    document.querySelectorAll('.biblioteca-section').forEach(s => s.classList.remove('active'));
+  }
+}
+
+function openBibliotecaModal(item, section) {
+  // Remove existing modal
+  document.querySelector('.biblioteca-modal-overlay')?.remove();
+
+  const typeLabel = section === 'efeitos' ? 'Efeito' : 'Transição';
+  const overlay = document.createElement('div');
+  overlay.className = 'biblioteca-modal-overlay';
+  overlay.innerHTML = `
+    <div class="biblioteca-modal">
+      <div class="biblioteca-modal-header">
+        <h3><i class="fas ${section === 'efeitos' ? 'fa-magic' : 'fa-shuffle'}" style="color:var(--accent);margin-right:8px;"></i>${item.name}</h3>
+        <button class="biblioteca-modal-close"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="biblioteca-modal-body">
+        <video class="biblioteca-modal-video" controls autoplay muted loop>
+          <source src="${item.video}" type="video/mp4">
+          Seu navegador nao suporta video.
+        </video>
+        <div class="biblioteca-modal-desc">${item.desc}</div>
+        <div class="biblioteca-modal-tags">
+          <span class="biblioteca-tag" style="background:rgba(173,57,251,0.15);border-color:rgba(173,57,251,0.3);">${typeLabel}</span>
+          ${item.tags.map(t => `<span class="biblioteca-tag">${t}</span>`).join('')}
+        </div>
+        <div class="biblioteca-modal-usage">
+          <h4><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:6px;"></i>Quando usar</h4>
+          <p>${item.usage}</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('active'));
+
+  // Close events
+  overlay.querySelector('.biblioteca-modal-close').addEventListener('click', () => closeBibliotecaModal(overlay));
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeBibliotecaModal(overlay);
+  });
+}
+
+function closeBibliotecaModal(overlay) {
+  overlay.classList.remove('active');
+  setTimeout(() => overlay.remove(), 250);
 }
