@@ -7097,28 +7097,31 @@ function renderBibliotecaGrid(section) {
     card.className = 'biblioteca-card';
     card.dataset.id = item.id;
     card.dataset.section = section;
+    const hasVideo = item.video && item.video.trim() !== '';
     card.innerHTML = `
-      <div class="biblioteca-card-preview">
-        <div class="bib-anim-preview" data-anim="${item.anim}">
-          <div class="bib-anim-obj"></div>
-          <span class="bib-anim-label">preview</span>
-        </div>
+      <div class="biblioteca-card-thumb">
+        ${hasVideo
+          ? `<video class="biblioteca-card-video" src="${item.video}" muted loop playsinline preload="metadata"></video>`
+          : `<div class="bib-anim-preview" data-anim="${item.anim}">
+              <div class="bib-anim-obj"></div>
+            </div>`
+        }
       </div>
-      <div class="biblioteca-card-info">
-        <div class="biblioteca-card-name">${item.name}</div>
-        <div class="biblioteca-card-desc">${item.desc}</div>
-        <div class="biblioteca-card-tags">
-          ${item.tags.slice(0, 3).map(t => `<span class="biblioteca-tag">${t}</span>`).join('')}
-        </div>
-      </div>
+      <div class="biblioteca-card-name">${item.name.toUpperCase()}</div>
     `;
     card.addEventListener('click', () => openBibliotecaModal(item, section));
     grid.appendChild(card);
 
-    // Activate CSS animation on hover
-    const preview = card.querySelector('.bib-anim-preview');
-    card.addEventListener('mouseenter', () => preview.classList.add('playing'));
-    card.addEventListener('mouseleave', () => preview.classList.remove('playing'));
+    // Video hover play or CSS animation
+    if (hasVideo) {
+      const vid = card.querySelector('.biblioteca-card-video');
+      card.addEventListener('mouseenter', () => { try { vid.currentTime = 0; vid.play(); } catch(e){} });
+      card.addEventListener('mouseleave', () => { try { vid.pause(); vid.currentTime = 0; } catch(e){} });
+    } else {
+      const preview = card.querySelector('.bib-anim-preview');
+      card.addEventListener('mouseenter', () => preview.classList.add('playing'));
+      card.addEventListener('mouseleave', () => preview.classList.remove('playing'));
+    }
   });
 }
 
