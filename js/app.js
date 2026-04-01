@@ -7035,7 +7035,7 @@ const BIBLIOTECA_DATA = {
     { id: 'timelapse-landscape', name: 'Timelapse Landscape', desc: 'Paisagem em time-lapse mostrando mudança de luz, nuvens e atmosfera.', tags: ['VFX', 'timelapse', 'paisagem', 'céu', 'natureza'], usage: 'Establishing shots, documentários de natureza, passagem do tempo.', anim: 'timeLapse', video: '' },
     { id: 'timelapse-glam', name: 'Timelapse Glam', desc: 'Sequência acelerada de produção glamourosa: maquiagem, styling, transformação.', tags: ['VFX', 'timelapse', 'glam', 'transformação', 'moda'], usage: 'Conteúdo de beleza, transformações before/after, fashion.', anim: 'timeLapse', video: '' },
     { id: 'color-grading', name: 'Color Grading', desc: 'Alteração profissional de temperatura, contraste, grão e mood da imagem.', tags: ['VFX', 'cor', 'color-grade', 'mood', 'cinematográfico'], usage: 'Definir tom emocional: quente para nostalgia, frio para suspense.', anim: 'colorGrade', video: '' },
-    { id: 'paparazzi', name: 'Paparazzi', desc: 'Múltiplas cameras surgem ao redor do sujeito disparando flashes em sequência como paparazzi.', tags: ['VFX', 'paparazzi', 'flash', 'camera', 'celebridade'], usage: 'Cenas de red carpet, intros de celebridade, conteúdo de moda.', anim: 'shake', video: 'assets/biblioteca/paparazzi.mp4' },
+    { id: 'paparazzi', name: 'Paparazzi', desc: 'Múltiplas cameras surgem ao redor do sujeito disparando flashes em sequência como paparazzi.', tags: ['VFX', 'paparazzi', 'flash', 'camera', 'celebridade'], usage: 'Cenas de red carpet, intros de celebridade, conteúdo de moda.', anim: 'shake', video: 'assets/biblioteca/paparazzi.mp4', prompt: 'A stunning woman in a shimmering silver evening gown stands poised in the center of a classical art museum, surrounded by marble sculptures. Her presence is elegant and commanding, her expression calm and unshaken. Suddenly, numerous cameras begin to appear directly in front of her, all aimed at her from different angles. Flashbulbs erupt in rapid succession, capturing her every move as if she were a celebrity ambushed by relentless paparazzi.' },
     { id: 'live-concert', name: 'Live Concert', desc: 'Efeitos de palco com luzes, lasers e atmosfera de show ao vivo.', tags: ['VFX', 'concerto', 'palco', 'luzes', 'show'], usage: 'Vídeos musicais, conteúdo de performance, atmosfera de festival.', anim: 'colorGrade', video: '' },
     { id: 'i-can-fly', name: 'I Can Fly', desc: 'Sujeito levanta voo com efeitos de vento e perspectiva aérea dinâmica.', tags: ['VFX', 'voar', 'voo', 'super-herói', 'aéreo'], usage: 'Poderes de super-herói, sonhos de voo, cenas de liberdade.', anim: 'tiltUp', video: '' },
     { id: 'robo-arm', name: 'Robo Arm', desc: 'Movimento de camera estilo braço robótico com precisão mecânica.', tags: ['VFX', 'robô', 'braço', 'mecânico', 'preciso'], usage: 'Comerciais de produto, cenas tecnológicas, movimentos impossíveis.', anim: 'orbit', video: '' },
@@ -7308,6 +7308,10 @@ function openBibliotecaModal(item, section) {
           </div>
           <p style="text-align:center;color:var(--text-secondary);font-size:0.78rem;margin-top:8px;">Video de exemplo ainda nao adicionado</p>
         </div>`}
+        ${item.prompt ? `<div class="biblioteca-modal-prompt">
+          <h4><i class="fas fa-terminal" style="color:var(--accent);margin-right:6px;"></i>Prompt</h4>
+          <p>${item.prompt}</p>
+        </div>` : ''}
         <div class="biblioteca-modal-desc">${item.desc}</div>
         <div class="biblioteca-modal-tags">
           <span class="biblioteca-tag" style="background:rgba(173,57,251,0.15);border-color:rgba(173,57,251,0.3);">${typeLabel}</span>

@@ -5028,6 +5028,25 @@ h1, h2, h3, h4, h5, h6 {
 .biblioteca-modal-close:hover { color: var(--text-primary); }
 .biblioteca-modal-body { padding: 20px; }
 .biblioteca-modal-video { width: 100%; max-height: 70vh; border-radius: var(--radius-md); background: #000; object-fit: contain; }
+.biblioteca-modal-prompt {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--bg-primary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.biblioteca-modal-prompt h4 {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+.biblioteca-modal-prompt p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
 .biblioteca-modal-desc { margin-top: 16px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.6; }
 .biblioteca-modal-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .biblioteca-modal-usage {
