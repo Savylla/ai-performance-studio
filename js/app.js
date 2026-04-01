@@ -6951,7 +6951,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'zoom', 'aproximação', 'foco'],
       usage: 'Use para destacar detalhes, criar tensão dramática ou revelar elementos importantes.',
       anim: 'zoomIn',
-      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+zoom+in+on+a+colorful+flower+close+up+cinematic&width=512&height=288&duration=3&seed=101'
+      video: ''
     },
     {
       id: 'zoom-out',
@@ -6960,7 +6960,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'zoom', 'afastamento', 'revelar'],
       usage: 'Use para revelar localização, mostrar escala ou finalizar uma cena.',
       anim: 'zoomOut',
-      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+zoom+out+revealing+a+beautiful+mountain+landscape+cinematic&width=512&height=288&duration=3&seed=102'
+      video: ''
     },
     {
       id: 'pan-left',
@@ -6969,7 +6969,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'pan', 'horizontal', 'movimento'],
       usage: 'Use para seguir um personagem, revelar ambiente ou criar continuidade entre elementos.',
       anim: 'panLeft',
-      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+pan+left+across+a+city+skyline+at+sunset+cinematic&width=512&height=288&duration=3&seed=103'
+      video: ''
     },
     {
       id: 'pan-right',
@@ -6978,7 +6978,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'pan', 'horizontal', 'direita'],
       usage: 'Use para acompanhar movimento, transição entre cenas ou revelar novos elementos.',
       anim: 'panRight',
-      video: 'https://video.pollinations.ai/generate?prompt=smooth+camera+pan+right+across+a+beautiful+garden+cinematic&width=512&height=288&duration=3&seed=104'
+      video: ''
     },
     {
       id: 'tilt-up',
@@ -6987,7 +6987,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'tilt', 'vertical', 'cima'],
       usage: 'Use para mostrar a grandiosidade de prédios, árvores ou personagens imponentes.',
       anim: 'tiltUp',
-      video: 'https://video.pollinations.ai/generate?prompt=camera+tilt+up+revealing+a+tall+skyscraper+from+ground+to+top+cinematic&width=512&height=288&duration=3&seed=105'
+      video: ''
     },
     {
       id: 'tilt-down',
@@ -6996,7 +6996,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'tilt', 'vertical', 'baixo'],
       usage: 'Use para revelar o chão, criar vertigem ou mostrar perspectiva de cima.',
       anim: 'tiltDown',
-      video: 'https://video.pollinations.ai/generate?prompt=camera+tilt+down+from+sky+to+a+peaceful+lake+below+cinematic&width=512&height=288&duration=3&seed=106'
+      video: ''
     },
     {
       id: 'orbit',
@@ -7005,7 +7005,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'orbit', 'giro', '360', 'circular', 'rotação'],
       usage: 'Use para apresentar produtos, personagens ou objetos de todos os ângulos.',
       anim: 'orbit',
-      video: 'https://video.pollinations.ai/generate?prompt=camera+orbiting+around+a+golden+trophy+on+a+pedestal+360+rotation+cinematic&width=512&height=288&duration=3&seed=107'
+      video: ''
     },
     {
       id: 'dolly-zoom',
@@ -7014,7 +7014,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'dolly', 'vertigo', 'hitchcock', 'perspectiva', 'distorção'],
       usage: 'Use para momentos de choque, revelação dramática ou desconforto visual.',
       anim: 'dollyZoom',
-      video: 'https://video.pollinations.ai/generate?prompt=dolly+zoom+vertigo+effect+on+a+long+hallway+hitchcock+style+cinematic&width=512&height=288&duration=3&seed=108'
+      video: ''
     },
     {
       id: 'shake',
@@ -7023,7 +7023,7 @@ const BIBLIOTECA_DATA = {
       tags: ['camera', 'shake', 'tremor', 'impacto', 'ação'],
       usage: 'Use para cenas de ação, impactos, explosões ou momentos de tensão.',
       anim: 'shake',
-      video: 'https://video.pollinations.ai/generate?prompt=camera+shake+effect+during+an+explosion+action+scene+cinematic&width=512&height=288&duration=3&seed=109'
+      video: ''
     },
     {
       id: 'slow-motion',
@@ -7032,7 +7032,7 @@ const BIBLIOTECA_DATA = {
       tags: ['velocidade', 'slow-motion', 'câmera lenta', 'drama', 'detalhe'],
       usage: 'Use para momentos épicos, detalhes de ação ou transições emocionais.',
       anim: 'slowMo',
-      video: 'https://video.pollinations.ai/generate?prompt=slow+motion+water+droplets+falling+into+a+pool+cinematic+detail&width=512&height=288&duration=3&seed=110'
+      video: ''
     },
     {
       id: 'time-lapse',
@@ -7041,7 +7041,7 @@ const BIBLIOTECA_DATA = {
       tags: ['velocidade', 'time-lapse', 'acelerado', 'tempo'],
       usage: 'Use para mostrar passagem do tempo, construções, pôr do sol ou mudanças climáticas.',
       anim: 'timeLapse',
-      video: 'https://video.pollinations.ai/generate?prompt=time+lapse+of+clouds+moving+fast+over+mountains+sunset+cinematic&width=512&height=288&duration=3&seed=111'
+      video: ''
     },
     {
       id: 'blur-focus',
@@ -7050,7 +7050,7 @@ const BIBLIOTECA_DATA = {
       tags: ['foco', 'blur', 'desfoque', 'profundidade', 'bokeh'],
       usage: 'Use para revelar elementos, mudar foco de atenção ou criar efeito cinematográfico.',
       anim: 'blurFocus',
-      video: 'https://video.pollinations.ai/generate?prompt=rack+focus+blur+to+sharp+on+a+red+rose+with+bokeh+background+cinematic&width=512&height=288&duration=3&seed=112'
+      video: ''
     },
     {
       id: 'glitch',
@@ -7059,7 +7059,7 @@ const BIBLIOTECA_DATA = {
       tags: ['digital', 'glitch', 'distorção', 'cyberpunk', 'erro'],
       usage: 'Use para estética futurista, transições de impacto ou narrativas tecnológicas.',
       anim: 'glitch',
-      video: 'https://video.pollinations.ai/generate?prompt=digital+glitch+effect+on+a+neon+cyberpunk+cityscape+distortion&width=512&height=288&duration=3&seed=113'
+      video: ''
     },
     {
       id: 'color-grade',
@@ -7068,7 +7068,7 @@ const BIBLIOTECA_DATA = {
       tags: ['cor', 'color-grade', 'paleta', 'atmosfera', 'mood'],
       usage: 'Use para definir o tom emocional: quente para nostalgia, frio para suspense, saturado para energia.',
       anim: 'colorGrade',
-      video: 'https://video.pollinations.ai/generate?prompt=cinematic+color+grading+warm+to+cold+tones+on+a+forest+scene&width=512&height=288&duration=3&seed=114'
+      video: ''
     },
     {
       id: 'parallax',
@@ -7077,7 +7077,7 @@ const BIBLIOTECA_DATA = {
       tags: ['parallax', '2.5D', 'profundidade', 'camadas', '3D'],
       usage: 'Use para dar vida a imagens estáticas ou criar sensação de profundidade.',
       anim: 'parallax',
-      video: 'https://video.pollinations.ai/generate?prompt=parallax+2.5D+effect+on+a+layered+mountain+landscape+depth+cinematic&width=512&height=288&duration=3&seed=115'
+      video: ''
     },
     {
       id: 'lens-flare',
@@ -7086,7 +7086,7 @@ const BIBLIOTECA_DATA = {
       tags: ['luz', 'lens-flare', 'reflexo', 'brilho', 'sol'],
       usage: 'Use para adicionar dramaticidade, sensação de calor ou estilo cinematográfico.',
       anim: 'lensFlare',
-      video: 'https://video.pollinations.ai/generate?prompt=golden+lens+flare+sun+rays+through+trees+cinematic+warm+light&width=512&height=288&duration=3&seed=116'
+      video: ''
     },
     {
       id: 'vignette',
@@ -7095,7 +7095,7 @@ const BIBLIOTECA_DATA = {
       tags: ['vinheta', 'borda', 'escuro', 'foco', 'centro'],
       usage: 'Use para direcionar atenção, criar atmosfera íntima ou estilo vintage.',
       anim: 'vignette',
-      video: 'https://video.pollinations.ai/generate?prompt=vignette+effect+portrait+with+dark+edges+focus+on+center+cinematic&width=512&height=288&duration=3&seed=117'
+      video: ''
     },
     {
       id: 'split-screen',
@@ -7104,7 +7104,7 @@ const BIBLIOTECA_DATA = {
       tags: ['tela', 'split', 'divisão', 'múltiplo', 'simultâneo'],
       usage: 'Use para comparações, ações paralelas ou antes/depois.',
       anim: 'splitScreen',
-      video: 'https://video.pollinations.ai/generate?prompt=split+screen+two+scenes+city+day+vs+night+comparison+cinematic&width=512&height=288&duration=3&seed=118'
+      video: ''
     },
     {
       id: 'freeze-frame',
@@ -7113,7 +7113,7 @@ const BIBLIOTECA_DATA = {
       tags: ['congelar', 'freeze', 'pausa', 'destaque', 'momento'],
       usage: 'Use para introduções de personagens, momentos cômicos ou finalizações.',
       anim: 'freezeFrame',
-      video: 'https://video.pollinations.ai/generate?prompt=freeze+frame+moment+of+a+dancer+mid+jump+cinematic+dramatic&width=512&height=288&duration=3&seed=119'
+      video: ''
     },
     {
       id: 'ken-burns',
@@ -7122,7 +7122,7 @@ const BIBLIOTECA_DATA = {
       tags: ['ken-burns', 'foto', 'pan', 'zoom', 'documentário'],
       usage: 'Use para documentários, slideshows ou dar movimento a fotografias.',
       anim: 'kenBurns',
-      video: 'https://video.pollinations.ai/generate?prompt=ken+burns+effect+slow+zoom+and+pan+on+a+vintage+photograph+documentary+style&width=512&height=288&duration=3&seed=120'
+      video: ''
     }
   ],
   transicoes: [
@@ -7133,7 +7133,7 @@ const BIBLIOTECA_DATA = {
       tags: ['fade', 'suave', 'preto', 'branco', 'clássico'],
       usage: 'Use para aberturas, encerramentos ou mudanças de tempo significativas.',
       anim: 'fade',
-      video: 'https://video.pollinations.ai/generate?prompt=smooth+fade+transition+from+black+to+a+sunrise+landscape+cinematic&width=512&height=288&duration=3&seed=201'
+      video: ''
     },
     {
       id: 'crossfade',
@@ -7142,7 +7142,7 @@ const BIBLIOTECA_DATA = {
       tags: ['crossfade', 'dissolve', 'mistura', 'suave'],
       usage: 'Use para conexões temáticas, passagem de tempo ou transições oníricas.',
       anim: 'crossfade',
-      video: 'https://video.pollinations.ai/generate?prompt=crossfade+dissolve+transition+between+forest+and+ocean+dreamy+cinematic&width=512&height=288&duration=3&seed=202'
+      video: ''
     },
     {
       id: 'wipe-left',
@@ -7151,7 +7151,7 @@ const BIBLIOTECA_DATA = {
       tags: ['wipe', 'lateral', 'empurrar', 'horizontal'],
       usage: 'Use para mudanças de localização, comparações ou estilo dinâmico.',
       anim: 'wipeLeft',
-      video: 'https://video.pollinations.ai/generate?prompt=wipe+transition+from+left+scene+change+city+to+beach+cinematic&width=512&height=288&duration=3&seed=203'
+      video: ''
     },
     {
       id: 'wipe-up',
@@ -7160,7 +7160,7 @@ const BIBLIOTECA_DATA = {
       tags: ['wipe', 'vertical', 'revelar', 'cima', 'baixo'],
       usage: 'Use para revelar cenários, mudanças dramáticas de perspectiva.',
       anim: 'wipeUp',
-      video: 'https://video.pollinations.ai/generate?prompt=vertical+wipe+transition+underwater+to+above+water+cinematic&width=512&height=288&duration=3&seed=204'
+      video: ''
     },
     {
       id: 'zoom-transition',
@@ -7169,7 +7169,7 @@ const BIBLIOTECA_DATA = {
       tags: ['zoom', 'transição', 'rápido', 'contínuo', 'seamless'],
       usage: 'Use para vídeos de viagem, vlogs ou transições energéticas e modernas.',
       anim: 'zoomTransition',
-      video: 'https://video.pollinations.ai/generate?prompt=zoom+transition+from+eye+closeup+into+galaxy+seamless+cinematic&width=512&height=288&duration=3&seed=205'
+      video: ''
     },
     {
       id: 'whip-pan',
@@ -7178,7 +7178,7 @@ const BIBLIOTECA_DATA = {
       tags: ['whip', 'pan', 'rápido', 'blur', 'dinâmico'],
       usage: 'Use para transições energéticas, cenas de ação ou montagens rápidas.',
       anim: 'whipPan',
-      video: 'https://video.pollinations.ai/generate?prompt=whip+pan+fast+camera+movement+blur+between+two+scenes+cinematic&width=512&height=288&duration=3&seed=206'
+      video: ''
     },
     {
       id: 'morph',
@@ -7187,7 +7187,7 @@ const BIBLIOTECA_DATA = {
       tags: ['morph', 'metamorfose', 'transformação', 'fluido'],
       usage: 'Use para mostrar transformações, evolução ou conexões entre objetos.',
       anim: 'morph',
-      video: 'https://video.pollinations.ai/generate?prompt=morph+transition+face+transforming+into+another+face+smooth+cinematic&width=512&height=288&duration=3&seed=207'
+      video: ''
     },
     {
       id: 'iris',
@@ -7196,7 +7196,7 @@ const BIBLIOTECA_DATA = {
       tags: ['iris', 'círculo', 'abertura', 'clássico', 'retro'],
       usage: 'Use para finalizações, estilo retrô ou revelações dramáticas.',
       anim: 'iris',
-      video: 'https://video.pollinations.ai/generate?prompt=iris+circle+transition+opening+to+reveal+a+new+scene+vintage+cinema&width=512&height=288&duration=3&seed=208'
+      video: ''
     },
     {
       id: 'glitch-transition',
@@ -7205,7 +7205,7 @@ const BIBLIOTECA_DATA = {
       tags: ['glitch', 'digital', 'distorção', 'erro', 'tech'],
       usage: 'Use para estética cyberpunk, vídeos tech ou transições de impacto.',
       anim: 'glitchTrans',
-      video: 'https://video.pollinations.ai/generate?prompt=glitch+digital+distortion+transition+between+two+neon+scenes+cyberpunk&width=512&height=288&duration=3&seed=209'
+      video: ''
     },
     {
       id: 'spin',
@@ -7214,7 +7214,7 @@ const BIBLIOTECA_DATA = {
       tags: ['spin', 'rotação', 'giro', 'dinâmico'],
       usage: 'Use para transições divertidas, montagens ou mudanças energéticas.',
       anim: 'spin',
-      video: 'https://video.pollinations.ai/generate?prompt=spin+rotation+transition+scene+rotating+into+new+scene+energetic+cinematic&width=512&height=288&duration=3&seed=210'
+      video: ''
     },
     {
       id: 'slide-push',
@@ -7223,7 +7223,7 @@ const BIBLIOTECA_DATA = {
       tags: ['slide', 'push', 'deslizar', 'empurrar'],
       usage: 'Use para apresentações, comparações lado a lado ou troca de informações.',
       anim: 'slidePush',
-      video: 'https://video.pollinations.ai/generate?prompt=slide+push+transition+one+scene+pushing+another+off+screen+cinematic&width=512&height=288&duration=3&seed=211'
+      video: ''
     },
     {
       id: 'light-leak',
@@ -7232,7 +7232,7 @@ const BIBLIOTECA_DATA = {
       tags: ['luz', 'light-leak', 'vazamento', 'colorido', 'filme'],
       usage: 'Use para estilo vintage, transições quentes ou efeito de filme analógico.',
       anim: 'lightLeak',
-      video: 'https://video.pollinations.ai/generate?prompt=light+leak+warm+colorful+lens+flare+transition+vintage+film+cinematic&width=512&height=288&duration=3&seed=212'
+      video: ''
     },
     {
       id: 'mask-shape',
@@ -7241,7 +7241,7 @@ const BIBLIOTECA_DATA = {
       tags: ['máscara', 'shape', 'forma', 'geométrico', 'revelar'],
       usage: 'Use para revelações criativas, intros de personagem ou estilo motion graphics.',
       anim: 'maskShape',
-      video: 'https://video.pollinations.ai/generate?prompt=shape+mask+transition+star+shape+revealing+new+scene+motion+graphics&width=512&height=288&duration=3&seed=213'
+      video: ''
     },
     {
       id: 'ink-bleed',
@@ -7250,7 +7250,7 @@ const BIBLIOTECA_DATA = {
       tags: ['tinta', 'ink', 'mancha', 'orgânico', 'artístico'],
       usage: 'Use para estilo artístico, revelações orgânicas ou vídeos criativos.',
       anim: 'inkBleed',
-      video: 'https://video.pollinations.ai/generate?prompt=ink+bleed+paint+spread+transition+artistic+watercolor+revealing+new+scene&width=512&height=288&duration=3&seed=214'
+      video: ''
     },
     {
       id: 'pixelate',
@@ -7259,7 +7259,7 @@ const BIBLIOTECA_DATA = {
       tags: ['pixel', 'pixelate', 'digital', 'retro', '8bit'],
       usage: 'Use para estilo retro/gaming, transições tech ou efeitos nostálgicos.',
       anim: 'pixelate',
-      video: 'https://video.pollinations.ai/generate?prompt=pixelate+transition+scene+breaking+into+pixels+then+forming+new+scene+retro&width=512&height=288&duration=3&seed=215'
+      video: ''
     }
   ]
 };
@@ -7488,10 +7488,14 @@ function openBibliotecaModal(item, section) {
         <button class="biblioteca-modal-close"><i class="fas fa-times"></i></button>
       </div>
       <div class="biblioteca-modal-body">
-        <video class="biblioteca-modal-video" controls autoplay muted loop>
+        ${item.video ? `<video class="biblioteca-modal-video" controls autoplay muted loop>
           <source src="${item.video}" type="video/mp4">
-          Seu navegador nao suporta video.
-        </video>
+        </video>` : `<div class="biblioteca-modal-anim-preview">
+          <div class="bib-anim-preview playing" data-anim="${item.anim}" style="height:220px;border-radius:var(--radius-md);">
+            <div class="bib-anim-obj"></div>
+          </div>
+          <p style="text-align:center;color:var(--text-secondary);font-size:0.78rem;margin-top:8px;">Video de exemplo ainda nao adicionado</p>
+        </div>`}
         <div class="biblioteca-modal-desc">${item.desc}</div>
         <div class="biblioteca-modal-tags">
           <span class="biblioteca-tag" style="background:rgba(173,57,251,0.15);border-color:rgba(173,57,251,0.3);">${typeLabel}</span>
