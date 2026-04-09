@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src *;">
+  <meta name="description" content="Gere imagens, videos, audio e texto com IA gratuitamente. Multiplos provedores, moodboard, storyboard e mais.">
+  <meta property="og:title" content="AI Performance Studio">
+  <meta property="og:description" content="Gere imagens, videos, audio e texto com IA gratuitamente.">
+  <meta property="og:image" content="assets/logo.png">
+  <meta property="og:type" content="website">
   <title>AI Performance Studio</title>
+  <link rel="icon" href="assets/logo.png" type="image/png">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/responsive.css">
@@ -35,7 +42,7 @@
           <span class="logo-text">AI Studio</span>
         </div>
       </div>
-      <nav class="topbar-nav">
+      <nav class="topbar-nav" aria-label="Navegacao principal" role="tablist">
         <a href="#" class="topbar-link active" data-tab="image"><i class="fas fa-image"></i> Imagem</a>
         <a href="#" class="topbar-link" data-tab="video"><i class="fas fa-video"></i> Video</a>
         <a href="#" class="topbar-link" data-tab="audio"><i class="fas fa-headphones"></i> Audio</a>
@@ -46,13 +53,10 @@
         <a href="#" class="topbar-link" data-tab="biblioteca"><i class="fas fa-book"></i> Biblioteca</a>
         <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Historico</a>
         <a href="#" class="topbar-link" data-tab="folders"><i class="fas fa-folder-tree"></i> Pastas</a>
-        <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i></a>
+        <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i> Lixeira</a>
       </nav>
       <div class="topbar-actions">
-        <a href="#" class="topbar-action-link" onclick="openApiKeyModal(); return false;" title="Configuracoes">
-          <i class="fas fa-gear"></i> <span class="topbar-action-text">Configuracoes</span>
-        </a>
-        <button class="btn-icon" title="Configurar APIs" onclick="openApiKeyModal()"><i class="fas fa-key"></i></button>
+        <button class="btn-icon" title="Configuracoes" onclick="openApiKeyModal()" aria-label="Configuracoes"><i class="fas fa-gear"></i></button>
         <div class="user-avatar" id="topbarAvatar" title="Clique para login">
           <img src="" alt="Avatar" id="topbarAvatarImg" style="display:none;">
           <svg class="avatar-default-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">

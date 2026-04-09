@@ -1,5 +1,19 @@
 // === AI Performance Studio - Main Application ===
 
+// Security: sanitize strings before innerHTML injection
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Performance: revoke blob URLs in a container before clearing to prevent memory leaks
+function revokeBlobUrls(container) {
+  if (!container) return;
+  container.querySelectorAll('img[src^="blob:"], video[src^="blob:"], audio[src^="blob:"], source[src^="blob:"]').forEach(el => {
+    try { URL.revokeObjectURL(el.src || el.getAttribute('src')); } catch(e) {}
+  });
+}
+
 let currentTab = 'image';
 let syncTimeout = null;
 
@@ -65,6 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function initTabs() {
   // Topbar tabs
   document.querySelectorAll('.topbar-link[data-tab]').forEach(link => {
+    link.setAttribute('role', 'tab');
+    link.setAttribute('aria-selected', link.classList.contains('active') ? 'true' : 'false');
     link.addEventListener('click', (e) => {
       e.preventDefault();
       switchTab(link.dataset.tab);
@@ -108,8 +124,9 @@ function initTabs() {
 function switchTab(tab) {
   currentTab = tab;
   // Update topbar
-  document.querySelectorAll('.topbar-link').forEach(l => l.classList.remove('active'));
-  document.querySelector(`.topbar-link[data-tab="${tab}"]`)?.classList.add('active');
+  document.querySelectorAll('.topbar-link').forEach(l => { l.classList.remove('active'); l.setAttribute('aria-selected', 'false'); });
+  const activeLink = document.querySelector(`.topbar-link[data-tab="${tab}"]`);
+  if (activeLink) { activeLink.classList.add('active'); activeLink.setAttribute('aria-selected', 'true'); }
   // Update sidebar
   document.querySelectorAll('.sidebar-nav .nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector(`.sidebar-nav .nav-item[data-tab="${tab}"]`)?.classList.add('active');
@@ -1107,7 +1124,7 @@ async function startImageGeneration() {
           <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
           <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
-        <div class="result-card-provider">${providerLabel}</div>
+        <div class="result-card-provider">${escapeHtml(providerLabel)}</div>
       `;
       card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
       // Save to gallery + history
@@ -1464,7 +1481,11 @@ function repositionImporterWidgets() {
 
 function closeImporterWidget(id) {
   const el = document.getElementById(id);
-  if (el) el.remove();
+  if (el) {
+    if (el._cleanup) el._cleanup();
+    if (el._abortController) el._abortController.abort();
+    el.remove();
+  }
   repositionImporterWidgets();
 }
 
@@ -1523,7 +1544,9 @@ function showHiggsfieldImporter(modelName) {
   document.body.appendChild(widget);
   repositionImporterWidgets();
 
-  // Drag functionality
+  // Drag functionality with AbortController for cleanup
+  const ac = new AbortController();
+  widget._abortController = ac;
   const dragHandle = document.getElementById('higgsDragHandle');
   let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
   dragHandle.addEventListener('mousedown', (e) => {
@@ -1538,20 +1561,19 @@ function showHiggsfieldImporter(modelName) {
     if (!isDragging) return;
     let newX = e.clientX - dragOffsetX;
     let newY = e.clientY - dragOffsetY;
-    // Keep within viewport
     newX = Math.max(0, Math.min(newX, window.innerWidth - widget.offsetWidth));
     newY = Math.max(0, Math.min(newY, window.innerHeight - widget.offsetHeight));
     widget.style.left = newX + 'px';
     widget.style.top = newY + 'px';
     widget.style.right = 'auto';
     widget.style.bottom = 'auto';
-  });
+  }, { signal: ac.signal });
   document.addEventListener('mouseup', () => {
     if (isDragging) {
       isDragging = false;
       dragHandle.style.cursor = 'grab';
     }
-  });
+  }, { signal: ac.signal });
   // Touch support for mobile
   dragHandle.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'BUTTON') return;
@@ -1571,8 +1593,8 @@ function showHiggsfieldImporter(modelName) {
     widget.style.top = newY + 'px';
     widget.style.right = 'auto';
     widget.style.bottom = 'auto';
-  }, { passive: true });
-  document.addEventListener('touchend', () => { isDragging = false; });
+  }, { passive: true, signal: ac.signal });
+  document.addEventListener('touchend', () => { isDragging = false; }, { signal: ac.signal });
 
   const dropZone = document.getElementById('higgsDropZone');
   const fileInput = document.getElementById('higgsFileInput');
@@ -1745,7 +1767,9 @@ function showTikTokImporter() {
   document.body.appendChild(widget);
   repositionImporterWidgets();
 
-  // Drag functionality
+  // Drag functionality with AbortController for cleanup
+  const ac = new AbortController();
+  widget._abortController = ac;
   const dragHandle = document.getElementById('tiktokDragHandle');
   let isDragging = false, dragOffsetX = 0, dragOffsetY = 0;
   dragHandle.addEventListener('mousedown', (e) => {
@@ -1766,13 +1790,13 @@ function showTikTokImporter() {
     widget.style.top = newY + 'px';
     widget.style.right = 'auto';
     widget.style.bottom = 'auto';
-  });
+  }, { signal: ac.signal });
   document.addEventListener('mouseup', () => {
     if (isDragging) {
       isDragging = false;
       dragHandle.style.cursor = 'grab';
     }
-  });
+  }, { signal: ac.signal });
   // Touch support for mobile
   dragHandle.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'BUTTON') return;
@@ -1792,8 +1816,8 @@ function showTikTokImporter() {
     widget.style.top = newY + 'px';
     widget.style.right = 'auto';
     widget.style.bottom = 'auto';
-  }, { passive: true });
-  document.addEventListener('touchend', () => { isDragging = false; });
+  }, { passive: true, signal: ac.signal });
+  document.addEventListener('touchend', () => { isDragging = false; }, { signal: ac.signal });
 
   const dropZone = document.getElementById('tiktokDropZone');
   const fileInput = document.getElementById('tiktokFileInput');
@@ -3378,7 +3402,7 @@ Historia: ${storyPrompt}`,
           <div class="spinner-ring small"></div>
           <span>Gerando painel ${i + 1}/${panels.length}...</span>
         </div>
-        <div class="sb-panel-caption">${desc}</div>
+        <div class="sb-panel-caption">${escapeHtml(desc)}</div>
       `;
       card.querySelector('.sb-panel-remove').addEventListener('click', () => removeSbPanel(card));
       grid.appendChild(card);
@@ -3441,7 +3465,7 @@ function addToStoryboard(imageUrl, caption) {
     <div class="sb-panel-number">${panelNum}</div>
     <button class="sb-panel-remove" title="Remover painel"><i class="fas fa-times"></i></button>
     <div class="sb-panel-image"><img src="${imageUrl}" alt="Panel ${panelNum}" style="cursor:pointer;"></div>
-    <div class="sb-panel-caption">${caption || ''}</div>
+    <div class="sb-panel-caption">${escapeHtml(caption) || ''}</div>
   `;
   card.querySelector('.sb-panel-remove').addEventListener('click', (e) => { e.stopPropagation(); removeSbPanel(card); });
   card.querySelector('.sb-panel-image img')?.addEventListener('click', () => openLightbox(imageUrl, caption || '', '', 'image'));
@@ -3534,8 +3558,8 @@ function openLightbox(src, prompt, ratio, type) {
   }
 
   let infoHTML = '';
-  if (prompt) infoHTML += `<p><strong>Prompt:</strong> ${prompt}</p>`;
-  if (ratio) infoHTML += `<p><strong>Ratio:</strong> ${ratio}</p>`;
+  if (prompt) infoHTML += `<p><strong>Prompt:</strong> ${escapeHtml(prompt)}</p>`;
+  if (ratio) infoHTML += `<p><strong>Ratio:</strong> ${escapeHtml(ratio)}</p>`;
   infoEl.innerHTML = infoHTML;
 
   lightbox.classList.add('open');
@@ -3544,7 +3568,10 @@ function openLightbox(src, prompt, ratio, type) {
 
 function closeLightbox() {
   const lightbox = document.getElementById('lightbox');
+  const imgEl = document.getElementById('lightboxImg');
   const vidEl = document.getElementById('lightboxVideo');
+  if (imgEl?.src?.startsWith('blob:')) URL.revokeObjectURL(imgEl.src);
+  if (vidEl?.src?.startsWith('blob:')) URL.revokeObjectURL(vidEl.src);
   vidEl.pause();
   vidEl.src = '';
   lightbox.classList.remove('open');
@@ -3607,7 +3634,7 @@ function showDropdownPopup(btn, provGroup, group) {
       // Update button text
       const dotClass = btn.querySelector('.dot')?.className || 'dot key';
       const modelName = popItem.textContent.trim();
-      btn.innerHTML = `<span class="${dotClass}"></span> ${modelName} <i class="fas fa-chevron-down"></i>`;
+      btn.innerHTML = `<span class="${dotClass}"></span> ${escapeHtml(modelName)} <i class="fas fa-chevron-down"></i>`;
       closeDropdownPopup();
       if (group.id === 'audioProviders') updateVoiceSelect();
     });
@@ -3721,6 +3748,9 @@ function initApiKeyModal() {
   const modal = document.createElement('div');
   modal.id = 'apiKeyModal';
   modal.className = 'modal-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-label', 'Configurar API Keys');
   modal.innerHTML = `
     <div class="modal">
       <div class="modal-header">
@@ -3882,6 +3912,14 @@ function closeApiKeyModal() {
   updateApiKeyStatus();
 }
 
+// Close API key modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('apiKeyModal');
+    if (modal && modal.classList.contains('open')) closeApiKeyModal();
+  }
+});
+
 function updateApiKeyStatus() {
   const providers = {
     Gemini: !!getApiKey('gemini_api_key'),
@@ -3915,7 +3953,7 @@ function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-  toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+  toast.innerHTML = `<i class="fas ${icon}"></i> <span>${escapeHtml(message)}</span>`;
   container.appendChild(toast);
   setTimeout(() => {
     toast.classList.add('toast-exit');
@@ -4078,7 +4116,7 @@ async function searchPexelsImages(append) {
   data.photos.forEach(photo => {
     const card = document.createElement('div');
     card.className = 'moodboard-result-card';
-    card.innerHTML = `<img src="${photo.src.medium}" alt="${photo.alt || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${photo.photographer}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.innerHTML = `<img src="${photo.src.medium}" alt="${escapeHtml(photo.alt) || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${escapeHtml(photo.photographer)}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
     card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(photo.src.large, photo.photographer, photo.avg_color); });
     grid.appendChild(card);
   });
@@ -4098,7 +4136,7 @@ async function searchPixabayImages(append) {
   data.hits.forEach(img => {
     const card = document.createElement('div');
     card.className = 'moodboard-result-card';
-    card.innerHTML = `<img src="${img.webformatURL}" alt="${img.tags}" loading="lazy"><div class="moodboard-result-overlay"><span>${img.user}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.innerHTML = `<img src="${img.webformatURL}" alt="${escapeHtml(img.tags)}" loading="lazy"><div class="moodboard-result-overlay"><span>${escapeHtml(img.user)}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
     card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(img.largeImageURL, img.user, null); });
     grid.appendChild(card);
   });
@@ -4118,7 +4156,7 @@ async function searchUnsplashImages(append) {
   data.results.forEach(photo => {
     const card = document.createElement('div');
     card.className = 'moodboard-result-card';
-    card.innerHTML = `<img src="${photo.urls.small}" alt="${photo.alt_description || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${photo.user.name}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.innerHTML = `<img src="${photo.urls.small}" alt="${escapeHtml(photo.alt_description) || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${escapeHtml(photo.user.name)}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
     card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(photo.urls.regular, photo.user.name, photo.color); });
     grid.appendChild(card);
   });
@@ -4136,7 +4174,7 @@ async function searchOpenverseImages(append) {
   data.results.forEach(img => {
     const card = document.createElement('div');
     card.className = 'moodboard-result-card';
-    card.innerHTML = `<img src="${img.thumbnail || img.url}" alt="${img.title || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${img.creator || 'CC'}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.innerHTML = `<img src="${img.thumbnail || img.url}" alt="${escapeHtml(img.title) || ''}" loading="lazy"><div class="moodboard-result-overlay"><span>${escapeHtml(img.creator) || 'CC'}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
     card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => { e.stopPropagation(); addImageToBoard(img.url, img.creator || 'Creative Commons', null); });
     grid.appendChild(card);
   });
@@ -4158,7 +4196,7 @@ async function searchPexelsVideos(append) {
     const videoFile = video.video_files.find(f => f.quality === 'sd') || video.video_files[0];
     const card = document.createElement('div');
     card.className = 'moodboard-result-card';
-    card.innerHTML = `<div style="position:relative;"><img src="${thumb}" alt="" loading="lazy"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-play-circle" style="font-size:2rem;color:rgba(255,255,255,0.85);"></i></div></div><div class="moodboard-result-overlay"><span>${video.user.name}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.innerHTML = `<div style="position:relative;"><img src="${thumb}" alt="" loading="lazy"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-play-circle" style="font-size:2rem;color:rgba(255,255,255,0.85);"></i></div></div><div class="moodboard-result-overlay"><span>${escapeHtml(video.user.name)}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
     card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       moodboardItems.push({ type: 'video', url: videoFile.link, provider: video.user.name, id: Date.now() });
@@ -4185,7 +4223,7 @@ async function searchPixabayVideos(append) {
     const videoUrl = video.videos.small?.url || video.videos.medium?.url || video.videos.tiny?.url;
     const card = document.createElement('div');
     card.className = 'moodboard-result-card';
-    card.innerHTML = `<div style="position:relative;"><img src="${thumb}" alt="${video.tags}" loading="lazy" onerror="this.style.display='none'"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><i class="fas fa-play-circle" style="font-size:2rem;color:rgba(255,255,255,0.85);"></i></div></div><div class="moodboard-result-overlay"><span>${video.user}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
+    card.innerHTML = `<div style="position:relative;"><img src="${thumb}" alt="${escapeHtml(video.tags)}" loading="lazy" onerror="this.style.display='none'"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><i class="fas fa-play-circle" style="font-size:2rem;color:rgba(255,255,255,0.85);"></i></div></div><div class="moodboard-result-overlay"><span>${escapeHtml(video.user)}</span><button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button></div>`;
     card.querySelector('.moodboard-add-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       moodboardItems.push({ type: 'video', url: videoUrl, provider: video.user, id: Date.now() });
@@ -4216,7 +4254,7 @@ async function searchFreesound(append) {
       <div class="mb-audio-result">
         <div class="mb-audio-info">
           <i class="fas fa-music" style="color:var(--green);"></i>
-          <div><strong>${sound.name}</strong><br><span style="font-size:0.65rem;color:var(--text-muted);">${sound.username} · ${dur}s</span></div>
+          <div><strong>${escapeHtml(sound.name)}</strong><br><span style="font-size:0.65rem;color:var(--text-muted);">${escapeHtml(sound.username)} · ${dur}s</span></div>
         </div>
         <audio controls preload="none" src="${preview}" style="width:100%;height:28px;margin-top:4px;"></audio>
         <button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button>
@@ -4249,7 +4287,7 @@ async function searchOpenverseAudio(append) {
       <div class="mb-audio-result">
         <div class="mb-audio-info">
           <i class="fas fa-headphones" style="color:var(--blue);"></i>
-          <div><strong>${audio.title || 'Audio'}</strong><br><span style="font-size:0.65rem;color:var(--text-muted);">${audio.creator || 'CC'} · ${dur}s</span></div>
+          <div><strong>${escapeHtml(audio.title) || 'Audio'}</strong><br><span style="font-size:0.65rem;color:var(--text-muted);">${escapeHtml(audio.creator) || 'CC'} · ${dur}s</span></div>
         </div>
         ${preview ? `<audio controls preload="none" src="${preview}" style="width:100%;height:28px;margin-top:4px;"></audio>` : ''}
         <button class="moodboard-add-btn" title="Adicionar ao board"><i class="fas fa-plus"></i></button>
@@ -4998,6 +5036,7 @@ async function renderGallery() {
 
     grid.style.display = '';
     empty.style.display = 'none';
+    revokeBlobUrls(grid);
     grid.innerHTML = '';
 
     const allFolders = getFolders();
@@ -5021,13 +5060,13 @@ async function renderGallery() {
         thumbHTML = `<i class="fas fa-volume-up thumb-icon"></i>`;
       } else if (item.type === 'text') {
         const preview = (typeof item.data === 'string' ? item.data : '').substring(0, 100);
-        thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${preview}</div>`;
+        thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(preview)}</div>`;
       }
 
       // Folder badge
       const itemFolderId = folderMap[String(item.id)];
       const itemFolder = itemFolderId ? allFolders.find(f => f.id === itemFolderId) : null;
-      const folderBadgeHTML = itemFolder ? `<span class="item-folder-badge" style="background:${itemFolder.color}20;color:${itemFolder.color};"><span class="badge-dot" style="background:${itemFolder.color};"></span>${itemFolder.name}</span>` : '';
+      const folderBadgeHTML = itemFolder ? `<span class="item-folder-badge" style="background:${itemFolder.color}20;color:${itemFolder.color};"><span class="badge-dot" style="background:${itemFolder.color};"></span>${escapeHtml(itemFolder.name)}</span>` : '';
 
       card.innerHTML = `
         <span class="gallery-card-badge type-${item.type}">${typeLabels[item.type]}</span>
@@ -5037,9 +5076,9 @@ async function renderGallery() {
         <button class="gallery-card-delete" title="Excluir"><i class="fas fa-trash"></i></button>
         <div class="gallery-card-thumb">${thumbHTML}</div>
         <div class="gallery-card-info">
-          <div class="gallery-card-prompt">${promptSnippet || 'Sem prompt'}</div>
+          <div class="gallery-card-prompt">${escapeHtml(promptSnippet) || 'Sem prompt'}</div>
           <div class="gallery-card-meta">
-            <span>${item.provider || ''}</span>
+            <span>${escapeHtml(item.provider) || ''}</span>
             <span>${timeStr}</span>
             ${folderBadgeHTML}
           </div>
@@ -5147,10 +5186,10 @@ function openGalleryPreview(item) {
   const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto' };
   infoEl.innerHTML = `
     <div class="preview-section-label"><i class="fas fa-quote-left"></i> PROMPT</div>
-    <div class="preview-prompt">${item.prompt || 'Sem prompt'}</div>
+    <div class="preview-prompt">${escapeHtml(item.prompt) || 'Sem prompt'}</div>
     <div class="preview-section-label"><i class="fas fa-info-circle"></i> INFORMACOES</div>
     <div class="preview-meta">
-      <span><i class="fas fa-robot"></i> Modelo: <strong>${item.provider || '—'}</strong></span>
+      <span><i class="fas fa-robot"></i> Modelo: <strong>${escapeHtml(item.provider) || '—'}</strong></span>
       <span><i class="fas fa-tag"></i> Tipo: <strong>${typeLabels[item.type] || item.type}</strong></span>
       <span><i class="fas fa-clock"></i> Criado: <strong>${timeStr}</strong></span>
     </div>
@@ -5168,7 +5207,9 @@ function openGalleryPreview(item) {
 function closeGalleryPreview() {
   const overlay = document.getElementById('galleryPreview');
   overlay.style.display = 'none';
-  document.getElementById('galleryPreviewMedia').innerHTML = '';
+  const mediaEl = document.getElementById('galleryPreviewMedia');
+  revokeBlobUrls(mediaEl);
+  mediaEl.innerHTML = '';
 }
 
 async function deleteAndClosePreview(id) {
@@ -5231,12 +5272,13 @@ async function renderTrash(filterType) {
 
     grid.style.display = '';
     empty.style.display = 'none';
+    revokeBlobUrls(grid);
     grid.innerHTML = '';
 
     items.forEach(item => {
       const card = document.createElement('div');
       card.className = 'gallery-card';
-      card.dataset.trashId = item.trashId;
+      card.dataset.trashId = item.trashId || '';
 
       const typeLabels = { image: 'Imagem', video: 'Video', audio: 'Audio', text: 'Texto' };
       const timeStr = new Date(item.deletedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -5252,7 +5294,7 @@ async function renderTrash(filterType) {
         thumbHTML = `<i class="fas fa-volume-up thumb-icon"></i>`;
       } else if (item.type === 'text') {
         const preview = (typeof item.data === 'string' ? item.data : '').substring(0, 100);
-        thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${preview}</div>`;
+        thumbHTML = `<div style="padding:10px;font-size:0.7rem;color:var(--text-secondary);line-height:1.4;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(preview)}</div>`;
       }
 
       card.innerHTML = `
@@ -5344,6 +5386,7 @@ async function renderMoodboardFiles(filterType) {
     }
     grid.style.display = '';
     empty.style.display = 'none';
+    revokeBlobUrls(grid);
     grid.innerHTML = '';
 
     items.forEach(item => {
@@ -5517,6 +5560,7 @@ async function renderHistory() {
 
     list.style.display = '';
     empty.style.display = 'none';
+    revokeBlobUrls(list);
     list.innerHTML = '';
 
     const typeIcons = {
@@ -5560,19 +5604,19 @@ async function renderHistory() {
       // Folder badge
       const itemFolderId = folderMap[String(item.id)];
       const itemFolder = itemFolderId ? allFolders.find(f => f.id === itemFolderId) : null;
-      const folderBadgeHTML = itemFolder ? `<span class="item-folder-badge" style="background:${itemFolder.color}20;color:${itemFolder.color};"><span class="badge-dot" style="background:${itemFolder.color};"></span>${itemFolder.name}</span>` : '';
+      const folderBadgeHTML = itemFolder ? `<span class="item-folder-badge" style="background:${itemFolder.color}20;color:${itemFolder.color};"><span class="badge-dot" style="background:${itemFolder.color};"></span>${escapeHtml(itemFolder.name)}</span>` : '';
 
       el.innerHTML = `
         <div class="history-item-icon type-${item.type}">
           <i class="fas ${typeIcons[item.type] || 'fa-file'}"></i>
         </div>
         <div class="history-item-body">
-          <div class="history-item-prompt">${promptSnippet || 'Sem prompt'}</div>
+          <div class="history-item-prompt">${escapeHtml(promptSnippet) || 'Sem prompt'}</div>
           <div class="history-item-meta">
             <span><i class="fas fa-tag"></i> ${typeLabels[item.type] || item.type}</span>
-            <span><i class="fas fa-robot"></i> ${item.provider || ''}</span>
+            <span><i class="fas fa-robot"></i> ${escapeHtml(item.provider) || ''}</span>
             <span><i class="fas fa-clock"></i> ${timeStr}</span>
-            ${item.detail ? `<span><i class="fas fa-info-circle"></i> ${item.detail}</span>` : ''}
+            ${item.detail ? `<span><i class="fas fa-info-circle"></i> ${escapeHtml(item.detail)}</span>` : ''}
             ${folderBadgeHTML}
           </div>
         </div>
@@ -5839,7 +5883,7 @@ function renderFolderChips(page) {
     chip.dataset.folder = folder.id;
     chip.innerHTML = `
       <span class="folder-chip-dot" style="background:${folder.color};"></span>
-      ${folder.name}
+      ${escapeHtml(folder.name)}
       ${hasChildren ? '<i class="fas fa-caret-down" style="font-size:0.65rem;opacity:0.5;margin-left:-2px;"></i>' : ''}
       <span class="folder-chip-count">${count}</span>
       <span class="folder-chip-delete" title="Opcoes"><i class="fas fa-ellipsis-v"></i></span>
@@ -5867,7 +5911,7 @@ function renderFolderChips(page) {
         subChip.dataset.folder = child.id;
         subChip.innerHTML = `
           <span class="folder-chip-dot" style="background:${child.color};width:6px;height:6px;"></span>
-          ${child.name}
+          ${escapeHtml(child.name)}
           <span class="folder-chip-count">${cCount}</span>
           <span class="folder-chip-delete" title="Opcoes"><i class="fas fa-ellipsis-v"></i></span>
         `;
@@ -5919,7 +5963,7 @@ function showFolderContextMenu(e, folder, page) {
     moveItemsHTML += `<button class="folder-context-item folder-context-sub" data-action="move-root"><i class="fas fa-arrow-up"></i> Raiz (remover de pasta)</button>`;
   }
   validTargets.forEach(t => {
-    moveItemsHTML += `<button class="folder-context-item folder-context-sub" data-move-target="${t.id}"><span class="folder-ctx-dot" style="background:${t.color};"></span> ${t.name}</button>`;
+    moveItemsHTML += `<button class="folder-context-item folder-context-sub" data-move-target="${t.id}"><span class="folder-ctx-dot" style="background:${t.color};"></span> ${escapeHtml(t.name)}</button>`;
   });
 
   menu.innerHTML = `
@@ -6095,7 +6139,7 @@ function openMoveToFolderModal(page, itemId, currentFolderId) {
       item.innerHTML = `
         <i class="fas fa-grip-vertical move-folder-drag-handle"></i>
         <span class="move-folder-item-dot" style="background:${folder.color};"></span>
-        <span class="move-folder-item-name">${folder.name}</span>
+        <span class="move-folder-item-name">${escapeHtml(folder.name)}</span>
         ${hasChildren ? '<i class="fas fa-folder-open" style="margin-left:auto;font-size:0.65rem;opacity:0.4;"></i>' : ''}
       `;
 
@@ -6233,6 +6277,7 @@ async function renderFoldersPage() {
 
   allItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
+  revokeBlobUrls(container);
   container.innerHTML = '';
 
   if (subfolders.length === 0 && allItems.length === 0 && currentParent === null) {
@@ -6270,7 +6315,7 @@ async function renderFoldersPage() {
       card.dataset.folderId = folder.id;
       card.innerHTML = `
         <div class="fe-folder-icon" style="color:${folder.color};"><i class="fas fa-folder"></i></div>
-        <div class="fe-name">${folder.name}</div>
+        <div class="fe-name">${escapeHtml(folder.name)}</div>
         <div class="fe-folder-meta">${totalItems} arquivo${totalItems !== 1 ? 's' : ''}${childCount > 0 ? ` · ${childCount} subpasta${childCount !== 1 ? 's' : ''}` : ''}</div>
         <button class="fe-action" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
       `;
@@ -6378,7 +6423,7 @@ async function renderFoldersPage() {
 
     card.innerHTML = `
       <div class="fe-file-thumb">${thumbHTML}</div>
-      <div class="fe-name" title="${(item.prompt || item.name || '').replace(/"/g, '&quot;')}">${name}</div>
+      <div class="fe-name" title="${escapeHtml(item.prompt || item.name || '')}">${escapeHtml(name)}</div>
       <div class="fe-type" style="color:${color};">${typeLabels[item.type] || ''}</div>
       <button class="fe-action fe-file-menu" title="Opcoes"><i class="fas fa-ellipsis-v"></i></button>
     `;
@@ -6593,7 +6638,7 @@ function renderFoldersBreadcrumb(currentId, folders) {
 
       const btn = document.createElement('button');
       btn.className = `breadcrumb-item ${i === path.length - 1 ? 'active' : ''}`;
-      btn.innerHTML = `<span class="breadcrumb-dot" style="background:${folder.color};"></span> ${folder.name}`;
+      btn.innerHTML = `<span class="breadcrumb-dot" style="background:${folder.color};"></span> ${escapeHtml(folder.name)}`;
       btn.addEventListener('click', () => { foldersPageCurrentId = folder.id; renderFoldersPage(); });
       bc.appendChild(btn);
     });
@@ -7249,15 +7294,15 @@ function renderBibliotecaGrid(section) {
     card.innerHTML = `
       <div class="biblioteca-card-thumb">
         ${hasThumb
-          ? `<img class="biblioteca-card-img" src="${item.thumb}" alt="${item.name}" loading="lazy">`
+          ? `<img class="biblioteca-card-img" src="${item.thumb}" alt="${escapeHtml(item.name)}" loading="lazy">`
           : hasVideo
-            ? `<video class="biblioteca-card-video" src="${item.video}" muted loop playsinline preload="metadata"></video>`
+            ? `<video class="biblioteca-card-video" src="${item.video}#t=0.5" muted loop playsinline preload="metadata"></video>`
             : `<div class="bib-anim-preview" data-anim="${item.anim}">
                 <div class="bib-anim-obj"></div>
               </div>`
         }
       </div>
-      <div class="biblioteca-card-name">${item.name.toUpperCase()}</div>
+      <div class="biblioteca-card-name">${escapeHtml(item.name.toUpperCase())}</div>
     `;
     card.addEventListener('click', () => openBibliotecaModal(item, section));
     grid.appendChild(card);
@@ -7470,7 +7515,7 @@ function openBibliotecaModal(item, section) {
   overlay.innerHTML = `
     <div class="biblioteca-modal">
       <div class="biblioteca-modal-header">
-        <h3><i class="fas ${section === 'efeitos' ? 'fa-magic' : 'fa-shuffle'}" style="color:var(--accent);margin-right:8px;"></i>${item.name}</h3>
+        <h3><i class="fas ${section === 'efeitos' ? 'fa-magic' : 'fa-shuffle'}" style="color:var(--accent);margin-right:8px;"></i>${escapeHtml(item.name)}</h3>
         <button class="biblioteca-modal-close"><i class="fas fa-times"></i></button>
       </div>
       <div class="biblioteca-modal-body">
@@ -7484,16 +7529,16 @@ function openBibliotecaModal(item, section) {
         </div>`}
         ${item.prompt ? `<div class="biblioteca-modal-prompt">
           <h4><i class="fas fa-terminal" style="color:var(--accent);margin-right:6px;"></i>Prompt</h4>
-          <p>${item.prompt}</p>
+          <p>${escapeHtml(item.prompt)}</p>
         </div>` : ''}
-        <div class="biblioteca-modal-desc">${item.desc}</div>
+        <div class="biblioteca-modal-desc">${escapeHtml(item.desc)}</div>
         <div class="biblioteca-modal-tags">
-          <span class="biblioteca-tag" style="background:rgba(173,57,251,0.15);border-color:rgba(173,57,251,0.3);">${typeLabel}</span>
-          ${item.tags.map(t => `<span class="biblioteca-tag">${t}</span>`).join('')}
+          <span class="biblioteca-tag" style="background:rgba(173,57,251,0.15);border-color:rgba(173,57,251,0.3);">${escapeHtml(typeLabel)}</span>
+          ${item.tags.map(t => `<span class="biblioteca-tag">${escapeHtml(t)}</span>`).join('')}
         </div>
         <div class="biblioteca-modal-usage">
           <h4><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:6px;"></i>Quando usar</h4>
-          <p>${item.usage}</p>
+          <p>${escapeHtml(item.usage)}</p>
         </div>
         ${item.higgsfield ? `<a href="${item.higgsfield}" target="_blank" rel="noopener" class="biblioteca-higgsfield-link">
           <i class="fas fa-external-link-alt"></i> Ver no Higgsfield
@@ -7505,7 +7550,7 @@ function openBibliotecaModal(item, section) {
             ${item.gallery.map((g, i) => `
               <div class="biblioteca-gallery-item" data-gallery-index="${i}">
                 ${g.thumb ? `<img src="${g.thumb}" alt="${g.title || ''}" loading="lazy">` : `<video src="${g.video}" muted preload="metadata"></video>`}
-                ${g.title ? `<span class="biblioteca-gallery-title">${g.title}</span>` : ''}
+                ${g.title ? `<span class="biblioteca-gallery-title">${escapeHtml(g.title)}</span>` : ''}
               </div>
             `).join('')}
           </div>
@@ -7543,7 +7588,7 @@ function openBibliotecaGalleryDetail(galleryItem, effectName) {
   overlay.innerHTML = `
     <div class="biblioteca-gallery-detail">
       <div class="biblioteca-modal-header">
-        <h3><i class="fas fa-play-circle" style="color:var(--accent);margin-right:8px;"></i>${effectName}</h3>
+        <h3><i class="fas fa-play-circle" style="color:var(--accent);margin-right:8px;"></i>${escapeHtml(effectName)}</h3>
         <button class="biblioteca-modal-close"><i class="fas fa-times"></i></button>
       </div>
       <div class="biblioteca-modal-body">
@@ -7552,9 +7597,9 @@ function openBibliotecaGalleryDetail(galleryItem, effectName) {
         </video>
         ${galleryItem.prompt ? `<div class="biblioteca-modal-prompt">
           <h4><i class="fas fa-terminal" style="color:var(--accent);margin-right:6px;"></i>Prompt</h4>
-          <p>${galleryItem.prompt}</p>
+          <p>${escapeHtml(galleryItem.prompt)}</p>
         </div>` : ''}
-        ${galleryItem.title ? `<div class="biblioteca-modal-desc">${galleryItem.title}</div>` : ''}
+        ${galleryItem.title ? `<div class="biblioteca-modal-desc">${escapeHtml(galleryItem.title)}</div>` : ''}
       </div>
     </div>
   `;

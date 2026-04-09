@@ -1,11 +1,23 @@
 /* === RESPONSIVE === */
 
-/* Topbar nav always scrollable */
+/* Topbar nav always scrollable with scroll indicator */
 .topbar-nav {
   overflow-x: auto;
   scrollbar-width: none;
+  position: relative;
 }
 .topbar-nav::-webkit-scrollbar { display: none; }
+.topbar-nav::after {
+  content: '';
+  position: sticky;
+  right: 0;
+  top: 0;
+  min-width: 40px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--bg-primary, #0d0d0d));
+  pointer-events: none;
+  flex-shrink: 0;
+}
 
 @media (max-width: 900px) {
   .topbar-action-text { display: none; }

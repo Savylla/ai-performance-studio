@@ -10,7 +10,7 @@
 // 6. Cole essa URL no campo "Higgsfield Proxy URL" no seu site
 // ============================================
 
-const ALLOWED_ORIGIN = '*';
+const ALLOWED_ORIGIN = 'https://savylla.github.io';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
