@@ -480,7 +480,16 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
+  table-layout: fixed;
 }
+.decupagem-table th:nth-child(1) { width: 8%; }
+.decupagem-table th:nth-child(2) { width: 7%; }
+.decupagem-table th:nth-child(3) { width: 10%; }
+.decupagem-table th:nth-child(4) { width: 22%; }
+.decupagem-table th:nth-child(5) { width: 22%; }
+.decupagem-table th:nth-child(6) { width: 14%; }
+.decupagem-table th:nth-child(7) { width: 7%; }
+.decupagem-table th:nth-child(8) { width: 36px; }
 .decupagem-table thead th {
   background: var(--accent-subtle);
   color: var(--accent);
@@ -503,8 +512,8 @@
 .decupagem-table tbody td input,
 .decupagem-table tbody td textarea {
   width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 4px;
   padding: 6px 8px;
   color: var(--text-primary);

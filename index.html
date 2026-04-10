@@ -867,7 +867,7 @@
         <div class="decupagem-top-row">
           <!-- PDF Upload -->
           <div class="decupagem-upload-card">
-            <div class="decupagem-upload-area" id="decupagemUploadArea">
+            <div class="decupagem-upload-area" id="decupagemUploadArea" role="button" tabindex="0" aria-label="Area de upload de PDF. Arraste ou clique para selecionar.">
               <input type="file" id="decupagemFileInput" accept=".pdf" style="display:none;">
               <div class="decupagem-upload-icon"><i class="fas fa-file-pdf"></i></div>
               <p class="decupagem-upload-text">Arraste o PDF do roteiro aqui</p>
@@ -877,7 +877,7 @@
               <i class="fas fa-file-pdf"></i>
               <span id="decupagemFileName"></span>
               <span id="decupagemPageCount"></span>
-              <button class="decupagem-file-remove" id="decupagemFileRemove" title="Remover"><i class="fas fa-times"></i></button>
+              <button class="decupagem-file-remove" id="decupagemFileRemove" title="Remover" aria-label="Remover arquivo"><i class="fas fa-times"></i></button>
             </div>
             <div class="decupagem-extract-preview" id="decupagemExtractPreview" style="display:none;">
               <div class="decupagem-extract-header">
@@ -893,35 +893,35 @@
             <h3><i class="fas fa-clipboard-list"></i> Informacoes da Gravacao</h3>
             <div class="decupagem-form-grid">
               <div class="decupagem-field">
-                <label>Cliente</label>
+                <label for="decCliente">Cliente</label>
                 <input type="text" id="decCliente" placeholder="Nome do cliente">
               </div>
               <div class="decupagem-field">
-                <label>Projeto</label>
+                <label for="decProjeto">Projeto</label>
                 <input type="text" id="decProjeto" placeholder="Nome do projeto">
               </div>
               <div class="decupagem-field full-width">
-                <label>Criativos</label>
+                <label for="decCriativos">Criativos</label>
                 <input type="text" id="decCriativos" placeholder="Nomes dos criativos">
               </div>
               <div class="decupagem-field">
-                <label>Data</label>
+                <label for="decData">Data</label>
                 <input type="date" id="decData">
               </div>
               <div class="decupagem-field">
-                <label>Horario Inicio Gravacao</label>
+                <label for="decHoraInicio">Horario Inicio Gravacao</label>
                 <input type="time" id="decHoraInicio" value="09:00">
               </div>
               <div class="decupagem-field">
-                <label>Horario Final Gravacao</label>
+                <label for="decHoraFim">Horario Final Gravacao</label>
                 <input type="time" id="decHoraFim">
               </div>
               <div class="decupagem-field">
-                <label>Horario Inicio Log</label>
+                <label for="decLogInicio">Horario Inicio Log</label>
                 <input type="time" id="decLogInicio">
               </div>
               <div class="decupagem-field">
-                <label>Horario Final Log</label>
+                <label for="decLogFim">Horario Final Log</label>
                 <input type="time" id="decLogFim">
               </div>
             </div>
@@ -963,7 +963,7 @@
                   <th>Ambiente / Cenario</th>
                   <th>Objeto de Cena</th>
                   <th>Tecnica</th>
-                  <th>Nivel 1</th>
+                  <th>Nivel</th>
                   <th class="decupagem-col-actions"></th>
                 </tr>
               </thead>

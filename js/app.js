@@ -7644,8 +7644,11 @@ function initDecupagem() {
 
   if (!uploadArea) return;
 
-  // Upload click
+  // Upload click + keyboard accessibility (UX P6.3)
   uploadArea.addEventListener('click', () => fileInput.click());
+  uploadArea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
 
   // Drag and drop
   uploadArea.addEventListener('dragover', (e) => {
@@ -7760,6 +7763,14 @@ async function handleDecupagemPdf(file) {
     }
 
     decupagemPdfText = fullText.trim();
+
+    // QA fix: detectar PDF sem texto extraível (scanned/imagens)
+    if (!decupagemPdfText) {
+      showToast('PDF nao contem texto extraivel. Use um PDF com texto (nao escaneado).', 'error');
+      pageCount.textContent = 'Sem texto';
+      return;
+    }
+
     extractText.textContent = decupagemPdfText.substring(0, 3000) + (decupagemPdfText.length > 3000 ? '\n\n[...texto truncado na preview]' : '');
     extractText.classList.remove('collapsed');
     extractPreview.style.display = '';
@@ -7778,10 +7789,9 @@ async function generateDecupagem() {
     return;
   }
 
-  const apiKey = getApiKey('gemini_api_key');
-  if (!apiKey) {
-    openApiKeyModal();
-    showToast('Configure sua API key do Gemini primeiro', 'error');
+  // QA fix: check online status
+  if (!navigator.onLine) {
+    showToast('Sem conexao com a internet', 'error');
     return;
   }
 
@@ -7825,7 +7835,6 @@ As colunas da tabela sao:
 [
   {"roteiro":"1","cena":"#1","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano geral","nivel":"1"},
   {"roteiro":"1","cena":"#2","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano medio","nivel":"1"},
-  {"roteiro":"1","cena":"#3","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano geral","nivel":"1"},
   {"roteiro":"1","cena":"#4","plano":"Plano 1","ambiente":"Escritorio","objeto":"Celular, Cafe, Caderno, Caneta, Laptop","tecnica":"Plano medio","nivel":"1"},
   {"roteiro":"1","cena":"#4","plano":"Plano 2","ambiente":"Escritorio","objeto":"Celular","tecnica":"Tela do app","nivel":"1"},
   {"roteiro":"6","cena":"#1","plano":"Plano 1","ambiente":"Cozinha","objeto":"Sacola, Papelzinho","tecnica":"Plano medio","nivel":"2"},
@@ -7850,90 +7859,187 @@ Retorne APENAS o JSON array. Sem markdown, sem explicacoes, sem texto antes ou d
 ${decupagemPdfText}`;
 
   try {
-    // Use Gemini with systemInstruction for better instruction following (Bug #4 fix)
-    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
     let responseText = null;
+    let providerUsed = '';
 
-    for (const model of models) {
+    // === CASCATA DE PROVIDERS GRATUITOS (sem depender de API key) ===
+
+    // Provider 1: Pollinations — 100% GRATIS, sem API key, sem limites
+    const pollinationsModels = ['openai', 'mistral-large', 'deepseek'];
+    for (const pModel of pollinationsModels) {
+      if (responseText) break;
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const response = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: pModel,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.15
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content?.trim();
+          if (content && content.includes('[')) {
+            responseText = content;
+            providerUsed = `Pollinations ${pModel}`;
+          } else {
+            console.warn(`Decupagem: Pollinations ${pModel} — resposta sem JSON array`);
+          }
+        } else {
+          console.warn(`Decupagem: Pollinations ${pModel} HTTP ${response.status}`);
+        }
+      } catch (e) {
+        console.warn(`Decupagem: Pollinations ${pModel} failed:`, e.message);
+      }
+    }
+
+    // Provider 2: Groq — gratis com API key (se configurada)
+    if (!responseText) {
+      const groqKey = getApiKey('groq_api_key');
+      if (groqKey) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${groqKey}`
+            },
             body: JSON.stringify({
-              systemInstruction: { parts: [{ text: systemPrompt }] },
-              contents: [{ parts: [{ text: userPrompt }] }],
-              generationConfig: { temperature: 0.15, maxOutputTokens: 65536 }
-            })
-          }
-        );
-
-        if (!response.ok) {
-          // Bug #1 fix: only clear key on 401/403, NOT on 400
-          if ([401, 403].includes(response.status)) {
-            setApiKey('gemini_api_key', '');
-            openApiKeyModal();
-            throw new Error('API key invalida ou expirada. Configure uma nova.');
-          }
-          if (response.status === 400) {
-            const errBody = await response.json().catch(() => ({}));
-            const errMsg = errBody.error?.message || '';
-            if (errMsg.toLowerCase().includes('too long') || errMsg.toLowerCase().includes('token')) {
-              throw new Error('Roteiro muito longo para o modelo. Tente um PDF menor.');
+              model: 'llama-3.3-70b-versatile',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.15,
+              max_tokens: 8192
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (response.ok) {
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content?.trim();
+            if (content && content.includes('[')) {
+              responseText = content;
+              providerUsed = 'Groq Llama 3.3 70B';
             }
-            throw new Error('Requisicao invalida: ' + (errMsg || 'verifique o PDF'));
           }
-          if (response.status === 429) {
-            console.warn(`Quota exceeded for ${model}, trying next...`);
-            continue;
+        } catch (e) {
+          console.warn('Decupagem: Groq failed:', e.message);
+        }
+      }
+    }
+
+    // Provider 3: OpenRouter — modelos gratuitos (se API key configurada)
+    if (!responseText) {
+      const orKey = getApiKey('openrouter_api_key');
+      if (orKey) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${orKey}`,
+              'HTTP-Referer': window.location.href,
+              'X-Title': 'AI Performance Studio'
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.0-flash-001',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.15
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          if (response.ok) {
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content?.trim();
+            if (content && content.includes('[')) {
+              responseText = content;
+              providerUsed = 'OpenRouter';
+            }
           }
-          throw new Error(`Erro do servidor (${response.status}). Tente novamente.`);
+        } catch (e) {
+          console.warn('Decupagem: OpenRouter failed:', e.message);
         }
+      }
+    }
 
-        const data = await response.json();
-        const candidate = data.candidates?.[0];
-
-        // Bug #2 fix: detect safety-filtered responses
-        if (candidate?.finishReason === 'SAFETY' || data.promptFeedback?.blockReason) {
-          throw new Error('Conteudo bloqueado pelo filtro de seguranca da IA. Revise o roteiro ou tente outro modelo.');
-        }
-
-        if (candidate?.content?.parts) {
-          for (const part of candidate.content.parts) {
-            if (part.text) responseText = part.text.trim();
+    // Provider 4: Gemini — ultimo fallback (se API key configurada)
+    if (!responseText) {
+      const geminiKey = getApiKey('gemini_api_key');
+      if (geminiKey) {
+        const geminiModels = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+        for (const model of geminiModels) {
+          if (responseText) break;
+          try {
+            const response = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  systemInstruction: { parts: [{ text: systemPrompt }] },
+                  contents: [{ parts: [{ text: userPrompt }] }],
+                  generationConfig: { temperature: 0.15, maxOutputTokens: 65536 }
+                })
+              }
+            );
+            if (!response.ok) {
+              if ([401, 403].includes(response.status)) { setApiKey('gemini_api_key', ''); break; }
+              continue;
+            }
+            const data = await response.json();
+            const candidate = data.candidates?.[0];
+            if (candidate?.finishReason === 'SAFETY' || data.promptFeedback?.blockReason) continue;
+            if (candidate?.content?.parts) {
+              for (const part of candidate.content.parts) {
+                if (part.text) responseText = part.text.trim();
+              }
+            }
+            if (responseText) providerUsed = `Gemini ${model}`;
+          } catch (err) {
+            console.warn(`Decupagem: Gemini ${model} failed:`, err.message);
           }
         }
-        if (responseText) break;
-      } catch (err) {
-        if (err.message.includes('invalida') || err.message.includes('bloqueado') || err.message.includes('longo')) throw err;
-        console.warn(`Decupagem: ${model} failed:`, err.message);
-        continue;
       }
     }
 
     if (!responseText) {
-      throw new Error('Nenhum modelo retornou resposta. Verifique sua API key do Gemini nas configuracoes e tente novamente.');
+      throw new Error('Nenhum provedor conseguiu gerar a decupagem. Verifique sua conexao e tente novamente.');
     }
 
-    // Bug #6 fix: try direct parse first, then regex fallback
+    // Parse JSON — try direct parse first, then regex fallback
     let parsed;
     try {
       parsed = JSON.parse(responseText);
     } catch {
-      // Try extracting JSON array with non-greedy regex anchored to end
-      const jsonMatch = responseText.match(/\[[\s\S]*?\](?=\s*$)/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        // Last resort: find first [ to last ]
-        const start = responseText.indexOf('[');
-        const end = responseText.lastIndexOf(']');
-        if (start !== -1 && end > start) {
+      const start = responseText.indexOf('[');
+      const end = responseText.lastIndexOf(']');
+      if (start !== -1 && end > start) {
+        try {
           parsed = JSON.parse(responseText.substring(start, end + 1));
-        } else {
+        } catch {
           throw new Error('A IA nao retornou JSON valido. Tente novamente.');
         }
+      } else {
+        throw new Error('A IA nao retornou JSON valido. Tente novamente.');
       }
     }
 
@@ -7956,11 +8062,11 @@ ${decupagemPdfText}`;
 
     loading.style.display = 'none';
     result.style.display = '';
-    showToast(`Decupagem gerada: ${decupagemRows.length} planos`, 'success');
+    showToast(`Decupagem gerada: ${decupagemRows.length} planos (${providerUsed})`, 'success');
 
   } catch (err) {
     loading.style.display = 'none';
-    empty.style.display = '';
+    // UX fix P3.3: não resetar para empty state no erro — manter UI como estava
     showToast('Erro ao gerar decupagem: ' + err.message, 'error');
     console.error('Decupagem generation error:', err);
   } finally {
@@ -7997,13 +8103,13 @@ function renderDecupagemTable() {
   tbody.innerHTML = decupagemRows.map((row, i) => `
     <tr>
       <td><input type="text" value="${escapeHtml(row.roteiro)}" data-row="${i}" data-field="roteiro"></td>
-      <td><input type="text" value="${escapeHtml(row.cena)}" data-row="${i}" data-field="cena" style="width:60px;"></td>
-      <td><input type="text" value="${escapeHtml(row.plano)}" data-row="${i}" data-field="plano" style="width:80px;"></td>
+      <td><input type="text" value="${escapeHtml(row.cena)}" data-row="${i}" data-field="cena"></td>
+      <td><input type="text" value="${escapeHtml(row.plano)}" data-row="${i}" data-field="plano"></td>
       <td><textarea rows="2" data-row="${i}" data-field="ambiente">${escapeHtml(row.ambiente)}</textarea></td>
       <td><textarea rows="2" data-row="${i}" data-field="objeto">${escapeHtml(row.objeto)}</textarea></td>
-      <td><input type="text" value="${escapeHtml(row.tecnica)}" data-row="${i}" data-field="tecnica" style="width:100px;"></td>
-      <td><input type="text" value="${escapeHtml(row.nivel)}" data-row="${i}" data-field="nivel" style="width:80px;"></td>
-      <td><button class="decupagem-row-delete" data-row="${i}" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
+      <td><input type="text" value="${escapeHtml(row.tecnica)}" data-row="${i}" data-field="tecnica"></td>
+      <td><input type="text" value="${escapeHtml(row.nivel)}" data-row="${i}" data-field="nivel"></td>
+      <td><button class="decupagem-row-delete" data-row="${i}" title="Remover" aria-label="Remover linha"><i class="fas fa-trash-alt"></i></button></td>
     </tr>
   `).join('');
 
@@ -8073,7 +8179,7 @@ function buildDecupagemHTML() {
   <table class="dec-table">
     <thead>
       <tr>
-        <th>N° ROTEIRO</th><th>N° CENA</th><th>Plano</th><th>AMBIENTE / CENARIO</th><th>OBJETO DE CENA</th><th>TECNICA</th><th>Nivel 1</th>
+        <th>N° ROTEIRO</th><th>N° CENA</th><th>Plano</th><th>AMBIENTE / CENARIO</th><th>OBJETO DE CENA</th><th>TECNICA</th><th>Nivel</th>
       </tr>
     </thead>
     <tbody>
@@ -8107,7 +8213,7 @@ function exportDecupagemHTML() {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
   showToast('HTML exportado com sucesso', 'success');
 }
 
@@ -8122,7 +8228,7 @@ function copyDecupagemTable() {
   text += `Criativos: ${h.criativos}\n`;
   text += `Inicio Gravacao: ${h.horaInicio}\tFim Gravacao: ${h.horaFim}\n`;
   text += `Inicio Log: ${h.logInicio}\tFim Log: ${h.logFim}\n\n`;
-  text += `N° ROTEIRO\tN° CENA\tPlano\tAMBIENTE / CENARIO\tOBJETO DE CENA\tTECNICA\tNivel 1\n`;
+  text += `N° ROTEIRO\tN° CENA\tPlano\tAMBIENTE / CENARIO\tOBJETO DE CENA\tTECNICA\tNivel\n`;
   text += decupagemRows.map(r =>
     `${r.roteiro}\t${r.cena}\t${r.plano}\t${r.ambiente}\t${r.objeto}\t${r.tecnica}\t${r.nivel}`
   ).join('\n');
@@ -8240,7 +8346,7 @@ async function exportDecupagemToGoogleDocs() {
     const table = docData.body.content.find(el => el.table);
     if (table) {
       const cellRequests = [];
-      const headers = ['N° ROTEIRO', 'N° CENA', 'Plano', 'AMBIENTE / CENARIO', 'OBJETO DE CENA', 'TECNICA', 'Nivel 1'];
+      const headers = ['N° ROTEIRO', 'N° CENA', 'Plano', 'AMBIENTE / CENARIO', 'OBJETO DE CENA', 'TECNICA', 'Nivel'];
       const fields = ['roteiro', 'cena', 'plano', 'ambiente', 'objeto', 'tecnica', 'nivel'];
 
       // Populate header row

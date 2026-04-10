@@ -170,3 +170,42 @@
     max-height: 50vh;
   }
 }
+
+/* === DECUPAGEM Responsive === */
+@media (max-width: 768px) {
+  .decupagem-page {
+    padding: 16px;
+    gap: 14px;
+  }
+  .decupagem-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .decupagem-upload-area {
+    padding: 24px 16px;
+  }
+  .decupagem-table {
+    min-width: 700px;
+  }
+  .decupagem-table tbody td textarea {
+    max-height: 120px;
+  }
+}
+
+@media (max-width: 640px) {
+  .decupagem-page {
+    padding: 12px;
+    gap: 10px;
+  }
+  .decupagem-header-bar h2 {
+    font-size: 1.1rem;
+  }
+  .decupagem-result-actions {
+    width: 100%;
+  }
+  .decupagem-action-btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.72rem;
+    padding: 8px 6px;
+  }
+}
