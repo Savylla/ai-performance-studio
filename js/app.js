@@ -7716,6 +7716,12 @@ function initDecupagem() {
 }
 
 async function handleDecupagemPdf(file) {
+  const MAX_PDF_SIZE = 20 * 1024 * 1024; // 20MB
+  if (file.size > MAX_PDF_SIZE) {
+    showToast('PDF muito grande (max 20MB)', 'error');
+    return;
+  }
+
   const uploadArea = document.getElementById('decupagemUploadArea');
   const fileInfo = document.getElementById('decupagemFileInfo');
   const extractPreview = document.getElementById('decupagemExtractPreview');
@@ -7736,6 +7742,13 @@ async function handleDecupagemPdf(file) {
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    if (pdf.numPages > 100) {
+      showToast('PDF com muitas paginas (max 100). Use um roteiro mais curto.', 'error');
+      pageCount.textContent = 'Muitas paginas';
+      return;
+    }
+
     pageCount.textContent = `${pdf.numPages} pagina${pdf.numPages > 1 ? 's' : ''}`;
 
     let fullText = '';
@@ -7785,46 +7798,59 @@ async function generateDecupagem() {
   const cliente = document.getElementById('decCliente').value.trim();
   const projeto = document.getElementById('decProjeto').value.trim();
 
-  const systemPrompt = `Voce e um assistente especializado em producao audiovisual brasileira. Sua unica funcao e analisar roteiros/copys e gerar decupagens precisas para Ordem do Dia de gravacao.
+  // Prompt baseado no formato REAL de Ordem de Gravacao da Allfluence
+  // Referencia: Bradesco P04 Ordem de Gravacao (dados reais validados)
+  const systemPrompt = `Voce e um assistente de producao audiovisual brasileiro da produtora Allfluence.
+Sua UNICA funcao e analisar roteiros/copys de campanhas publicitarias e gerar a DECUPAGEM para Ordem do Dia de gravacao.
 
-REGRAS ABSOLUTAS:
-1. USE APENAS informacoes presentes no texto do roteiro fornecido. NAO invente NADA.
-2. NAO busque informacoes externas. NAO adicione cenas, dialogos ou acoes que nao existam no texto.
-3. Se uma informacao nao esta clara no roteiro, marque como "A DEFINIR" — nunca invente.
-4. Cada cena do roteiro deve gerar uma ou mais linhas na decupagem, conforme a quantidade de planos necessarios.
-5. Analise o texto como um profissional de producao: identifique mudancas de locacao, mudancas de acao, momentos que exigem planos diferentes.
+=== REGRAS ABSOLUTAS (INEGOCIAVEIS) ===
+1. USE SOMENTE informacoes que existem no texto do roteiro. NUNCA invente cenarios, objetos, acoes ou dialogos.
+2. Se algo nao esta explicito no roteiro, escreva "A DEFINIR" — nunca presuma.
+3. NAO busque informacoes fora do texto fornecido.
+4. Cada CENA mencionada no roteiro gera linhas na decupagem. Cada ACAO DISTINTA dentro de uma cena gera um PLANO separado.
+5. Se o roteiro menciona multiplos videos/criativos, identifique cada um pelo numero.
 
-FORMATO DE SAIDA — JSON puro, sem markdown:
+=== FORMATO REAL DA TABELA (baseado em ordens de gravacao reais) ===
+
+As colunas da tabela sao:
+- "roteiro": numero do roteiro/criativo (ex: "1", "3", "6"). Se o PDF tiver um unico roteiro, use "1" para todos.
+- "cena": numero da cena com prefixo # (ex: "#1", "#2", "#3"). Numere sequencialmente por roteiro.
+- "plano": numero sequencial do plano DENTRO da cena (ex: "Plano 1", "Plano 2"). Cada angulo ou enquadramento diferente e um plano novo.
+- "ambiente": local/cenario onde a cena acontece, extraido do roteiro (ex: "Escritorio", "Quarto", "Rua", "Cozinha", "Tela verde", "Estudio"). Use nomes curtos e diretos.
+- "objeto": lista de objetos de cena/props mencionados, separados por virgula (ex: "Celular, Cafe, Caderno, Laptop"). Se nenhum objeto for mencionado, use "—".
+- "tecnica": tipo de enquadramento/plano cinematografico (ex: "Plano geral", "Plano medio", "Plano detalhe", "Close-up", "Tela do app", "POV"). Baseie-se na acao descrita.
+- "nivel": nivel de complexidade de producao: "1" para cenas simples (estaticas, poucos elementos), "2" para cenas medias (movimento, efeitos leves), "3" para cenas complexas (efeitos especiais, muitos elementos, pos-producao pesada).
+
+=== EXEMPLO REAL DE SAIDA (Bradesco P04) ===
 [
-  {
-    "roteiro": "numero do roteiro ou identificador do video/conteudo",
-    "cena": "numero sequencial da cena",
-    "plano": "tipo de plano: PP (Primeiro Plano), PM (Plano Medio), PA (Plano Americano), PG (Plano Geral), PD (Plano Detalhe), Insert, POV, etc",
-    "ambiente": "descricao do cenario/locacao extraida do roteiro",
-    "objeto": "objetos de cena, props, produtos mencionados no roteiro",
-    "tecnica": "tecnica de filmagem sugerida: estatica, travelling, pan, tilt, dolly, drone, handcam, etc",
-    "nivel": "nivel de complexidade: simples, medio, complexo"
-  }
+  {"roteiro":"1","cena":"#1","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano geral","nivel":"1"},
+  {"roteiro":"1","cena":"#2","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano medio","nivel":"1"},
+  {"roteiro":"1","cena":"#3","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano geral","nivel":"1"},
+  {"roteiro":"1","cena":"#4","plano":"Plano 1","ambiente":"Escritorio","objeto":"Celular, Cafe, Caderno, Caneta, Laptop","tecnica":"Plano medio","nivel":"1"},
+  {"roteiro":"1","cena":"#4","plano":"Plano 2","ambiente":"Escritorio","objeto":"Celular","tecnica":"Tela do app","nivel":"1"},
+  {"roteiro":"6","cena":"#1","plano":"Plano 1","ambiente":"Cozinha","objeto":"Sacola, Papelzinho","tecnica":"Plano medio","nivel":"2"},
+  {"roteiro":"6","cena":"#2","plano":"Plano 1","ambiente":"Tela verde","objeto":"Papelzinho","tecnica":"Plano medio","nivel":"2"}
 ]
 
-CRITERIOS PARA DEFINIR PLANOS:
-- Dialogo frontal para camera = PP ou PM
-- Acao com movimento = PA ou PG com movimento de camera
-- Mostrando produto/detalhe = PD (Plano Detalhe)
-- Transicao de ambiente = novo plano
-- Cada troca de acao significativa = novo plano
+=== COMO ANALISAR O ROTEIRO ===
+1. Identifique CADA cena descrita (mudanca de locacao, mudanca de acao, corte descrito).
+2. Para cada cena, determine quantos PLANOS sao necessarios (cada angulo/enquadramento = 1 plano).
+3. Extraia os OBJETOS DE CENA literalmente mencionados no texto.
+4. Determine o AMBIENTE pela descricao do local.
+5. Escolha a TECNICA pelo tipo de acao (dialogo frontal = Plano medio, visao geral = Plano geral, detalhe de produto = Plano detalhe, tela de celular = Tela do app).
+6. Classifique o NIVEL: cena simples sem efeitos = "1", com movimento ou elementos extras = "2", com efeitos/pos-producao = "3".
 
 ${cliente ? `CLIENTE: ${cliente}` : ''}
-${projeto ? `PROJETO: ${projeto}` : ''}`;
+${projeto ? `PROJETO: ${projeto}` : ''}
 
-  const userPrompt = `Analise o roteiro abaixo e gere a decupagem completa. Retorne APENAS o JSON, sem explicacoes, sem markdown, sem texto antes ou depois:
+Retorne APENAS o JSON array. Sem markdown, sem explicacoes, sem texto antes ou depois do JSON.`;
+
+  const userPrompt = `Analise o roteiro/copy abaixo e gere a decupagem completa para Ordem do Dia:
 
 ${decupagemPdfText}`;
 
   try {
-    const fullPrompt = systemPrompt + '\n\n' + userPrompt;
-
-    // Use Gemini 2.5 Flash for longer context
+    // Use Gemini with systemInstruction for better instruction following (Bug #4 fix)
     const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
     let responseText = null;
 
@@ -7836,27 +7862,43 @@ ${decupagemPdfText}`;
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{ parts: [{ text: fullPrompt }] }],
-              generationConfig: { temperature: 0.2, maxOutputTokens: 65536 }
+              systemInstruction: { parts: [{ text: systemPrompt }] },
+              contents: [{ parts: [{ text: userPrompt }] }],
+              generationConfig: { temperature: 0.15, maxOutputTokens: 65536 }
             })
           }
         );
 
         if (!response.ok) {
-          if ([400, 401, 403].includes(response.status)) {
+          // Bug #1 fix: only clear key on 401/403, NOT on 400
+          if ([401, 403].includes(response.status)) {
             setApiKey('gemini_api_key', '');
             openApiKeyModal();
-            throw new Error('API key invalida.');
+            throw new Error('API key invalida ou expirada. Configure uma nova.');
+          }
+          if (response.status === 400) {
+            const errBody = await response.json().catch(() => ({}));
+            const errMsg = errBody.error?.message || '';
+            if (errMsg.toLowerCase().includes('too long') || errMsg.toLowerCase().includes('token')) {
+              throw new Error('Roteiro muito longo para o modelo. Tente um PDF menor.');
+            }
+            throw new Error('Requisicao invalida: ' + (errMsg || 'verifique o PDF'));
           }
           if (response.status === 429) {
             console.warn(`Quota exceeded for ${model}, trying next...`);
             continue;
           }
-          throw new Error(`Erro ${response.status}`);
+          throw new Error(`Erro do servidor (${response.status}). Tente novamente.`);
         }
 
         const data = await response.json();
         const candidate = data.candidates?.[0];
+
+        // Bug #2 fix: detect safety-filtered responses
+        if (candidate?.finishReason === 'SAFETY' || data.promptFeedback?.blockReason) {
+          throw new Error('Conteudo bloqueado pelo filtro de seguranca da IA. Revise o roteiro ou tente outro modelo.');
+        }
+
         if (candidate?.content?.parts) {
           for (const part of candidate.content.parts) {
             if (part.text) responseText = part.text.trim();
@@ -7864,36 +7906,49 @@ ${decupagemPdfText}`;
         }
         if (responseText) break;
       } catch (err) {
-        if (err.message.includes('invalida')) throw err;
+        if (err.message.includes('invalida') || err.message.includes('bloqueado') || err.message.includes('longo')) throw err;
         console.warn(`Decupagem: ${model} failed:`, err.message);
         continue;
       }
     }
 
     if (!responseText) {
-      throw new Error('Todos os modelos estao indisponiveis. Tente novamente.');
+      throw new Error('Nenhum modelo retornou resposta. Verifique sua API key do Gemini nas configuracoes e tente novamente.');
     }
 
-    // Parse JSON from response (handle markdown code blocks)
-    let jsonStr = responseText;
-    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
+    // Bug #6 fix: try direct parse first, then regex fallback
+    let parsed;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch {
+      // Try extracting JSON array with non-greedy regex anchored to end
+      const jsonMatch = responseText.match(/\[[\s\S]*?\](?=\s*$)/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        // Last resort: find first [ to last ]
+        const start = responseText.indexOf('[');
+        const end = responseText.lastIndexOf(']');
+        if (start !== -1 && end > start) {
+          parsed = JSON.parse(responseText.substring(start, end + 1));
+        } else {
+          throw new Error('A IA nao retornou JSON valido. Tente novamente.');
+        }
+      }
     }
 
-    const parsed = JSON.parse(jsonStr);
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      throw new Error('A IA nao retornou dados de decupagem validos.');
+      throw new Error('A IA nao retornou dados de decupagem validos. Tente novamente.');
     }
 
     decupagemRows = parsed.map(row => ({
-      roteiro: row.roteiro || '',
-      cena: row.cena || '',
-      plano: row.plano || '',
-      ambiente: row.ambiente || '',
-      objeto: row.objeto || '',
-      tecnica: row.tecnica || '',
-      nivel: row.nivel || ''
+      roteiro: String(row.roteiro || ''),
+      cena: String(row.cena || ''),
+      plano: String(row.plano || ''),
+      ambiente: String(row.ambiente || ''),
+      objeto: String(row.objeto || ''),
+      tecnica: String(row.tecnica || ''),
+      nivel: String(row.nivel || '')
     }));
 
     renderDecupagemHeaderPreview();
@@ -8158,9 +8213,8 @@ async function exportDecupagemToGoogleDocs() {
       }
     });
 
-    // We need to send the create request first, then populate the table
-    // Batch update with just structure first
-    await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+    // Bug #3 fix: check batchUpdate response for errors
+    const batchRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -8168,11 +8222,18 @@ async function exportDecupagemToGoogleDocs() {
       },
       body: JSON.stringify({ requests })
     });
+    if (!batchRes.ok) {
+      const errData = await batchRes.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `Erro ao popular documento (${batchRes.status})`);
+    }
 
     // Step 3: Re-read the doc to get table cell positions
     const docRead = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
+    if (!docRead.ok) {
+      throw new Error(`Erro ao ler documento criado (${docRead.status})`);
+    }
     const docData = await docRead.json();
 
     // Find the table in the document
@@ -8210,7 +8271,7 @@ async function exportDecupagemToGoogleDocs() {
         // Sort by index descending to avoid position shifts
         cellRequests.sort((a, b) => b.insertText.location.index - a.insertText.location.index);
 
-        await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+        const cellRes = await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -8218,6 +8279,9 @@ async function exportDecupagemToGoogleDocs() {
           },
           body: JSON.stringify({ requests: cellRequests })
         });
+        if (!cellRes.ok) {
+          console.warn('Erro ao preencher celulas da tabela:', cellRes.status);
+        }
       }
     }
 
