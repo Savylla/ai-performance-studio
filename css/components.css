@@ -105,8 +105,8 @@
 }
 
 .btn-tiny {
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: none;

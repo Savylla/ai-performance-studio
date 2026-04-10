@@ -14,8 +14,23 @@ function revokeBlobUrls(container) {
   });
 }
 
+// Global error handlers to prevent stuck UI states
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled promise rejection:', e.reason);
+  if (typeof showToast === 'function') showToast('Erro inesperado. Tente novamente.', 'error');
+  // Reset stuck loading states
+  document.querySelectorAll('.loading').forEach(el => el.classList.remove('loading'));
+  const genBtn = document.getElementById('generateBtnMain');
+  if (genBtn && genBtn.disabled) { genBtn.disabled = false; genBtn.style.opacity = ''; }
+});
+
+window.addEventListener('error', (e) => {
+  console.error('Uncaught error:', e.error);
+});
+
 let currentTab = 'image';
 let syncTimeout = null;
+let isGenerating = false;
 
 // === USER-SCOPED API KEY STORAGE ===
 const API_KEY_NAMES = [
@@ -74,7 +89,37 @@ document.addEventListener('DOMContentLoaded', () => {
   initTrash();
   initDecupagem();
   initGoogleAuth();
+  initOnboarding();
 });
+
+// === ONBOARDING (first-time user experience) ===
+function initOnboarding() {
+  if (localStorage.getItem('onboarding_seen')) return;
+  const banner = document.createElement('div');
+  banner.id = 'onboardingBanner';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:20px 24px;max-width:480px;width:90%;box-shadow:0 8px 32px rgba(173,57,251,0.3);';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:14px;">
+      <div style="font-size:1.8rem;flex-shrink:0;">✨</div>
+      <div style="flex:1;">
+        <h3 style="margin:0 0 8px;font-size:1rem;color:var(--text-primary);">Bem-vindo ao AI Studio!</h3>
+        <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.5;">
+          <p style="margin:0 0 6px;"><span style="color:var(--green);">●</span> <strong>Provedores verdes</strong> são gratuitos e prontos para usar</p>
+          <p style="margin:0 0 6px;"><span style="color:#f59e0b;">●</span> <strong>Provedores amarelos</strong> precisam de API key gratuita — clique em <i class="fas fa-gear" style="color:var(--accent);"></i> para configurar</p>
+          <p style="margin:0;"><strong>Dica:</strong> Comece com <em>Pollinations</em> (gratuito) ou configure o <em>Gemini</em> para mais qualidade</p>
+        </div>
+        <button id="onboardingDismiss" style="margin-top:12px;padding:6px 16px;background:var(--accent-gradient);border:none;border-radius:var(--radius-full);color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer;">Entendi!</button>
+      </div>
+      <button id="onboardingClose" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:0;flex-shrink:0;" title="Fechar">&times;</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  const dismiss = () => { banner.remove(); localStorage.setItem('onboarding_seen', '1'); };
+  document.getElementById('onboardingDismiss').addEventListener('click', dismiss);
+  document.getElementById('onboardingClose').addEventListener('click', dismiss);
+  // Auto-dismiss after 30 seconds
+  setTimeout(() => { if (document.getElementById('onboardingBanner')) dismiss(); }, 30000);
+}
 
 // === TAB MANAGEMENT ===
 function initTabs() {
@@ -85,8 +130,23 @@ function initTabs() {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       switchTab(link.dataset.tab);
+      // Scroll active tab into view
+      link.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     });
   });
+  // Topbar scroll indicator
+  const topbarNav = document.querySelector('.topbar-nav');
+  if (topbarNav) {
+    const updateScrollHint = () => {
+      const canScroll = topbarNav.scrollWidth > topbarNav.clientWidth;
+      const atEnd = topbarNav.scrollLeft + topbarNav.clientWidth >= topbarNav.scrollWidth - 10;
+      topbarNav.classList.toggle('has-scroll-right', canScroll && !atEnd);
+      topbarNav.classList.toggle('has-scroll-left', topbarNav.scrollLeft > 10);
+    };
+    topbarNav.addEventListener('scroll', updateScrollHint, { passive: true });
+    window.addEventListener('resize', updateScrollHint);
+    updateScrollHint();
+  }
   // Sidebar tabs
   document.querySelectorAll('.sidebar-nav .nav-item[data-tab]').forEach(item => {
     item.addEventListener('click', (e) => {
@@ -139,11 +199,11 @@ function switchTab(tab) {
   document.getElementById('settings' + tab.charAt(0).toUpperCase() + tab.slice(1))?.classList.add('active');
   // Update prompt placeholder
   const placeholders = {
-    image: 'Descreva a imagem que voce quer criar...',
-    video: 'Descreva o video que voce quer criar...',
-    audio: 'Digite o texto para converter em audio...',
+    image: 'Descreva a imagem que você quer criar...',
+    video: 'Descreva o vídeo que você quer criar...',
+    audio: 'Digite o texto para converter em áudio...',
     text: 'Digite seu prompt para gerar texto...',
-    moodboard: 'Descreva a imagem que voce quer criar...'
+    moodboard: 'Descreva a imagem que você quer criar...'
   };
   document.getElementById('promptInput').placeholder = placeholders[tab] || placeholders.image;
   // Show/hide enhance & lang buttons for all generation tabs
@@ -511,13 +571,19 @@ function speakPreview() {
   showToast('Reproduzindo...', 'success');
 }
 
-function handleGenerate() {
-  switch (currentTab) {
-    case 'image': startImageGeneration(); break;
-    case 'video': startVideoGeneration(); break;
-    case 'audio': startTTS(); break;
-    case 'text': startTextGeneration(); break;
-    case 'moodboard': startMoodboardGeneration(); break;
+async function handleGenerate() {
+  if (isGenerating) return;
+  isGenerating = true;
+  try {
+    switch (currentTab) {
+      case 'image': await startImageGeneration(); break;
+      case 'video': await startVideoGeneration(); break;
+      case 'audio': await startTTS(); break;
+      case 'text': await startTextGeneration(); break;
+      case 'moodboard': await startMoodboardGeneration(); break;
+    }
+  } finally {
+    isGenerating = false;
   }
 }
 
@@ -712,7 +778,7 @@ const GEMINI_TEXT_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'
 
 async function callGemini(prompt) {
   const apiKey = getApiKey('gemini_api_key');
-  if (!apiKey) { openApiKeyModal(); return null; }
+  if (!apiKey) { openApiKeyModal(); showToast('Configure sua API key do Gemini primeiro', 'error'); return null; }
 
   for (const model of GEMINI_TEXT_FALLBACK_MODELS) {
     try {
@@ -798,7 +864,7 @@ Original prompt: ${original}`;
       const geminiKey = getApiKey('gemini_api_key');
       if (geminiKey) {
         try {
-          result = await callGemini(enhanceInstruction, geminiKey);
+          result = await callGemini(enhanceInstruction);
         } catch (e) { console.warn('Enhance: Gemini failed:', e.message); }
       }
     }
@@ -941,7 +1007,7 @@ async function translateText(text, direction) {
   const geminiKey = getApiKey('gemini_api_key');
   if (geminiKey) {
     try {
-      const geminiResult = await callGemini(`${systemPrompt}\n\n${text}`, geminiKey);
+      const geminiResult = await callGemini(`${systemPrompt}\n\n${text}`);
       if (geminiResult) {
         const result = cleanTranslationResponse(geminiResult);
         if (result) {
@@ -1121,12 +1187,15 @@ async function startImageGeneration() {
       card.innerHTML = `
         <img src="${imgSrc}" alt="Generated" crossorigin="anonymous">
         <div class="result-card-overlay">
-          <button title="Download" onclick="event.stopPropagation(); downloadImage('${imgSrc}', 'ai-image-${Date.now()}.png')"><i class="fas fa-download"></i></button>
-          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
-          <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
+          <button class="rc-download" title="Download"><i class="fas fa-download"></i></button>
+          <button class="rc-fav" title="Favoritar"><i class="fas fa-heart"></i></button>
+          <button class="rc-delete" title="Deletar" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
         <div class="result-card-provider">${escapeHtml(providerLabel)}</div>
       `;
+      card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); downloadImage(imgSrc, 'ai-image-' + Date.now() + '.png'); });
+      card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
+      card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); card.remove(); });
       card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
       // Save to gallery + history
       saveImageToGallery(imgSrc, prompt, providerLabel);
@@ -1700,12 +1769,15 @@ function showHiggsfieldImporter(modelName) {
       card.innerHTML = `
         <img src="${imgUrl}" alt="Higgsfield" crossorigin="anonymous">
         <div class="result-card-overlay">
-          <button title="Download" onclick="event.stopPropagation(); downloadImage('${imgUrl}', 'higgsfield-${Date.now()}.png')"><i class="fas fa-download"></i></button>
-          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
-          <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
+          <button class="rc-download" title="Download"><i class="fas fa-download"></i></button>
+          <button class="rc-fav" title="Favoritar"><i class="fas fa-heart"></i></button>
+          <button class="rc-delete" title="Deletar" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
-        <div class="result-card-provider">${provider}</div>
+        <div class="result-card-provider">${escapeHtml(provider)}</div>
       `;
+      card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); downloadImage(imgUrl, 'higgsfield-' + Date.now() + '.png'); });
+      card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
+      card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); card.remove(); });
       card.addEventListener('click', () => openLightbox(imgUrl, prompt, '1:1'));
       grid.insertBefore(card, grid.firstChild);
     }
@@ -1882,12 +1954,15 @@ function showTikTokImporter() {
       card.innerHTML = `
         <video src="${vidUrl}" style="width:100%;border-radius:8px;" controls muted></video>
         <div class="result-card-overlay">
-          <button title="Download" onclick="event.stopPropagation(); const a=document.createElement('a');a.href='${vidUrl}';a.download='tiktok-${Date.now()}.mp4';a.click();"><i class="fas fa-download"></i></button>
-          <button title="Favoritar" onclick="event.stopPropagation(); this.style.color='var(--accent)'"><i class="fas fa-heart"></i></button>
-          <button title="Deletar" onclick="event.stopPropagation(); this.closest('.result-card').remove();" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
+          <button class="rc-download" title="Download"><i class="fas fa-download"></i></button>
+          <button class="rc-fav" title="Favoritar"><i class="fas fa-heart"></i></button>
+          <button class="rc-delete" title="Deletar" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
         </div>
-        <div class="result-card-provider">${provider}</div>
+        <div class="result-card-provider">${escapeHtml(provider)}</div>
       `;
+      card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); const a = document.createElement('a'); a.href = vidUrl; a.download = 'tiktok-' + Date.now() + '.mp4'; a.click(); });
+      card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
+      card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); card.remove(); });
       grid.insertBefore(card, grid.firstChild);
     }
 
@@ -2751,7 +2826,7 @@ function browserSTT() {
     isRecording = false;
     recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
     recordBtn.classList.remove('recording');
-    if (finalTranscript.trim()) showToast('Transcricao concluida!', 'success');
+    if (finalTranscript.trim()) showToast('Transcrição concluída!', 'success');
   };
 
   speechRecognition.start();
@@ -2760,6 +2835,15 @@ function browserSTT() {
 async function pollinationsSTT() {
   showToast('Gravando audio para Pollinations STT...', 'success');
   const recordBtn = document.getElementById('recordBtn');
+
+  // Stop any active recording first
+  if (recordBtn._activeRecorder && recordBtn._activeRecorder.state === 'recording') {
+    recordBtn._activeRecorder.stop();
+    isRecording = false;
+    recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+    recordBtn.classList.remove('recording');
+    return;
+  }
 
   if (isRecording) {
     isRecording = false;
@@ -2801,9 +2885,9 @@ async function pollinationsSTT() {
           document.getElementById('transcriptionResult').style.display = 'block';
           document.querySelector('#audioTranscribe .audio-empty-state').style.display = 'none';
           document.getElementById('transcriptionText').textContent = text;
-          showToast('Transcricao concluida!', 'success');
+          showToast('Transcrição concluída!', 'success');
         } catch (e) {
-          showToast('Erro na transcricao: ' + e.message, 'error');
+          showToast('Erro na transcrição: ' + e.message, 'error');
         }
       };
       reader.readAsDataURL(blob);
@@ -2824,15 +2908,8 @@ async function pollinationsSTT() {
       }
     }, 30000);
 
-    // Store reference so we can stop it
-    recordBtn.onclick = () => {
-      if (mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        isRecording = false;
-        recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
-        recordBtn.classList.remove('recording');
-      }
-    };
+    // Store mediaRecorder reference for stop control
+    recordBtn._activeRecorder = mediaRecorder;
   } catch (e) {
     showToast('Erro ao acessar microfone: ' + e.message, 'error');
   }
@@ -2843,6 +2920,15 @@ async function huggingFaceSTT() {
   if (!apiKey) { openApiKeyModal(); showToast('Configure API key do HuggingFace', 'error'); return; }
 
   const recordBtn = document.getElementById('recordBtn');
+
+  // Stop any active recording first
+  if (recordBtn._activeRecorder && recordBtn._activeRecorder.state === 'recording') {
+    recordBtn._activeRecorder.stop();
+    isRecording = false;
+    recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+    recordBtn.classList.remove('recording');
+    return;
+  }
 
   if (isRecording) {
     isRecording = false;
@@ -2880,9 +2966,9 @@ async function huggingFaceSTT() {
         document.getElementById('transcriptionResult').style.display = 'block';
         document.querySelector('#audioTranscribe .audio-empty-state').style.display = 'none';
         document.getElementById('transcriptionText').textContent = text;
-        showToast('Transcricao concluida com Whisper!', 'success');
+        showToast('Transcrição concluída com Whisper!', 'success');
       } catch (e) {
-        showToast('Erro na transcricao: ' + e.message, 'error');
+        showToast('Erro na transcrição: ' + e.message, 'error');
       }
     };
 
@@ -2901,14 +2987,8 @@ async function huggingFaceSTT() {
       }
     }, 30000);
 
-    recordBtn.onclick = () => {
-      if (mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-        isRecording = false;
-        recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
-        recordBtn.classList.remove('recording');
-      }
-    };
+    // Store mediaRecorder reference for stop control
+    recordBtn._activeRecorder = mediaRecorder;
   } catch (e) {
     showToast('Erro ao acessar microfone: ' + e.message, 'error');
   }
@@ -3028,7 +3108,7 @@ async function startTextGeneration() {
 // Generic Gemini text call with model selector
 async function callGeminiModel(prompt, model) {
   const apiKey = getApiKey('gemini_api_key');
-  if (!apiKey) { openApiKeyModal(); return null; }
+  if (!apiKey) { openApiKeyModal(); showToast('Configure sua API key do Gemini primeiro', 'error'); return null; }
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -3565,19 +3645,28 @@ function openLightbox(src, prompt, ratio, type) {
 
   lightbox.classList.add('open');
   document.body.style.overflow = 'hidden';
+  history.pushState({ modal: 'lightbox' }, '');
 }
 
 function closeLightbox() {
   const lightbox = document.getElementById('lightbox');
   const imgEl = document.getElementById('lightboxImg');
   const vidEl = document.getElementById('lightboxVideo');
-  if (imgEl?.src?.startsWith('blob:')) URL.revokeObjectURL(imgEl.src);
-  if (vidEl?.src?.startsWith('blob:')) URL.revokeObjectURL(vidEl.src);
+  // Don't revoke blob URLs here - they may be used by gallery/result cards
+  imgEl.src = '';
   vidEl.pause();
   vidEl.src = '';
   lightbox.classList.remove('open');
   document.body.style.overflow = '';
 }
+
+// History API: Back button closes modals instead of leaving the site
+window.addEventListener('popstate', (e) => {
+  const lightbox = document.getElementById('lightbox');
+  if (lightbox?.classList.contains('open')) { closeLightbox(); return; }
+  const apiModal = document.getElementById('apiKeyModal');
+  if (apiModal?.classList.contains('open')) { closeApiKeyModal(); return; }
+});
 
 // === KEYBOARD SHORTCUTS ===
 // === DROPDOWN POPUP SYSTEM ===
@@ -3741,6 +3830,16 @@ function initKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handleGenerate(); }
     if (e.ctrlKey && e.key === '/') { e.preventDefault(); document.getElementById('promptInput').focus(); }
+    // Escape to close modals, lightbox, dropdowns
+    if (e.key === 'Escape') {
+      const lightbox = document.getElementById('lightbox');
+      if (lightbox?.classList.contains('open')) { closeLightbox(); return; }
+      const apiModal = document.getElementById('apiKeyModal');
+      if (apiModal?.classList.contains('open')) { closeApiKeyModal(); return; }
+      const folderModal = document.getElementById('folderModal');
+      if (folderModal?.style.display !== 'none' && folderModal?.style.display) { folderModal.style.display = 'none'; return; }
+      closeDropdownPopup();
+    }
   });
 }
 
@@ -3906,6 +4005,7 @@ function openApiKeyModal() {
   document.getElementById('unsplashKeyInput').value = getApiKey('unsplash_api_key') || '';
   document.getElementById('freesoundKeyInput').value = getApiKey('freesound_api_key') || '';
   modal.classList.add('open');
+  history.pushState({ modal: 'apikeys' }, '');
 }
 
 function closeApiKeyModal() {
@@ -4392,7 +4492,7 @@ function renderMoodboard() {
           <button class="moodboard-item-action-btn moodboard-storyboard-btn" title="Adicionar ao Story Board"><i class="fas fa-book-open"></i></button>
         </div>
         <div class="moodboard-item-info">
-          <span><i class="fas fa-camera"></i> ${item.photographer}</span>
+          <span><i class="fas fa-camera"></i> ${escapeHtml(item.photographer)}</span>
         </div>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
@@ -4406,7 +4506,7 @@ function renderMoodboard() {
       `;
     } else if (item.type === 'note') {
       el.innerHTML = `
-        <div class="moodboard-note-content"><i class="fas fa-sticky-note"></i> ${item.text}</div>
+        <div class="moodboard-note-content"><i class="fas fa-sticky-note"></i> ${escapeHtml(item.text)}</div>
         <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
@@ -4419,7 +4519,7 @@ function renderMoodboard() {
           </div>
         </div>
         <div class="moodboard-item-info">
-          <span><i class="fas fa-video"></i> ${item.provider || 'Video'}</span>
+          <span><i class="fas fa-video"></i> ${escapeHtml(item.provider || 'Video')}</span>
         </div>
         <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
@@ -4429,7 +4529,7 @@ function renderMoodboard() {
         <div style="padding:12px; text-align:center;">
           <i class="fas fa-volume-up" style="font-size:1.5rem; color:var(--green); margin-bottom:8px;"></i>
           <audio controls src="${item.url}" style="width:100%;"></audio>
-          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${item.provider || 'Audio'}</div>
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${escapeHtml(item.provider || 'Audio')}</div>
         </div>
         <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
@@ -4440,9 +4540,11 @@ function renderMoodboard() {
       link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(item.fontName)}&display=swap`;
       link.rel = 'stylesheet';
       document.head.appendChild(link);
+      const safeFontName = escapeHtml(item.fontName);
+      const safeFontStyle = item.fontName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
       el.innerHTML = `
-        <div class="moodboard-font-preview" style="font-family:'${item.fontName}',sans-serif;">
-          <span class="moodboard-font-name">${item.fontName}</span>
+        <div class="moodboard-font-preview" style="font-family:'${safeFontStyle}',sans-serif;">
+          <span class="moodboard-font-name">${safeFontName}</span>
           <span class="moodboard-font-sample">The quick brown fox jumps over the lazy dog</span>
           <span class="moodboard-font-sample-pt">A raposa marrom rapida salta sobre o cao preguicoso</span>
         </div>

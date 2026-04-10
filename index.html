@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src *; worker-src blob:;">
-  <meta name="description" content="Gere imagens, videos, audio e texto com IA gratuitamente. Multiplos provedores, moodboard, storyboard e mais.">
+  <meta name="description" content="Gere imagens, vídeos, áudio e texto com IA gratuitamente. Múltiplos provedores, moodboard, storyboard e mais.">
   <meta property="og:title" content="AI Performance Studio">
-  <meta property="og:description" content="Gere imagens, videos, audio e texto com IA gratuitamente.">
+  <meta property="og:description" content="Gere imagens, vídeos, áudio e texto com IA gratuitamente.">
   <meta property="og:image" content="assets/logo.png">
   <meta property="og:type" content="website">
   <title>AI Performance Studio</title>
@@ -38,7 +38,7 @@
     <!-- Top Bar -->
     <header class="topbar">
       <div class="topbar-left">
-        <div class="logo-mini">
+        <div class="logo-mini" style="cursor:pointer;" onclick="switchTab('image')" title="Voltar ao inicio" role="button" tabindex="0">
           <img src="assets/logo.png" alt="AI Studio" class="logo-icon-img">
           <span class="logo-text">AI Studio</span>
         </div>
@@ -52,13 +52,13 @@
         <a href="#" class="topbar-link" data-tab="storyboard"><i class="fas fa-book-open"></i> Story Board</a>
         <a href="#" class="topbar-link" data-tab="gallery"><i class="fas fa-th-large"></i> Galeria</a>
         <a href="#" class="topbar-link" data-tab="biblioteca"><i class="fas fa-book"></i> Biblioteca</a>
-        <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Historico</a>
+        <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Histórico</a>
         <a href="#" class="topbar-link" data-tab="folders"><i class="fas fa-folder-tree"></i> Pastas</a>
         <a href="#" class="topbar-link" data-tab="decupagem"><i class="fas fa-clapperboard"></i> Decupagem</a>
         <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i> Lixeira</a>
       </nav>
       <div class="topbar-actions">
-        <button class="btn-icon" title="Configuracoes" onclick="openApiKeyModal()" aria-label="Configuracoes"><i class="fas fa-gear"></i></button>
+        <button class="btn-icon" title="Configurações" onclick="openApiKeyModal()" aria-label="Configurações"><i class="fas fa-gear"></i></button>
         <div class="user-avatar" id="topbarAvatar" title="Clique para login">
           <img src="" alt="Avatar" id="topbarAvatarImg" style="display:none;">
           <svg class="avatar-default-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -75,7 +75,7 @@
 
     <!-- IMAGE Tab -->
     <!-- FOLDERS Tab -->
-    <div class="tab-content" id="tabFolders">
+    <div class="tab-content" id="tabFolders" role="tabpanel">
       <div class="folders-page">
         <!-- Toolbar -->
         <div class="folders-toolbar">
@@ -101,21 +101,21 @@
             <i class="fas fa-folder-open"></i>
           </div>
           <h3>Nenhuma pasta ainda</h3>
-          <p>Crie pastas para organizar suas imagens, videos, audios e textos</p>
+          <p>Crie pastas para organizar suas imagens, vídeos, áudios e textos</p>
         </div>
         <!-- Status bar -->
         <div class="folders-statusbar" id="foldersStatusbar"></div>
       </div>
     </div>
 
-    <div class="tab-content active" id="tabImage">
+    <div class="tab-content active" id="tabImage" role="tabpanel">
       <div class="display-empty" id="displayEmpty">
         <div class="empty-illustration">
           <div class="empty-glow"></div>
           <i class="fas fa-wand-magic-sparkles"></i>
         </div>
-        <h3>Descreva a cena que voce imagina</h3>
-        <p>Escolha um provedor abaixo e gere imagens incriveis com IA</p>
+        <h3>Descreva a cena que você imagina</h3>
+        <p>Escolha um provedor abaixo e gere imagens incríveis com IA</p>
       </div>
       <div class="display-loading" id="displayLoading" style="display: none;">
         <div class="loading-spinner">
@@ -130,7 +130,7 @@
     </div>
 
     <!-- VIDEO Tab -->
-    <div class="tab-content" id="tabVideo">
+    <div class="tab-content" id="tabVideo" role="tabpanel">
       <!-- Video sub-tabs -->
       <div class="video-subtabs">
         <button class="video-subtab active" data-videotab="text2video"><i class="fas fa-film"></i> Text-to-Video</button>
@@ -144,8 +144,8 @@
             <div class="empty-glow"></div>
             <i class="fas fa-film"></i>
           </div>
-          <h3>Gere videos com IA</h3>
-          <p>Descreva o video que voce quer criar</p>
+          <h3>Gere vídeos com IA</h3>
+          <p>Descreva o vídeo que você quer criar</p>
         </div>
         <div class="display-results" id="videoResults" style="display: none;">
           <div class="results-masonry" id="videoMasonry"></div>
@@ -161,7 +161,7 @@
             <div class="i2v-upload-content">
               <div class="i2v-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
               <h3>Arraste uma imagem ou clique para enviar</h3>
-              <p>Transforme imagens estaticas em videos dinamicos com IA</p>
+              <p>Transforme imagens estáticas em vídeos dinâmicos com IA</p>
               <div class="i2v-upload-formats">JPG, PNG, WEBP — max 10MB</div>
               <p class="i2v-hint"><i class="fas fa-bolt"></i> 100% gratuito — processado no navegador</p>
             </div>
@@ -404,7 +404,7 @@
     </div>
 
     <!-- AUDIO Tab -->
-    <div class="tab-content" id="tabAudio">
+    <div class="tab-content" id="tabAudio" role="tabpanel">
       <div class="audio-workspace">
         <!-- Audio sub-tabs -->
         <div class="audio-subtabs">
@@ -445,7 +445,7 @@
     </div>
 
     <!-- TEXT Tab -->
-    <div class="tab-content" id="tabText">
+    <div class="tab-content" id="tabText" role="tabpanel">
       <div class="text-workspace">
         <div class="text-output-area" id="textOutputArea">
           <div class="display-empty">
@@ -472,7 +472,7 @@
     </div>
 
     <!-- MOODBOARD Tab -->
-    <div class="tab-content" id="tabMoodboard">
+    <div class="tab-content" id="tabMoodboard" role="tabpanel">
       <div class="moodboard-workspace">
         <!-- Moodboard Toolbar -->
         <div class="moodboard-toolbar">
@@ -564,13 +564,13 @@
           <div class="moodboard-files-filters">
             <button class="mb-file-filter active" data-type="all">Todos</button>
             <button class="mb-file-filter" data-type="image"><i class="fas fa-image"></i> Imagens</button>
-            <button class="mb-file-filter" data-type="video"><i class="fas fa-video"></i> Videos</button>
-            <button class="mb-file-filter" data-type="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="mb-file-filter" data-type="video"><i class="fas fa-video"></i> Vídeos</button>
+            <button class="mb-file-filter" data-type="audio"><i class="fas fa-headphones"></i> Áudios</button>
             <button class="mb-file-filter" data-type="text"><i class="fas fa-font"></i> Textos</button>
           </div>
           <div class="moodboard-files-grid" id="moodboardFilesGrid"></div>
           <div class="moodboard-files-empty" id="moodboardFilesEmpty" style="display:none;">
-            <p>Nenhum arquivo. Gere conteudo nas outras abas e ele aparecerá aqui.</p>
+            <p>Nenhum arquivo. Gere conteúdo nas outras abas e ele aparecerá aqui.</p>
           </div>
         </div>
 
@@ -589,7 +589,7 @@
     </div>
 
     <!-- STORYBOARD Tab -->
-    <div class="tab-content" id="tabStoryboard">
+    <div class="tab-content" id="tabStoryboard" role="tabpanel">
       <div class="storyboard-workspace">
         <div class="storyboard-empty" id="storyboardEmpty">
           <div class="empty-illustration">
@@ -670,15 +670,15 @@
     </div>
 
     <!-- GALLERY Tab -->
-    <div class="tab-content" id="tabGallery">
+    <div class="tab-content" id="tabGallery" role="tabpanel">
       <div class="gallery-workspace">
         <!-- Gallery Toolbar -->
         <div class="gallery-toolbar">
           <div class="gallery-filters">
             <button class="gallery-filter active" data-filter="all"><i class="fas fa-th-large"></i> Todos</button>
             <button class="gallery-filter" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
-            <button class="gallery-filter" data-filter="video"><i class="fas fa-video"></i> Videos</button>
-            <button class="gallery-filter" data-filter="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="gallery-filter" data-filter="video"><i class="fas fa-video"></i> Vídeos</button>
+            <button class="gallery-filter" data-filter="audio"><i class="fas fa-headphones"></i> Áudios</button>
             <button class="gallery-filter" data-filter="text"><i class="fas fa-font"></i> Textos</button>
           </div>
           <div class="gallery-actions">
@@ -718,27 +718,27 @@
             <i class="fas fa-th-large"></i>
           </div>
           <h3>Galeria vazia</h3>
-          <p>Gere imagens, videos, audios ou textos e eles aparecerão aqui automaticamente</p>
+          <p>Gere imagens, vídeos, áudios ou textos e eles aparecerão aqui automaticamente</p>
         </div>
       </div>
     </div>
 
     <!-- HISTORY Tab -->
-    <div class="tab-content" id="tabHistory">
+    <div class="tab-content" id="tabHistory" role="tabpanel">
       <div class="history-workspace">
         <!-- History Toolbar -->
         <div class="history-toolbar">
           <div class="history-filters">
             <button class="history-filter active" data-filter="all"><i class="fas fa-clock-rotate-left"></i> Todos</button>
             <button class="history-filter" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
-            <button class="history-filter" data-filter="video"><i class="fas fa-video"></i> Videos</button>
-            <button class="history-filter" data-filter="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="history-filter" data-filter="video"><i class="fas fa-video"></i> Vídeos</button>
+            <button class="history-filter" data-filter="audio"><i class="fas fa-headphones"></i> Áudios</button>
             <button class="history-filter" data-filter="text"><i class="fas fa-font"></i> Textos</button>
             <button class="history-filter" data-filter="moodboard"><i class="fas fa-palette"></i> Moodboard</button>
           </div>
           <div class="history-actions">
             <span class="history-count" id="historyCount">0 registros</span>
-            <button class="gallery-action-btn gallery-delete-all" id="historyClearBtn" title="Limpar historico">
+            <button class="gallery-action-btn gallery-delete-all" id="historyClearBtn" title="Limpar histórico">
               <i class="fas fa-trash"></i>
             </button>
           </div>
@@ -765,21 +765,21 @@
             <div class="empty-glow"></div>
             <i class="fas fa-clock-rotate-left"></i>
           </div>
-          <h3>Historico vazio</h3>
+          <h3>Histórico vazio</h3>
           <p>Suas geracoes aparecerão aqui automaticamente</p>
         </div>
       </div>
     </div>
 
     <!-- TRASH Tab -->
-    <div class="tab-content" id="tabTrash">
+    <div class="tab-content" id="tabTrash" role="tabpanel">
       <div class="gallery-workspace">
         <div class="gallery-toolbar">
           <div class="gallery-filters">
             <button class="gallery-filter active" data-filter="all"><i class="fas fa-trash"></i> Todos</button>
             <button class="gallery-filter" data-filter="image"><i class="fas fa-image"></i> Imagens</button>
-            <button class="gallery-filter" data-filter="video"><i class="fas fa-video"></i> Videos</button>
-            <button class="gallery-filter" data-filter="audio"><i class="fas fa-headphones"></i> Audios</button>
+            <button class="gallery-filter" data-filter="video"><i class="fas fa-video"></i> Vídeos</button>
+            <button class="gallery-filter" data-filter="audio"><i class="fas fa-headphones"></i> Áudios</button>
             <button class="gallery-filter" data-filter="text"><i class="fas fa-font"></i> Textos</button>
           </div>
           <div class="gallery-actions">
@@ -805,7 +805,7 @@
     </div>
 
     <!-- BIBLIOTECA Tab -->
-    <div class="tab-content" id="tabBiblioteca">
+    <div class="tab-content" id="tabBiblioteca" role="tabpanel">
       <div class="biblioteca-page">
         <!-- Search Bar with LLM -->
         <div class="biblioteca-search-wrap">
@@ -855,7 +855,7 @@
     </div>
 
     <!-- DECUPAGEM Tab -->
-    <div class="tab-content" id="tabDecupagem">
+    <div class="tab-content" id="tabDecupagem" role="tabpanel">
       <div class="decupagem-page">
         <!-- Header -->
         <div class="decupagem-header-bar">
@@ -1020,7 +1020,8 @@
         <div class="prompt-input-wrap">
           <div class="prompt-resize-handle" id="promptResizeHandle" title="Arraste para redimensionar"></div>
           <i class="fas fa-sparkles prompt-icon"></i>
-          <textarea id="promptInput" placeholder="Descreva o que voce quer criar..." rows="1"></textarea>
+          <label for="promptInput" class="sr-only">Prompt de geração</label>
+          <textarea id="promptInput" placeholder="Descreva o que você quer criar..." rows="1"></textarea>
           <div class="lang-buttons" id="langButtons">
             <button class="lang-btn active" id="langPT" title="Portugues">PT</button>
             <button class="lang-btn" id="langEN" title="English">EN</button>
@@ -1371,8 +1372,8 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
-          <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Prompt / Descricao</label>
-          <input type="text" id="editItemPrompt" class="folder-modal-input" placeholder="Descreva o conteudo...">
+          <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Prompt / Descrição</label>
+          <input type="text" id="editItemPrompt" class="folder-modal-input" placeholder="Descreva o conteúdo...">
         </div>
         <div>
           <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Modelo / Provider</label>
