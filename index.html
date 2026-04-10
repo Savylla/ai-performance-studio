@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src *;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src *; worker-src blob:;">
   <meta name="description" content="Gere imagens, videos, audio e texto com IA gratuitamente. Multiplos provedores, moodboard, storyboard e mais.">
   <meta property="og:title" content="AI Performance Studio">
   <meta property="og:description" content="Gere imagens, videos, audio e texto com IA gratuitamente.">
@@ -17,6 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
   <!-- Hidden sidebar elements for JS compatibility -->
@@ -53,6 +54,7 @@
         <a href="#" class="topbar-link" data-tab="biblioteca"><i class="fas fa-book"></i> Biblioteca</a>
         <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Historico</a>
         <a href="#" class="topbar-link" data-tab="folders"><i class="fas fa-folder-tree"></i> Pastas</a>
+        <a href="#" class="topbar-link" data-tab="decupagem"><i class="fas fa-clapperboard"></i> Decupagem</a>
         <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i> Lixeira</a>
       </nav>
       <div class="topbar-actions">
@@ -848,6 +850,136 @@
           </div>
           <h3>Nenhum resultado encontrado</h3>
           <p>Tente descrever de outra forma ou limpe a busca</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- DECUPAGEM Tab -->
+    <div class="tab-content" id="tabDecupagem">
+      <div class="decupagem-page">
+        <!-- Header -->
+        <div class="decupagem-header-bar">
+          <h2><i class="fas fa-clapperboard"></i> Decupagem — Ordem do Dia</h2>
+          <p class="decupagem-subtitle">Suba o roteiro em PDF e a IA gera a decupagem automaticamente</p>
+        </div>
+
+        <!-- Upload + Form Row -->
+        <div class="decupagem-top-row">
+          <!-- PDF Upload -->
+          <div class="decupagem-upload-card">
+            <div class="decupagem-upload-area" id="decupagemUploadArea">
+              <input type="file" id="decupagemFileInput" accept=".pdf" style="display:none;">
+              <div class="decupagem-upload-icon"><i class="fas fa-file-pdf"></i></div>
+              <p class="decupagem-upload-text">Arraste o PDF do roteiro aqui</p>
+              <p class="decupagem-upload-hint">ou clique para selecionar</p>
+            </div>
+            <div class="decupagem-file-info" id="decupagemFileInfo" style="display:none;">
+              <i class="fas fa-file-pdf"></i>
+              <span id="decupagemFileName"></span>
+              <span id="decupagemPageCount"></span>
+              <button class="decupagem-file-remove" id="decupagemFileRemove" title="Remover"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="decupagem-extract-preview" id="decupagemExtractPreview" style="display:none;">
+              <div class="decupagem-extract-header">
+                <span><i class="fas fa-file-lines"></i> Texto extraido do PDF</span>
+                <button class="decupagem-toggle-preview" id="decupagemTogglePreview"><i class="fas fa-chevron-down"></i></button>
+              </div>
+              <div class="decupagem-extract-text" id="decupagemExtractText"></div>
+            </div>
+          </div>
+
+          <!-- Header Form -->
+          <div class="decupagem-form-card">
+            <h3><i class="fas fa-clipboard-list"></i> Informacoes da Gravacao</h3>
+            <div class="decupagem-form-grid">
+              <div class="decupagem-field">
+                <label>Cliente</label>
+                <input type="text" id="decCliente" placeholder="Nome do cliente">
+              </div>
+              <div class="decupagem-field">
+                <label>Projeto</label>
+                <input type="text" id="decProjeto" placeholder="Nome do projeto">
+              </div>
+              <div class="decupagem-field full-width">
+                <label>Criativos</label>
+                <input type="text" id="decCriativos" placeholder="Nomes dos criativos">
+              </div>
+              <div class="decupagem-field">
+                <label>Data</label>
+                <input type="date" id="decData">
+              </div>
+              <div class="decupagem-field">
+                <label>Horario Inicio Gravacao</label>
+                <input type="time" id="decHoraInicio" value="09:00">
+              </div>
+              <div class="decupagem-field">
+                <label>Horario Final Gravacao</label>
+                <input type="time" id="decHoraFim">
+              </div>
+              <div class="decupagem-field">
+                <label>Horario Inicio Log</label>
+                <input type="time" id="decLogInicio">
+              </div>
+              <div class="decupagem-field">
+                <label>Horario Final Log</label>
+                <input type="time" id="decLogFim">
+              </div>
+            </div>
+            <button class="decupagem-generate-btn" id="decupagemGenerateBtn">
+              <i class="fas fa-wand-magic-sparkles"></i> Gerar Decupagem com IA
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="decupagem-loading" id="decupagemLoading" style="display:none;">
+          <div class="decupagem-spinner"></div>
+          <span>Analisando roteiro e gerando decupagem...</span>
+        </div>
+
+        <!-- Result Table -->
+        <div class="decupagem-result" id="decupagemResult" style="display:none;">
+          <div class="decupagem-result-toolbar">
+            <h3><i class="fas fa-table"></i> Ordem do Dia — Decupagem</h3>
+            <div class="decupagem-result-actions">
+              <button class="decupagem-action-btn" id="decupagemAddRow" title="Adicionar linha"><i class="fas fa-plus"></i> Linha</button>
+              <button class="decupagem-action-btn" id="decupagemExportDocs" title="Exportar para Google Docs"><i class="fab fa-google-drive"></i> Google Docs</button>
+              <button class="decupagem-action-btn" id="decupagemExportHTML" title="Baixar HTML"><i class="fas fa-download"></i> HTML</button>
+              <button class="decupagem-action-btn" id="decupagemCopyTable" title="Copiar tabela"><i class="fas fa-copy"></i> Copiar</button>
+            </div>
+          </div>
+
+          <!-- Header Info Preview -->
+          <div class="decupagem-header-preview" id="decupagemHeaderPreview"></div>
+
+          <!-- Editable Table -->
+          <div class="decupagem-table-wrap">
+            <table class="decupagem-table" id="decupagemTable">
+              <thead>
+                <tr>
+                  <th>N° Roteiro</th>
+                  <th>N° Cena</th>
+                  <th>Plano</th>
+                  <th>Ambiente / Cenario</th>
+                  <th>Objeto de Cena</th>
+                  <th>Tecnica</th>
+                  <th>Nivel 1</th>
+                  <th class="decupagem-col-actions"></th>
+                </tr>
+              </thead>
+              <tbody id="decupagemTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="decupagem-empty" id="decupagemEmpty">
+          <div class="empty-illustration">
+            <div class="empty-glow"></div>
+            <i class="fas fa-clapperboard"></i>
+          </div>
+          <h3>Decupagem de Ordem do Dia</h3>
+          <p>Suba um roteiro em PDF, preencha as informacoes e gere a decupagem automaticamente com IA</p>
         </div>
       </div>
     </div>

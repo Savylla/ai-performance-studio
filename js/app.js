@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initStoryboard();
   initImageToVideo();
   initTrash();
+  initDecupagem();
   initGoogleAuth();
 });
 
@@ -153,7 +154,7 @@ function switchTab(tab) {
   enhanceBtn.style.display = isGenTab ? '' : 'none';
   // Hide bottom bar for non-generation tabs
   const bottomBar = document.querySelector('.bottom-bar');
-  if (['gallery', 'history', 'storyboard', 'trash', 'folders', 'biblioteca'].includes(tab)) {
+  if (['gallery', 'history', 'storyboard', 'trash', 'folders', 'biblioteca', 'decupagem'].includes(tab)) {
     bottomBar.style.display = 'none';
   } else {
     bottomBar.style.display = '';
@@ -161,7 +162,7 @@ function switchTab(tab) {
   // Show/hide shared bottom row for generation tabs
   const sharedRow = document.getElementById('sharedBottomRow');
   if (sharedRow) {
-    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash', 'folders', 'biblioteca'].includes(tab) ? 'none' : '';
+    sharedRow.style.display = ['gallery', 'history', 'storyboard', 'trash', 'folders', 'biblioteca', 'decupagem'].includes(tab) ? 'none' : '';
   }
   // Render biblioteca when switching to it
   if (tab === 'biblioteca' && typeof renderBiblioteca === 'function') {
@@ -7622,4 +7623,640 @@ function openBibliotecaGalleryDetail(galleryItem, effectName) {
 function closeBibliotecaModal(overlay) {
   overlay.classList.remove('active');
   setTimeout(() => overlay.remove(), 250);
+}
+
+// ==================== DECUPAGEM - ORDEM DO DIA ====================
+
+let decupagemPdfText = '';
+let decupagemRows = [];
+
+function initDecupagem() {
+  const uploadArea = document.getElementById('decupagemUploadArea');
+  const fileInput = document.getElementById('decupagemFileInput');
+  const fileInfo = document.getElementById('decupagemFileInfo');
+  const fileRemove = document.getElementById('decupagemFileRemove');
+  const generateBtn = document.getElementById('decupagemGenerateBtn');
+  const togglePreview = document.getElementById('decupagemTogglePreview');
+  const addRowBtn = document.getElementById('decupagemAddRow');
+  const exportDocsBtn = document.getElementById('decupagemExportDocs');
+  const exportHTMLBtn = document.getElementById('decupagemExportHTML');
+  const copyTableBtn = document.getElementById('decupagemCopyTable');
+
+  if (!uploadArea) return;
+
+  // Upload click
+  uploadArea.addEventListener('click', () => fileInput.click());
+
+  // Drag and drop
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+  });
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('drag-over');
+  });
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      handleDecupagemPdf(file);
+    } else {
+      showToast('Selecione um arquivo PDF', 'error');
+    }
+  });
+
+  // File input change
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) {
+      handleDecupagemPdf(fileInput.files[0]);
+    }
+  });
+
+  // Remove file
+  fileRemove.addEventListener('click', () => {
+    decupagemPdfText = '';
+    fileInput.value = '';
+    fileInfo.style.display = 'none';
+    document.getElementById('decupagemExtractPreview').style.display = 'none';
+    uploadArea.style.display = '';
+  });
+
+  // Toggle extract preview
+  togglePreview.addEventListener('click', () => {
+    const textEl = document.getElementById('decupagemExtractText');
+    textEl.classList.toggle('collapsed');
+    togglePreview.querySelector('i').className = textEl.classList.contains('collapsed')
+      ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+  });
+
+  // Generate
+  generateBtn.addEventListener('click', generateDecupagem);
+
+  // Add row
+  addRowBtn.addEventListener('click', () => {
+    decupagemRows.push({ roteiro: '', cena: '', plano: '', ambiente: '', objeto: '', tecnica: '', nivel: '' });
+    renderDecupagemTable();
+  });
+
+  // Export Google Docs
+  exportDocsBtn.addEventListener('click', exportDecupagemToGoogleDocs);
+
+  // Export HTML
+  exportHTMLBtn.addEventListener('click', exportDecupagemHTML);
+
+  // Copy table
+  copyTableBtn.addEventListener('click', copyDecupagemTable);
+
+  // Set today's date
+  const dateInput = document.getElementById('decData');
+  if (dateInput) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+async function handleDecupagemPdf(file) {
+  const uploadArea = document.getElementById('decupagemUploadArea');
+  const fileInfo = document.getElementById('decupagemFileInfo');
+  const extractPreview = document.getElementById('decupagemExtractPreview');
+  const extractText = document.getElementById('decupagemExtractText');
+  const fileName = document.getElementById('decupagemFileName');
+  const pageCount = document.getElementById('decupagemPageCount');
+
+  uploadArea.style.display = 'none';
+  fileInfo.style.display = 'flex';
+  fileName.textContent = file.name;
+  pageCount.textContent = 'Extraindo...';
+
+  try {
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF.js nao carregou. Recarregue a pagina.');
+    }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    pageCount.textContent = `${pdf.numPages} pagina${pdf.numPages > 1 ? 's' : ''}`;
+
+    let fullText = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      fullText += `--- Pagina ${i} ---\n${pageText}\n\n`;
+    }
+
+    decupagemPdfText = fullText.trim();
+    extractText.textContent = decupagemPdfText.substring(0, 3000) + (decupagemPdfText.length > 3000 ? '\n\n[...texto truncado na preview]' : '');
+    extractText.classList.remove('collapsed');
+    extractPreview.style.display = '';
+
+    showToast(`PDF extraido: ${pdf.numPages} paginas`, 'success');
+  } catch (err) {
+    showToast('Erro ao extrair PDF: ' + err.message, 'error');
+    pageCount.textContent = 'Erro';
+    console.error('PDF extraction error:', err);
+  }
+}
+
+async function generateDecupagem() {
+  if (!decupagemPdfText) {
+    showToast('Suba um PDF de roteiro primeiro', 'error');
+    return;
+  }
+
+  const apiKey = getApiKey('gemini_api_key');
+  if (!apiKey) {
+    openApiKeyModal();
+    showToast('Configure sua API key do Gemini primeiro', 'error');
+    return;
+  }
+
+  const loading = document.getElementById('decupagemLoading');
+  const result = document.getElementById('decupagemResult');
+  const empty = document.getElementById('decupagemEmpty');
+  const generateBtn = document.getElementById('decupagemGenerateBtn');
+
+  loading.style.display = 'flex';
+  result.style.display = 'none';
+  empty.style.display = 'none';
+  generateBtn.disabled = true;
+
+  const cliente = document.getElementById('decCliente').value.trim();
+  const projeto = document.getElementById('decProjeto').value.trim();
+
+  const systemPrompt = `Voce e um assistente especializado em producao audiovisual brasileira. Sua unica funcao e analisar roteiros/copys e gerar decupagens precisas para Ordem do Dia de gravacao.
+
+REGRAS ABSOLUTAS:
+1. USE APENAS informacoes presentes no texto do roteiro fornecido. NAO invente NADA.
+2. NAO busque informacoes externas. NAO adicione cenas, dialogos ou acoes que nao existam no texto.
+3. Se uma informacao nao esta clara no roteiro, marque como "A DEFINIR" — nunca invente.
+4. Cada cena do roteiro deve gerar uma ou mais linhas na decupagem, conforme a quantidade de planos necessarios.
+5. Analise o texto como um profissional de producao: identifique mudancas de locacao, mudancas de acao, momentos que exigem planos diferentes.
+
+FORMATO DE SAIDA — JSON puro, sem markdown:
+[
+  {
+    "roteiro": "numero do roteiro ou identificador do video/conteudo",
+    "cena": "numero sequencial da cena",
+    "plano": "tipo de plano: PP (Primeiro Plano), PM (Plano Medio), PA (Plano Americano), PG (Plano Geral), PD (Plano Detalhe), Insert, POV, etc",
+    "ambiente": "descricao do cenario/locacao extraida do roteiro",
+    "objeto": "objetos de cena, props, produtos mencionados no roteiro",
+    "tecnica": "tecnica de filmagem sugerida: estatica, travelling, pan, tilt, dolly, drone, handcam, etc",
+    "nivel": "nivel de complexidade: simples, medio, complexo"
+  }
+]
+
+CRITERIOS PARA DEFINIR PLANOS:
+- Dialogo frontal para camera = PP ou PM
+- Acao com movimento = PA ou PG com movimento de camera
+- Mostrando produto/detalhe = PD (Plano Detalhe)
+- Transicao de ambiente = novo plano
+- Cada troca de acao significativa = novo plano
+
+${cliente ? `CLIENTE: ${cliente}` : ''}
+${projeto ? `PROJETO: ${projeto}` : ''}`;
+
+  const userPrompt = `Analise o roteiro abaixo e gere a decupagem completa. Retorne APENAS o JSON, sem explicacoes, sem markdown, sem texto antes ou depois:
+
+${decupagemPdfText}`;
+
+  try {
+    const fullPrompt = systemPrompt + '\n\n' + userPrompt;
+
+    // Use Gemini 2.5 Flash for longer context
+    const models = ['gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+    let responseText = null;
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: fullPrompt }] }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 65536 }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          if ([400, 401, 403].includes(response.status)) {
+            setApiKey('gemini_api_key', '');
+            openApiKeyModal();
+            throw new Error('API key invalida.');
+          }
+          if (response.status === 429) {
+            console.warn(`Quota exceeded for ${model}, trying next...`);
+            continue;
+          }
+          throw new Error(`Erro ${response.status}`);
+        }
+
+        const data = await response.json();
+        const candidate = data.candidates?.[0];
+        if (candidate?.content?.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.text) responseText = part.text.trim();
+          }
+        }
+        if (responseText) break;
+      } catch (err) {
+        if (err.message.includes('invalida')) throw err;
+        console.warn(`Decupagem: ${model} failed:`, err.message);
+        continue;
+      }
+    }
+
+    if (!responseText) {
+      throw new Error('Todos os modelos estao indisponiveis. Tente novamente.');
+    }
+
+    // Parse JSON from response (handle markdown code blocks)
+    let jsonStr = responseText;
+    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
+    const parsed = JSON.parse(jsonStr);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('A IA nao retornou dados de decupagem validos.');
+    }
+
+    decupagemRows = parsed.map(row => ({
+      roteiro: row.roteiro || '',
+      cena: row.cena || '',
+      plano: row.plano || '',
+      ambiente: row.ambiente || '',
+      objeto: row.objeto || '',
+      tecnica: row.tecnica || '',
+      nivel: row.nivel || ''
+    }));
+
+    renderDecupagemHeaderPreview();
+    renderDecupagemTable();
+
+    loading.style.display = 'none';
+    result.style.display = '';
+    showToast(`Decupagem gerada: ${decupagemRows.length} planos`, 'success');
+
+  } catch (err) {
+    loading.style.display = 'none';
+    empty.style.display = '';
+    showToast('Erro ao gerar decupagem: ' + err.message, 'error');
+    console.error('Decupagem generation error:', err);
+  } finally {
+    generateBtn.disabled = false;
+  }
+}
+
+function renderDecupagemHeaderPreview() {
+  const preview = document.getElementById('decupagemHeaderPreview');
+  const fields = [
+    ['Cliente', document.getElementById('decCliente').value || '—'],
+    ['Projeto', document.getElementById('decProjeto').value || '—'],
+    ['Criativos', document.getElementById('decCriativos').value || '—'],
+    ['Data', formatDecDate(document.getElementById('decData').value) || '—'],
+    ['Horario Inicio Gravacao', document.getElementById('decHoraInicio').value || '—'],
+    ['Horario Final Gravacao', document.getElementById('decHoraFim').value || '—'],
+    ['Horario Inicio Log', document.getElementById('decLogInicio').value || '—'],
+    ['Horario Final Log', document.getElementById('decLogFim').value || '—'],
+  ];
+
+  preview.innerHTML = fields.map(([label, value]) =>
+    `<div class="dec-info-item"><span class="dec-info-label">${escapeHtml(label)}:</span><span class="dec-info-value">${escapeHtml(value)}</span></div>`
+  ).join('');
+}
+
+function formatDecDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function renderDecupagemTable() {
+  const tbody = document.getElementById('decupagemTableBody');
+  tbody.innerHTML = decupagemRows.map((row, i) => `
+    <tr>
+      <td><input type="text" value="${escapeHtml(row.roteiro)}" data-row="${i}" data-field="roteiro"></td>
+      <td><input type="text" value="${escapeHtml(row.cena)}" data-row="${i}" data-field="cena" style="width:60px;"></td>
+      <td><input type="text" value="${escapeHtml(row.plano)}" data-row="${i}" data-field="plano" style="width:80px;"></td>
+      <td><textarea rows="2" data-row="${i}" data-field="ambiente">${escapeHtml(row.ambiente)}</textarea></td>
+      <td><textarea rows="2" data-row="${i}" data-field="objeto">${escapeHtml(row.objeto)}</textarea></td>
+      <td><input type="text" value="${escapeHtml(row.tecnica)}" data-row="${i}" data-field="tecnica" style="width:100px;"></td>
+      <td><input type="text" value="${escapeHtml(row.nivel)}" data-row="${i}" data-field="nivel" style="width:80px;"></td>
+      <td><button class="decupagem-row-delete" data-row="${i}" title="Remover"><i class="fas fa-trash-alt"></i></button></td>
+    </tr>
+  `).join('');
+
+  // Bind edits
+  tbody.querySelectorAll('input, textarea').forEach(el => {
+    el.addEventListener('input', () => {
+      const idx = parseInt(el.dataset.row);
+      const field = el.dataset.field;
+      if (decupagemRows[idx]) {
+        decupagemRows[idx][field] = el.value;
+      }
+    });
+  });
+
+  // Bind deletes
+  tbody.querySelectorAll('.decupagem-row-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.row);
+      decupagemRows.splice(idx, 1);
+      renderDecupagemTable();
+    });
+  });
+}
+
+function getDecupagemHeaderData() {
+  return {
+    cliente: document.getElementById('decCliente').value || '',
+    projeto: document.getElementById('decProjeto').value || '',
+    criativos: document.getElementById('decCriativos').value || '',
+    data: formatDecDate(document.getElementById('decData').value) || '',
+    horaInicio: document.getElementById('decHoraInicio').value || '',
+    horaFim: document.getElementById('decHoraFim').value || '',
+    logInicio: document.getElementById('decLogInicio').value || '',
+    logFim: document.getElementById('decLogFim').value || ''
+  };
+}
+
+function buildDecupagemHTML() {
+  const h = getDecupagemHeaderData();
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Ordem do Dia - ${escapeHtml(h.cliente)} - ${escapeHtml(h.projeto)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+    h1 { text-align: center; font-size: 18px; margin-bottom: 20px; }
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .header-table td { border: 1px solid #bbb; padding: 6px 10px; font-size: 13px; }
+    .header-table .label { background: #d8c4f0; font-weight: bold; width: 180px; }
+    .header-table .value { background: #f5f0ff; }
+    .dec-table { width: 100%; border-collapse: collapse; }
+    .dec-table th { background: #d8c4f0; border: 1px solid #bbb; padding: 8px 10px; font-size: 12px; text-align: left; font-weight: bold; }
+    .dec-table td { border: 1px solid #bbb; padding: 6px 10px; font-size: 12px; vertical-align: top; }
+    .dec-table tr:nth-child(even) { background: #faf8ff; }
+  </style>
+</head>
+<body>
+  <h1>ORDEM DO DIA — DECUPAGEM</h1>
+  <table class="header-table">
+    <tr><td class="label">CLIENTE:</td><td class="value">${escapeHtml(h.cliente)}</td><td class="label">Data:</td><td class="value">${escapeHtml(h.data)}</td></tr>
+    <tr><td class="label">PROJETO:</td><td class="value">${escapeHtml(h.projeto)}</td><td class="label">Horario Inicio - Gravacao:</td><td class="value">${escapeHtml(h.horaInicio)}</td></tr>
+    <tr><td class="label">CRIATIVOS:</td><td class="value">${escapeHtml(h.criativos)}</td><td class="label">Horario Final - Gravacao:</td><td class="value">${escapeHtml(h.horaFim)}</td></tr>
+    <tr><td class="label"></td><td class="value"></td><td class="label">Horario Inicio - Log.:</td><td class="value">${escapeHtml(h.logInicio)}</td></tr>
+    <tr><td class="label"></td><td class="value"></td><td class="label">Horario Final - Log.:</td><td class="value">${escapeHtml(h.logFim)}</td></tr>
+  </table>
+  <table class="dec-table">
+    <thead>
+      <tr>
+        <th>N° ROTEIRO</th><th>N° CENA</th><th>Plano</th><th>AMBIENTE / CENARIO</th><th>OBJETO DE CENA</th><th>TECNICA</th><th>Nivel 1</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${decupagemRows.map(r => `<tr>
+        <td>${escapeHtml(r.roteiro)}</td>
+        <td>${escapeHtml(r.cena)}</td>
+        <td>${escapeHtml(r.plano)}</td>
+        <td>${escapeHtml(r.ambiente)}</td>
+        <td>${escapeHtml(r.objeto)}</td>
+        <td>${escapeHtml(r.tecnica)}</td>
+        <td>${escapeHtml(r.nivel)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</body>
+</html>`;
+}
+
+function exportDecupagemHTML() {
+  if (decupagemRows.length === 0) {
+    showToast('Gere uma decupagem primeiro', 'error');
+    return;
+  }
+  const html = buildDecupagemHTML();
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const h = getDecupagemHeaderData();
+  a.href = url;
+  a.download = `ordem-do-dia-${h.cliente || 'decupagem'}-${h.data || 'sem-data'}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('HTML exportado com sucesso', 'success');
+}
+
+function copyDecupagemTable() {
+  if (decupagemRows.length === 0) {
+    showToast('Gere uma decupagem primeiro', 'error');
+    return;
+  }
+  const h = getDecupagemHeaderData();
+  let text = `ORDEM DO DIA — DECUPAGEM\n`;
+  text += `Cliente: ${h.cliente}\tProjeto: ${h.projeto}\tData: ${h.data}\n`;
+  text += `Criativos: ${h.criativos}\n`;
+  text += `Inicio Gravacao: ${h.horaInicio}\tFim Gravacao: ${h.horaFim}\n`;
+  text += `Inicio Log: ${h.logInicio}\tFim Log: ${h.logFim}\n\n`;
+  text += `N° ROTEIRO\tN° CENA\tPlano\tAMBIENTE / CENARIO\tOBJETO DE CENA\tTECNICA\tNivel 1\n`;
+  text += decupagemRows.map(r =>
+    `${r.roteiro}\t${r.cena}\t${r.plano}\t${r.ambiente}\t${r.objeto}\t${r.tecnica}\t${r.nivel}`
+  ).join('\n');
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Tabela copiada (cole no Google Docs ou Sheets)', 'success');
+  }).catch(() => {
+    showToast('Erro ao copiar', 'error');
+  });
+}
+
+async function exportDecupagemToGoogleDocs() {
+  if (decupagemRows.length === 0) {
+    showToast('Gere uma decupagem primeiro', 'error');
+    return;
+  }
+
+  // Check if user is logged in with Google
+  const savedUser = localStorage.getItem('google_user');
+  if (!savedUser) {
+    showToast('Faca login com Google primeiro para exportar ao Docs', 'error');
+    return;
+  }
+
+  const exportBtn = document.getElementById('decupagemExportDocs');
+  exportBtn.disabled = true;
+  exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+
+  try {
+    // Request Google Docs scope via OAuth2
+    const accessToken = await requestGoogleDocsToken();
+    if (!accessToken) {
+      throw new Error('Permissao negada para Google Docs');
+    }
+
+    const h = getDecupagemHeaderData();
+
+    // Step 1: Create a new Google Doc
+    const createRes = await fetch('https://docs.googleapis.com/v1/documents', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        title: `Ordem do Dia - ${h.cliente || 'Decupagem'} - ${h.projeto || ''} - ${h.data || new Date().toLocaleDateString('pt-BR')}`
+      })
+    });
+
+    if (!createRes.ok) {
+      const errData = await createRes.json().catch(() => ({}));
+      throw new Error(errData.error?.message || `Erro ao criar documento (${createRes.status})`);
+    }
+
+    const doc = await createRes.json();
+    const docId = doc.documentId;
+
+    // Step 2: Build batch update requests to populate the doc
+    const requests = [];
+    let idx = 1; // cursor position
+
+    // Title
+    const title = 'ORDEM DO DIA — DECUPAGEM\n\n';
+    requests.push({ insertText: { location: { index: idx }, text: title } });
+    idx += title.length;
+
+    // Header info
+    const headerLines = [
+      `CLIENTE: ${h.cliente}`,
+      `PROJETO: ${h.projeto}`,
+      `CRIATIVOS: ${h.criativos}`,
+      `Data: ${h.data}    Horario Inicio Gravacao: ${h.horaInicio}`,
+      `Horario Final Gravacao: ${h.horaFim}`,
+      `Horario Inicio Log: ${h.logInicio}    Horario Final Log: ${h.logFim}`,
+      ''
+    ].join('\n') + '\n';
+    requests.push({ insertText: { location: { index: idx }, text: headerLines } });
+    idx += headerLines.length;
+
+    // Insert table
+    const numRows = decupagemRows.length + 1; // +1 for header
+    const numCols = 7;
+    requests.push({
+      insertTable: {
+        rows: numRows,
+        columns: numCols,
+        location: { index: idx }
+      }
+    });
+
+    // We need to send the create request first, then populate the table
+    // Batch update with just structure first
+    await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ requests })
+    });
+
+    // Step 3: Re-read the doc to get table cell positions
+    const docRead = await fetch(`https://docs.googleapis.com/v1/documents/${docId}`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    const docData = await docRead.json();
+
+    // Find the table in the document
+    const table = docData.body.content.find(el => el.table);
+    if (table) {
+      const cellRequests = [];
+      const headers = ['N° ROTEIRO', 'N° CENA', 'Plano', 'AMBIENTE / CENARIO', 'OBJETO DE CENA', 'TECNICA', 'Nivel 1'];
+      const fields = ['roteiro', 'cena', 'plano', 'ambiente', 'objeto', 'tecnica', 'nivel'];
+
+      // Populate header row
+      for (let col = 0; col < numCols; col++) {
+        const cell = table.table.tableRows[0].tableCells[col];
+        const cellIdx = cell.content[0].paragraph.elements[0].startIndex;
+        cellRequests.push({
+          insertText: { location: { index: cellIdx }, text: headers[col] }
+        });
+      }
+
+      // Populate data rows (reverse order to maintain indices)
+      for (let row = decupagemRows.length; row >= 1; row--) {
+        const rowData = decupagemRows[row - 1];
+        for (let col = numCols - 1; col >= 0; col--) {
+          const cell = table.table.tableRows[row].tableCells[col];
+          const cellIdx = cell.content[0].paragraph.elements[0].startIndex;
+          const value = String(rowData[fields[col]] || '');
+          if (value) {
+            cellRequests.push({
+              insertText: { location: { index: cellIdx }, text: value }
+            });
+          }
+        }
+      }
+
+      if (cellRequests.length > 0) {
+        // Sort by index descending to avoid position shifts
+        cellRequests.sort((a, b) => b.insertText.location.index - a.insertText.location.index);
+
+        await fetch(`https://docs.googleapis.com/v1/documents/${docId}:batchUpdate`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ requests: cellRequests })
+        });
+      }
+    }
+
+    // Open the doc in a new tab
+    window.open(`https://docs.google.com/document/d/${docId}/edit`, '_blank');
+    showToast('Documento criado no Google Docs!', 'success');
+
+  } catch (err) {
+    console.error('Google Docs export error:', err);
+    // Fallback: copy as tab-separated for manual paste
+    showToast('Erro ao exportar: ' + err.message + '. Tente "Copiar" e cole manualmente no Docs.', 'error');
+  } finally {
+    exportBtn.disabled = false;
+    exportBtn.innerHTML = '<i class="fab fa-google-drive"></i> Google Docs';
+  }
+}
+
+function requestGoogleDocsToken() {
+  return new Promise((resolve) => {
+    try {
+      if (typeof google === 'undefined' || !google.accounts) {
+        resolve(null);
+        return;
+      }
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file',
+        callback: (response) => {
+          if (response.access_token) {
+            resolve(response.access_token);
+          } else {
+            resolve(null);
+          }
+        }
+      });
+      tokenClient.requestAccessToken();
+    } catch (e) {
+      console.error('Google Docs auth error:', e);
+      resolve(null);
+    }
+  });
 }

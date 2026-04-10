@@ -135,3 +135,446 @@
   0%, 100% { box-shadow: 0 0 0 2px var(--accent-glow); }
   50% { box-shadow: 0 0 0 4px var(--accent-glow); }
 }
+
+/* ==================== DECUPAGEM PAGE ==================== */
+.decupagem-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.decupagem-header-bar {
+  text-align: center;
+  padding: 8px 0;
+}
+.decupagem-header-bar h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.decupagem-header-bar h2 i {
+  color: var(--accent);
+  margin-right: 8px;
+}
+.decupagem-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Top Row: Upload + Form */
+.decupagem-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* Upload Card */
+.decupagem-upload-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.decupagem-upload-area {
+  border: 2px dashed var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.decupagem-upload-area:hover,
+.decupagem-upload-area.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.decupagem-upload-icon {
+  font-size: 2.5rem;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.decupagem-upload-text {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.decupagem-upload-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* File Info */
+.decupagem-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+.decupagem-file-info i {
+  color: var(--red);
+  font-size: 1.2rem;
+}
+.decupagem-file-info span:first-of-type {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.decupagem-file-info span:last-of-type {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+.decupagem-file-remove {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 0.9rem;
+  transition: color var(--transition);
+}
+.decupagem-file-remove:hover {
+  color: var(--red);
+}
+
+/* Extract Preview */
+.decupagem-extract-preview {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.decupagem-extract-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+.decupagem-extract-header i {
+  margin-right: 6px;
+  color: var(--accent);
+}
+.decupagem-toggle-preview {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color var(--transition);
+}
+.decupagem-toggle-preview:hover {
+  color: var(--text-primary);
+}
+.decupagem-extract-text {
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-family: 'Inter', monospace;
+}
+.decupagem-extract-text.collapsed {
+  display: none;
+}
+
+/* Form Card */
+.decupagem-form-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+.decupagem-form-card h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+.decupagem-form-card h3 i {
+  color: var(--accent);
+  margin-right: 8px;
+}
+.decupagem-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.decupagem-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.decupagem-field.full-width {
+  grid-column: 1 / -1;
+}
+.decupagem-field label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+.decupagem-field input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color var(--transition);
+}
+.decupagem-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.decupagem-field input[type="date"],
+.decupagem-field input[type="time"] {
+  color-scheme: dark;
+}
+
+/* Generate Button */
+.decupagem-generate-btn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px;
+  background: var(--accent-gradient);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity var(--transition), transform var(--transition);
+  font-family: inherit;
+}
+.decupagem-generate-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.decupagem-generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Loading */
+.decupagem-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 30px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.decupagem-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: dec-spin 0.8s linear infinite;
+}
+@keyframes dec-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Result Section */
+.decupagem-result {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.decupagem-result-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.decupagem-result-toolbar h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.decupagem-result-toolbar h3 i {
+  color: var(--accent);
+  margin-right: 8px;
+}
+.decupagem-result-actions {
+  display: flex;
+  gap: 8px;
+}
+.decupagem-action-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+.decupagem-action-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+/* Header Preview */
+.decupagem-header-preview {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 24px;
+  font-size: 0.82rem;
+}
+.decupagem-header-preview .dec-info-item {
+  display: flex;
+  gap: 8px;
+}
+.decupagem-header-preview .dec-info-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+  min-width: 140px;
+}
+.decupagem-header-preview .dec-info-value {
+  color: var(--text-primary);
+}
+
+/* Editable Table */
+.decupagem-table-wrap {
+  overflow-x: auto;
+}
+.decupagem-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+.decupagem-table thead th {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--accent);
+  position: sticky;
+  top: 0;
+}
+.decupagem-table tbody td {
+  padding: 2px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.decupagem-table tbody td input,
+.decupagem-table tbody td textarea {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color var(--transition), background var(--transition);
+}
+.decupagem-table tbody td input:focus,
+.decupagem-table tbody td textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-input);
+}
+.decupagem-table tbody td input:hover,
+.decupagem-table tbody td textarea:hover {
+  border-color: var(--border-light);
+}
+.decupagem-table tbody tr:hover {
+  background: var(--bg-card-hover);
+}
+.decupagem-col-actions {
+  width: 36px;
+}
+.decupagem-row-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 0.8rem;
+  transition: color var(--transition);
+}
+.decupagem-row-delete:hover {
+  color: var(--red);
+}
+
+/* Empty State */
+.decupagem-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+.decupagem-empty h3 {
+  margin-top: 16px;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+.decupagem-empty p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 8px;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .decupagem-top-row {
+    grid-template-columns: 1fr;
+  }
+  .decupagem-result-toolbar {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .decupagem-result-actions {
+    flex-wrap: wrap;
+  }
+  .decupagem-header-preview {
+    grid-template-columns: 1fr;
+  }
+}
