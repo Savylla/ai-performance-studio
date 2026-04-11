@@ -20,17 +20,30 @@ window.addEventListener('unhandledrejection', (e) => {
   if (typeof showToast === 'function') showToast('Erro inesperado. Tente novamente.', 'error');
   // Reset stuck loading states
   document.querySelectorAll('.loading').forEach(el => el.classList.remove('loading'));
-  const genBtn = document.getElementById('generateBtnMain');
+  const genBtn = cachedGenerateBtnMain || document.getElementById('generateBtnMain');
   if (genBtn && genBtn.disabled) { genBtn.disabled = false; genBtn.style.opacity = ''; }
 });
 
 window.addEventListener('error', (e) => {
   console.error('Uncaught error:', e.error);
+  if (typeof showToast === 'function') showToast('Erro inesperado. Tente novamente.', 'error');
+  document.querySelectorAll('.loading').forEach(el => el.classList.remove('loading'));
+  const genBtn = cachedGenerateBtnMain || document.getElementById('generateBtnMain');
+  if (genBtn && genBtn.disabled) { genBtn.disabled = false; genBtn.style.opacity = ''; }
 });
 
 let currentTab = 'image';
 let syncTimeout = null;
 let isGenerating = false;
+
+// Performance: track previous TTS blob URL to revoke before creating new ones
+let lastTTSBlobUrl = null;
+
+// Performance: cached DOM references for frequently accessed elements (populated in DOMContentLoaded)
+let cachedPromptInput = null;
+let cachedGenerateBtnMain = null;
+let cachedSyncStatus = null;
+let cachedBilingualArea = null;
 
 // === USER-SCOPED API KEY STORAGE ===
 const API_KEY_NAMES = [
@@ -74,6 +87,12 @@ function loadUserApiKeys() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Performance: cache frequently accessed DOM elements
+  cachedPromptInput = document.getElementById('promptInput');
+  cachedGenerateBtnMain = document.getElementById('generateBtnMain');
+  cachedSyncStatus = document.getElementById('syncStatus');
+  cachedBilingualArea = document.getElementById('bilingualArea');
+
   initTabs();
   initSidebar();
   initPrompt();
@@ -337,6 +356,21 @@ function initSidebar() {
 }
 
 // === PROMPT ===
+function updatePromptCharCount(len) {
+  const counter = document.getElementById('promptCharCount');
+  const hint = document.getElementById('promptHint');
+  if (!counter) return;
+  if (len === 0) {
+    counter.textContent = '';
+    if (hint) { hint.textContent = 'Dica: prompts detalhados geram resultados melhores'; hint.style.display = ''; }
+    counter.className = 'prompt-char-count';
+  } else {
+    counter.textContent = len + ' chars';
+    if (hint) hint.style.display = 'none';
+    counter.className = 'prompt-char-count' + (len > 1000 ? ' over' : len > 500 ? ' warn' : '');
+  }
+}
+
 function initPrompt() {
   const textarea = document.getElementById('promptInput');
   textarea.addEventListener('input', () => {
@@ -344,6 +378,8 @@ function initPrompt() {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
     }
+    // Update character count
+    updatePromptCharCount(textarea.value.length);
   });
 
   // Prompt resize handle - drag to expand
@@ -447,7 +483,7 @@ function initPrompt() {
           document.getElementById('promptPT').value = translated;
           document.getElementById('promptEN').value = mainText;
         }
-      } catch (e) { console.warn('Translation failed:', e); }
+      } catch (e) { console.warn('Translation failed:', e); showToast('Traducao falhou, tente novamente', 'error'); }
       langPT.disabled = false;
       langPT.textContent = 'PT';
     }
@@ -471,7 +507,7 @@ function initPrompt() {
           document.getElementById('promptEN').value = translated;
           document.getElementById('promptPT').value = mainText;
         }
-      } catch (e) { console.warn('Translation failed:', e); }
+      } catch (e) { console.warn('Translation failed:', e); showToast('Traducao falhou, tente novamente', 'error'); }
       langEN.disabled = false;
       langEN.textContent = 'EN';
     }
@@ -480,33 +516,29 @@ function initPrompt() {
   // PT textarea edit -> auto sync to EN only (never touch main prompt)
   document.getElementById('promptPT').addEventListener('input', () => {
     clearTimeout(syncTimeout);
-    const syncStatus = document.getElementById('syncStatus');
-    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando PT...';
-    syncStatus.className = 'bilingual-sync';
+    cachedSyncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando PT...';
+    cachedSyncStatus.className = 'bilingual-sync';
     syncTimeout = setTimeout(() => syncPTtoEN(), 3000);
   });
 
   // EN textarea edit -> auto sync to PT only (never touch main prompt)
   document.getElementById('promptEN').addEventListener('input', () => {
     clearTimeout(syncTimeout);
-    const syncStatus = document.getElementById('syncStatus');
-    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando EN...';
-    syncStatus.className = 'bilingual-sync';
+    cachedSyncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando EN...';
+    cachedSyncStatus.className = 'bilingual-sync';
     syncTimeout = setTimeout(() => syncENtoPT(), 3000);
   });
 
   // Prompt field edit -> mirror to active language field + translate other (no write-back)
   let promptSyncTimeout;
-  document.getElementById('promptInput').addEventListener('input', () => {
-    const biArea = document.getElementById('bilingualArea');
-    if (biArea.style.display === 'none' || biArea.classList.contains('collapsed')) return;
+  cachedPromptInput.addEventListener('input', () => {
+    if (cachedBilingualArea.style.display === 'none' || cachedBilingualArea.classList.contains('collapsed')) return;
     clearTimeout(promptSyncTimeout);
     clearTimeout(syncTimeout);
     const isPT = document.getElementById('langPT').classList.contains('active');
-    const promptText = document.getElementById('promptInput').value;
-    const syncStatus = document.getElementById('syncStatus');
-    syncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
-    syncStatus.className = 'bilingual-sync';
+    const promptText = cachedPromptInput.value;
+    cachedSyncStatus.innerHTML = '<i class="fas fa-pencil"></i> Editando...';
+    cachedSyncStatus.className = 'bilingual-sync';
     if (isPT) {
       document.getElementById('promptPT').value = promptText;
       promptSyncTimeout = setTimeout(() => syncPTtoEN(), 3000);
@@ -517,7 +549,7 @@ function initPrompt() {
   });
 
   // Sync status click -> retry translation
-  document.getElementById('syncStatus').addEventListener('click', () => {
+  cachedSyncStatus.addEventListener('click', () => {
     const isPT = document.getElementById('langPT').classList.contains('active');
     if (isPT) {
       syncPTtoEN();
@@ -530,18 +562,18 @@ function initPrompt() {
   document.getElementById('useEnglishBtn').addEventListener('click', () => {
     const enText = document.getElementById('promptEN').value.trim();
     if (enText) {
-      document.getElementById('promptInput').value = enText;
-      document.getElementById('promptInput').style.height = 'auto';
-      document.getElementById('promptInput').style.height = document.getElementById('promptInput').scrollHeight + 'px';
+      cachedPromptInput.value = enText;
+      cachedPromptInput.style.height = 'auto';
+      cachedPromptInput.style.height = cachedPromptInput.scrollHeight + 'px';
       showToast('Prompt EN aplicado!', 'success');
     }
     // Collapse the bilingual area
-    document.getElementById('bilingualArea').classList.add('collapsed');
+    cachedBilingualArea.classList.add('collapsed');
   });
 
   document.getElementById('closeBilingualBtn').addEventListener('click', () => {
-    document.getElementById('bilingualArea').style.display = 'none';
-    document.getElementById('bilingualArea').classList.remove('collapsed');
+    cachedBilingualArea.style.display = 'none';
+    cachedBilingualArea.classList.remove('collapsed');
   });
 
   // Drag handle for bilingual area - swipe/drag to resize or collapse/expand
@@ -795,13 +827,16 @@ async function callGemini(prompt) {
       );
 
       if (!response.ok) {
-        if ([400, 401, 403].includes(response.status)) {
+        if ([401, 403].includes(response.status)) {
           setApiKey('gemini_api_key', '');
           openApiKeyModal();
           throw new Error('API key invalida. Cole uma nova chave.');
         }
         const errorData = await response.json().catch(() => ({}));
         const errMsg = errorData.error?.message || '';
+        if (response.status === 400) {
+          throw new Error(errMsg || 'Erro no prompt (400). Tente reformular.');
+        }
         // If quota exceeded, try next model
         if (response.status === 429 || errMsg.toLowerCase().includes('quota')) {
           console.warn(`Quota exceeded for ${model}, trying next...`);
@@ -815,13 +850,13 @@ async function callGemini(prompt) {
       const candidate = data.candidates?.[0];
       if (candidate?.content?.parts) {
         for (const part of candidate.content.parts) {
-          if (part.text) text = part.text.trim();
+          if (part.text) text += part.text.trim();
         }
       }
       return text;
     } catch (err) {
-      // If it's an auth error, don't retry
-      if (err.message.includes('invalida')) throw err;
+      // If it's an auth error or prompt error, don't retry
+      if (err.message.includes('invalida') || err.message.includes('(400)')) throw err;
       console.warn(`callGemini failed with ${model}:`, err.message);
       continue;
     }
@@ -855,6 +890,7 @@ Original prompt: ${original}`;
     let result = null;
 
     // Provider 1: Pollinations
+    enhanceBtn.title = 'Tentando Pollinations...';
     try {
       result = await pollinationsText(enhanceInstruction, 'openai', { temperature: 0.4 });
     } catch (e) { console.warn('Enhance: Pollinations failed:', e.message); }
@@ -863,6 +899,7 @@ Original prompt: ${original}`;
     if (!result) {
       const geminiKey = getApiKey('gemini_api_key');
       if (geminiKey) {
+        enhanceBtn.title = 'Tentando Gemini...';
         try {
           result = await callGemini(enhanceInstruction);
         } catch (e) { console.warn('Enhance: Gemini failed:', e.message); }
@@ -873,6 +910,7 @@ Original prompt: ${original}`;
     if (!result) {
       const groqKey = getApiKey('groq_api_key');
       if (groqKey) {
+        enhanceBtn.title = 'Tentando Groq...';
         try {
           result = await groqText(enhanceInstruction, groqKey, 'llama-3.3-70b-versatile');
         } catch (e) { console.warn('Enhance: Groq failed:', e.message); }
@@ -883,13 +921,14 @@ Original prompt: ${original}`;
     if (!result) {
       const orKey = getApiKey('openrouter_api_key');
       if (orKey) {
+        enhanceBtn.title = 'Tentando OpenRouter...';
         try {
           result = await openRouterText(enhanceInstruction, orKey, 'google/gemini-2.0-flash-001');
         } catch (e) { console.warn('Enhance: OpenRouter failed:', e.message); }
       }
     }
 
-    if (!result) throw new Error('Nenhum provedor conseguiu melhorar o prompt. Tente novamente.');
+    if (!result) throw new Error('Nenhum provedor conseguiu melhorar o prompt. Verifique sua conexao e tente novamente.');
 
     let ptText = '', enText = '';
     const ptMatch = result.match(/---PT---\s*([\s\S]*?)\s*---EN---/);
@@ -912,6 +951,7 @@ Original prompt: ${original}`;
   } finally {
     enhanceBtn.innerHTML = '<i class="fas fa-magic"></i>';
     enhanceBtn.disabled = false;
+    enhanceBtn.title = 'Melhorar prompt com IA';
   }
 }
 
@@ -1029,7 +1069,7 @@ async function syncPTtoEN(autoRetry = 2) {
   const ptText = document.getElementById('promptPT').value.trim();
   if (!ptText) return;
   const currentRequest = ++syncRequestId;
-  const syncStatus = document.getElementById('syncStatus');
+  const syncStatus = cachedSyncStatus || document.getElementById('syncStatus');
   syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo PT→EN...';
   syncStatus.className = 'bilingual-sync syncing';
   for (let attempt = 0; attempt <= autoRetry; attempt++) {
@@ -1062,7 +1102,7 @@ async function syncENtoPT(autoRetry = 2) {
   const enText = document.getElementById('promptEN').value.trim();
   if (!enText) return;
   const currentRequest = ++syncRequestId;
-  const syncStatus = document.getElementById('syncStatus');
+  const syncStatus = cachedSyncStatus || document.getElementById('syncStatus');
   syncStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traduzindo EN→PT...';
   syncStatus.className = 'bilingual-sync syncing';
   for (let attempt = 0; attempt <= autoRetry; attempt++) {
@@ -1160,15 +1200,16 @@ async function startImageGeneration() {
 
     let imageResult = null;
 
+    let actualProvider = provider;
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
       if (!imageResult) {
         console.log('Pollinations failed, falling back to Stable Horde...');
         card.querySelector('.card-loading-state span').textContent = 'Pollinations falhou, tentando Stable Horde...';
-        imageResult = await generateWithStableHorde(prompt, w, h);
+        try { imageResult = await generateWithStableHorde(prompt, w, h); actualProvider = 'Stable Horde (fallback)'; } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
       }
     } else if (provider.startsWith('horde')) {
-      imageResult = await generateWithStableHorde(prompt, w, h);
+      try { imageResult = await generateWithStableHorde(prompt, w, h); } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
     } else if (provider.startsWith('together-')) {
       imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
     } else if (provider.startsWith('hf-')) {
@@ -1183,7 +1224,7 @@ async function startImageGeneration() {
       success++;
       const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
       card.classList.remove('loading');
-      const providerLabel = provider;
+      const providerLabel = actualProvider;
       card.innerHTML = `
         <img src="${imgSrc}" alt="Generated" crossorigin="anonymous">
         <div class="result-card-overlay">
@@ -1202,7 +1243,7 @@ async function startImageGeneration() {
       saveToHistory({ type: 'image', prompt, provider: providerLabel, status: 'success', detail: ratio });
     } else {
       card.classList.remove('loading');
-      card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle"></i><span>Erro - tente novamente</span></div>`;
+      card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle"></i><span>${escapeHtml(provider)} falhou</span><small style="color:var(--text-muted);font-size:0.72rem;">Tente outro provedor ou verifique sua API key</small></div>`;
       saveToHistory({ type: 'image', prompt, provider, status: 'error', detail: 'Falha na geracao' });
     }
 
@@ -1211,7 +1252,7 @@ async function startImageGeneration() {
 
   setButtonLoading('generateBtnMain', false, 'Gerar');
   if (success > 0) showToast(`${success} imagem(ns) gerada(s)!`, 'success');
-  else showToast('Erro ao gerar. Tente outro provedor.', 'error');
+  else showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
 }
 
 // --- Moodboard Image Generation ---
@@ -1244,11 +1285,14 @@ async function startMoodboardGeneration() {
   for (let i = 0; i < qty; i++) {
     let imageResult = null;
 
+    let actualProvider = provider;
     if (provider.startsWith('pollinations')) {
       imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
-      if (!imageResult) imageResult = await generateWithStableHorde(prompt, w, h);
+      if (!imageResult) {
+        try { imageResult = await generateWithStableHorde(prompt, w, h); actualProvider = 'Stable Horde (fallback)'; } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+      }
     } else if (provider.startsWith('horde')) {
-      imageResult = await generateWithStableHorde(prompt, w, h);
+      try { imageResult = await generateWithStableHorde(prompt, w, h); } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
     } else if (provider.startsWith('together-')) {
       imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
     } else if (provider.startsWith('hf-')) {
@@ -1262,7 +1306,7 @@ async function startMoodboardGeneration() {
     if (imageResult) {
       success++;
       const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
-      const providerLabel = provider;
+      const providerLabel = actualProvider;
       addImageToBoard(imgSrc, 'AI Generated (' + providerLabel + ')', null);
       // Save to gallery + history
       saveImageToGallery(imgSrc, prompt, providerLabel);
@@ -1274,7 +1318,7 @@ async function startMoodboardGeneration() {
 
   setButtonLoading('generateBtnMain', false, 'Gerar');
   if (success > 0) showToast(`${success} imagem(ns) adicionada(s) ao moodboard!`, 'success');
-  else showToast('Erro ao gerar. Tente outro provedor.', 'error');
+  else showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
 }
 
 // --- Pollinations Image ---
@@ -1308,67 +1352,62 @@ async function generateWithPollinations(prompt, provider, w, h, seed, variation)
 
 // --- Stable Horde Image (Free, no API key) ---
 async function generateWithStableHorde(prompt, w, h) {
-  try {
-    // Use 512x512 for anonymous — most compatible with available workers
-    const size = 512;
-    const submitRes = await fetch('https://stablehorde.net/api/v2/generate/async', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'AI-Performance-Studio:1.0' },
-      body: JSON.stringify({
-        prompt: prompt.substring(0, 500),
-        params: { width: size, height: size, steps: 20, sampler_name: 'k_euler', cfg_scale: 7 },
-        nsfw: true,
-        censor_nsfw: false,
-        trusted_workers: false,
-        r2: true
-      })
-    });
-    if (!submitRes.ok) {
-      const errBody = await submitRes.text().catch(() => '');
-      console.warn('Stable Horde submit failed:', submitRes.status, errBody);
-      return null;
-    }
-    const submitData = await submitRes.json();
-    const id = submitData.id;
-    if (!id) { console.warn('Stable Horde: no job id returned', submitData); return null; }
-    console.log('Stable Horde job submitted:', id);
-
-    // Poll for result (max 180s)
-    for (let i = 0; i < 60; i++) {
-      await delay(3000);
-      try {
-        const checkRes = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`, {
-          headers: { 'Client-Agent': 'AI-Performance-Studio:1.0' }
-        });
-        if (!checkRes.ok) { console.warn('Stable Horde check failed:', checkRes.status); continue; }
-        const status = await checkRes.json();
-        console.log(`Stable Horde poll ${i + 1}: done=${status.done}, wait=${status.wait_time}s, queue=${status.queue_position}`);
-        if (status.faulted) { console.warn('Stable Horde generation faulted'); return null; }
-        if (status.done && status.generations?.length > 0) {
-          const imgUrl = status.generations[0].img;
-          if (!imgUrl) continue;
-          // Fetch image and convert to blob URL to avoid CORS issues
-          try {
-            const imgRes = await fetch(imgUrl);
-            if (imgRes.ok) {
-              const blob = await imgRes.blob();
-              return { url: URL.createObjectURL(blob) };
-            }
-          } catch (e2) {
-            console.warn('Stable Horde image fetch failed, using direct URL');
-          }
-          return { url: imgUrl };
-        }
-      } catch (pollErr) {
-        console.warn('Stable Horde poll error:', pollErr);
-      }
-    }
-    console.warn('Stable Horde timeout after 180s');
-    return null;
-  } catch (e) {
-    console.warn('Stable Horde error:', e);
-    return null;
+  // Use 512x512 for anonymous — most compatible with available workers
+  const size = 512;
+  const submitRes = await fetch('https://stablehorde.net/api/v2/generate/async', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': '0000000000', 'Client-Agent': 'AI-Performance-Studio:1.0' },
+    body: JSON.stringify({
+      prompt: prompt.substring(0, 500),
+      params: { width: size, height: size, steps: 20, sampler_name: 'k_euler', cfg_scale: 7 },
+      nsfw: true,
+      censor_nsfw: false,
+      trusted_workers: false,
+      r2: true
+    })
+  });
+  if (!submitRes.ok) {
+    const errBody = await submitRes.text().catch(() => '');
+    throw new Error(`Stable Horde: falha ao enviar job (HTTP ${submitRes.status}${errBody ? ' - ' + errBody.substring(0, 100) : ''})`);
   }
+  const submitData = await submitRes.json();
+  const id = submitData.id;
+  if (!id) throw new Error('Stable Horde: servidor nao retornou ID do job');
+  console.log('Stable Horde job submitted:', id);
+
+  // Poll for result (max 180s)
+  for (let i = 0; i < 60; i++) {
+    await delay(3000);
+    try {
+      const checkRes = await fetch(`https://stablehorde.net/api/v2/generate/status/${id}`, {
+        headers: { 'Client-Agent': 'AI-Performance-Studio:1.0' }
+      });
+      if (!checkRes.ok) { console.warn('Stable Horde check failed:', checkRes.status); continue; }
+      const status = await checkRes.json();
+      console.log(`Stable Horde poll ${i + 1}: done=${status.done}, wait=${status.wait_time}s, queue=${status.queue_position}`);
+      if (status.faulted) throw new Error('Stable Horde: geracao falhou no servidor (faulted)');
+      if (status.done && status.generations?.length > 0) {
+        const imgUrl = status.generations[0].img;
+        if (!imgUrl) continue;
+        // Fetch image and convert to blob URL to avoid CORS issues
+        try {
+          const imgRes = await fetch(imgUrl);
+          if (imgRes.ok) {
+            const blob = await imgRes.blob();
+            return { url: URL.createObjectURL(blob) };
+          }
+        } catch (e2) {
+          console.warn('Stable Horde image fetch failed, using direct URL');
+        }
+        return { url: imgUrl };
+      }
+    } catch (pollErr) {
+      // Re-throw descriptive errors, only swallow transient poll network hiccups
+      if (pollErr.message?.startsWith('Stable Horde:')) throw pollErr;
+      console.warn('Stable Horde poll error:', pollErr);
+    }
+  }
+  throw new Error('Stable Horde: tempo limite excedido (180s) - servidores ocupados, tente novamente');
 }
 
 // --- Gemini Image ---
@@ -1439,6 +1478,8 @@ async function generateWithTogether(prompt, provider, w, h, seed, variation) {
   const model = TOGETHER_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-schnell-Free';
   const steps = model.includes('schnell') ? 4 : 20;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const response = await fetch('https://api.together.xyz/v1/images/generations', {
       method: 'POST',
@@ -1455,8 +1496,10 @@ async function generateWithTogether(prompt, provider, w, h, seed, variation) {
         n: 1,
         seed: seed ? parseInt(seed) + variation : undefined,
         response_format: 'b64_json'
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
@@ -1468,6 +1511,8 @@ async function generateWithTogether(prompt, provider, w, h, seed, variation) {
     if (b64) return { base64: b64, mimeType: 'image/png' };
     return null;
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') { console.warn('Together AI: timeout after 30s'); return null; }
     console.warn('Together AI error:', e);
     return null;
   }
@@ -1488,6 +1533,8 @@ async function generateWithHuggingFace(prompt, provider, w, h) {
   if (!apiKey) return null;
   const model = HF_IMAGE_MODELS[provider] || 'black-forest-labs/FLUX.1-dev';
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
     const response = await fetch(`https://router.huggingface.co/hf-inference/models/${model}`, {
       method: 'POST',
@@ -1498,8 +1545,10 @@ async function generateWithHuggingFace(prompt, provider, w, h) {
       body: JSON.stringify({
         inputs: prompt,
         parameters: { width: w, height: h }
-      })
+      }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
@@ -1510,6 +1559,8 @@ async function generateWithHuggingFace(prompt, provider, w, h) {
     const url = URL.createObjectURL(blob);
     return { url };
   } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') { console.warn('HuggingFace: timeout after 30s'); return null; }
     console.warn('HuggingFace error:', e);
     return null;
   }
@@ -1978,24 +2029,34 @@ function showTikTokImporter() {
 
 // --- Groq Text ---
 async function groqText(prompt, apiKey, model) {
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: model || 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8
-    })
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: model || 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('Groq: tempo limite excedido (30s)');
+    throw e;
   }
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 // =============================================
@@ -2074,6 +2135,7 @@ async function generateVideoHuggingFace(prompt, model, modelName) {
     saveToHistory({ type: 'video', prompt, provider: `HuggingFace ${modelName}`, status: 'success' });
   } catch (e) {
     showToast('Erro ao gerar video: ' + e.message, 'error');
+    saveToHistory({ type: 'video', prompt, provider: modelName, status: 'error', detail: e.message });
   }
 }
 
@@ -2674,7 +2736,10 @@ async function pollinationsTTS(text) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
   const blob = await response.blob();
+  // Performance: revoke previous TTS blob URL to prevent memory leak
+  if (lastTTSBlobUrl) { try { URL.revokeObjectURL(lastTTSBlobUrl); } catch(e) {} }
   const audioUrl = URL.createObjectURL(blob);
+  lastTTSBlobUrl = audioUrl;
 
   const playerArea = document.getElementById('ttsPlayerArea');
   playerArea.style.display = 'block';
@@ -2726,7 +2791,10 @@ async function huggingFaceTTS(text, model) {
   }
 
   const blob = await response.blob();
+  // Performance: revoke previous TTS blob URL to prevent memory leak
+  if (lastTTSBlobUrl) { try { URL.revokeObjectURL(lastTTSBlobUrl); } catch(e) {} }
   const audioUrl = URL.createObjectURL(blob);
+  lastTTSBlobUrl = audioUrl;
 
   const playerArea = document.getElementById('ttsPlayerArea');
   playerArea.style.display = 'block';
@@ -2812,7 +2880,7 @@ function browserSTT() {
     document.getElementById('transcriptionResult').style.display = 'block';
     document.querySelector('#audioTranscribe .audio-empty-state').style.display = 'none';
     document.getElementById('transcriptionText').innerHTML =
-      finalTranscript + '<span style="color: var(--text-muted);">' + interim + '</span>';
+      escapeHtml(finalTranscript) + '<span style="color: var(--text-muted);">' + escapeHtml(interim) + '</span>';
   };
 
   speechRecognition.onerror = (e) => {
@@ -2859,10 +2927,21 @@ async function pollinationsSTT() {
 
     mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
 
+    mediaRecorder.onerror = (e) => {
+      stream.getTracks().forEach(t => t.stop());
+      isRecording = false;
+      recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+      recordBtn.classList.remove('recording');
+      showToast('Erro na gravacao de audio: ' + (e.error?.message || 'erro desconhecido'), 'error');
+    };
+
     mediaRecorder.onstop = async () => {
       stream.getTracks().forEach(t => t.stop());
       const blob = new Blob(chunks, { type: 'audio/webm' });
       const reader = new FileReader();
+      reader.onerror = () => {
+        showToast('Erro ao processar audio gravado', 'error');
+      };
       reader.onloadend = async () => {
         const base64 = reader.result.split(',')[1];
         try {
@@ -2880,6 +2959,7 @@ async function pollinationsSTT() {
               }]
             })
           });
+          if (!response.ok) throw new Error(`Erro na API de transcricao (${response.status})`);
           const data = await response.json();
           const text = data.choices?.[0]?.message?.content || 'Nenhum texto detectado';
           document.getElementById('transcriptionResult').style.display = 'block';
@@ -2911,6 +2991,9 @@ async function pollinationsSTT() {
     // Store mediaRecorder reference for stop control
     recordBtn._activeRecorder = mediaRecorder;
   } catch (e) {
+    isRecording = false;
+    recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+    recordBtn.classList.remove('recording');
     showToast('Erro ao acessar microfone: ' + e.message, 'error');
   }
 }
@@ -2943,6 +3026,14 @@ async function huggingFaceSTT() {
     const chunks = [];
 
     mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+
+    mediaRecorder.onerror = (e) => {
+      stream.getTracks().forEach(t => t.stop());
+      isRecording = false;
+      recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+      recordBtn.classList.remove('recording');
+      showToast('Erro na gravacao de audio: ' + (e.error?.message || 'erro desconhecido'), 'error');
+    };
 
     mediaRecorder.onstop = async () => {
       stream.getTracks().forEach(t => t.stop());
@@ -2990,14 +3081,20 @@ async function huggingFaceSTT() {
     // Store mediaRecorder reference for stop control
     recordBtn._activeRecorder = mediaRecorder;
   } catch (e) {
+    isRecording = false;
+    recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
+    recordBtn.classList.remove('recording');
     showToast('Erro ao acessar microfone: ' + e.message, 'error');
   }
 }
 
 function copyTranscription() {
   const text = document.getElementById('transcriptionText').textContent;
-  navigator.clipboard.writeText(text);
-  showToast('Texto copiado!', 'success');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Texto copiado!', 'success');
+  }).catch(() => {
+    showToast('Erro ao copiar texto', 'error');
+  });
 }
 
 // =============================================
@@ -3084,6 +3181,9 @@ async function startTextGeneration() {
       const cfg = OPENROUTER_TEXT_MODELS[provider];
       result = await openRouterText(prompt, key, cfg.model);
       providerName = cfg.name;
+    } else {
+      showToast('Provedor nao reconhecido: ' + escapeHtml(provider), 'error');
+      return;
     }
 
     if (result) {
@@ -3123,12 +3223,15 @@ async function callGeminiModel(prompt, model) {
   );
 
   if (!response.ok) {
-    if ([400, 401, 403].includes(response.status)) {
+    if ([401, 403].includes(response.status)) {
       setApiKey('gemini_api_key', '');
       openApiKeyModal();
       throw new Error('API key invalida. Cole uma nova chave.');
     }
     const errorData = await response.json().catch(() => ({}));
+    if (response.status === 400) {
+      throw new Error(errorData.error?.message || 'Erro no prompt (400). Tente reformular.');
+    }
     throw new Error(errorData.error?.message || `Erro ${response.status}`);
   }
 
@@ -3137,7 +3240,7 @@ async function callGeminiModel(prompt, model) {
   const candidate = data.candidates?.[0];
   if (candidate?.content?.parts) {
     for (const part of candidate.content.parts) {
-      if (part.text) text = part.text.trim();
+      if (part.text) text += part.text.trim();
     }
   }
   return text;
@@ -3196,31 +3299,44 @@ async function pollinationsText(prompt, model, options = {}) {
 }
 
 async function openRouterText(prompt, apiKey, model) {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': window.location.href,
-      'X-Title': 'AI Performance Studio'
-    },
-    body: JSON.stringify({
-      model: model || 'openrouter/auto',
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'AI Performance Studio'
+      },
+      body: JSON.stringify({
+        model: model || 'openrouter/auto',
+        messages: [{ role: 'user', content: prompt }]
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || '';
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e.name === 'AbortError') throw new Error('OpenRouter: tempo limite excedido (30s)');
+    throw e;
   }
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 function copyTextResult() {
   const text = document.getElementById('textResultContent').textContent;
-  navigator.clipboard.writeText(text);
-  showToast('Texto copiado!', 'success');
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('Texto copiado!', 'success');
+  }).catch(() => {
+    showToast('Erro ao copiar texto', 'error');
+  });
 }
 
 function addTextToMoodboard() {
@@ -3555,6 +3671,8 @@ function addToStoryboard(imageUrl, caption) {
 }
 
 function removeSbPanel(card) {
+  // Performance: revoke any blob URLs in this panel before removing from DOM
+  revokeBlobUrls(card);
   card.remove();
   // Renumber remaining panels
   const grid = document.getElementById('storyboardGrid');
@@ -3607,7 +3725,7 @@ function initLightbox() {
   const lightbox = document.getElementById('lightbox');
   lightbox.querySelector('.lightbox-backdrop').addEventListener('click', closeLightbox);
   lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+  // Escape handled by initKeyboardShortcuts
 }
 
 function openLightbox(src, prompt, ratio, type) {
@@ -4013,13 +4131,7 @@ function closeApiKeyModal() {
   updateApiKeyStatus();
 }
 
-// Close API key modal on Escape
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    const modal = document.getElementById('apiKeyModal');
-    if (modal && modal.classList.contains('open')) closeApiKeyModal();
-  }
-});
+// Escape handled by initKeyboardShortcuts
 
 function updateApiKeyStatus() {
   const providers = {
@@ -4053,6 +4165,9 @@ function showToast(message, type = 'success') {
   }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
+  toast.setAttribute('role', 'alert');
+  toast.setAttribute('aria-live', 'assertive');
+  toast.setAttribute('aria-atomic', 'true');
   const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
   toast.innerHTML = `<i class="fas ${icon}"></i> <span>${escapeHtml(message)}</span>`;
   container.appendChild(toast);
@@ -4078,7 +4193,13 @@ const GOOGLE_FONTS_TOP = [
 function initMoodboard() {
   // Load saved board
   const saved = localStorage.getItem('moodboard_items');
-  if (saved) { try { moodboardItems = JSON.parse(saved); } catch(e) {} }
+  if (saved) {
+    try { moodboardItems = JSON.parse(saved); }
+    catch(e) {
+      console.error('Moodboard data corrupted:', e);
+      showToast('Erro ao carregar moodboard salvo. Dados podem estar corrompidos.', 'error');
+    }
+  }
   renderMoodboard();
 
   // Source selector
@@ -4446,7 +4567,12 @@ function removeFromBoard(id) {
 }
 
 function saveMoodboard() {
-  localStorage.setItem('moodboard_items', JSON.stringify(moodboardItems));
+  try {
+    localStorage.setItem('moodboard_items', JSON.stringify(moodboardItems));
+  } catch (e) {
+    console.error('Moodboard save failed (storage quota?):', e);
+    showToast('Erro ao salvar moodboard: armazenamento cheio. Libere espaco.', 'error');
+  }
 }
 
 function renderMoodboard() {
@@ -4535,13 +4661,16 @@ function renderMoodboard() {
         <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
       `;
     } else if (item.type === 'font') {
-      // Load the font
-      const link = document.createElement('link');
-      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(item.fontName)}&display=swap`;
-      link.rel = 'stylesheet';
-      document.head.appendChild(link);
+      // Load the font (deduplicate)
+      const fontHref = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(item.fontName)}&display=swap`;
+      if (!document.querySelector(`link[href="${fontHref}"]`)) {
+        const link = document.createElement('link');
+        link.href = fontHref;
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
       const safeFontName = escapeHtml(item.fontName);
-      const safeFontStyle = item.fontName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const safeFontStyle = item.fontName.replace(/[^a-zA-Z0-9 \-]/g, '');
       el.innerHTML = `
         <div class="moodboard-font-preview" style="font-family:'${safeFontStyle}',sans-serif;">
           <span class="moodboard-font-name">${safeFontName}</span>
@@ -4681,7 +4810,10 @@ function initGoogleAuth() {
     try {
       const user = JSON.parse(savedUser);
       updateUserUI(user);
-    } catch(e) {}
+    } catch(e) {
+      console.error('Saved user data corrupted:', e);
+      localStorage.removeItem('google_user');
+    }
   }
 
   // Login button
@@ -4698,7 +4830,12 @@ function initGoogleAuth() {
     e.stopPropagation();
     const savedUser = localStorage.getItem('google_user');
     if (savedUser) {
-      const user = JSON.parse(savedUser);
+      let user;
+      try { user = JSON.parse(savedUser); } catch(e) {
+        localStorage.removeItem('google_user');
+        showToast('Dados de sessao corrompidos. Faca login novamente.', 'error');
+        return;
+      }
       if (confirm(`Logado como ${user.name}\n${user.email}\n\nDeseja sair?`)) {
         googleLogout();
       }
@@ -4748,7 +4885,14 @@ function startGoogleLogin(clientId) {
 
 function handleGoogleCredential(response) {
   // Decode JWT token
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  let payload;
+  try {
+    payload = JSON.parse(atob(response.credential.split('.')[1]));
+  } catch(e) {
+    console.error('Failed to decode Google credential:', e);
+    showToast('Erro ao processar credencial do Google.', 'error');
+    return;
+  }
   const user = {
     name: payload.name,
     email: payload.email,
@@ -4766,7 +4910,9 @@ async function fetchGoogleUserInfo(accessToken) {
     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
+    if (!res.ok) throw new Error(`Falha ao obter dados do Google (${res.status})`);
     const data = await res.json();
+    if (!data.sub) throw new Error('Dados incompletos do Google');
     const user = {
       name: data.name,
       email: data.email,
@@ -5002,7 +5148,7 @@ async function saveImageToGallery(blobOrUrl, prompt, provider) {
       data = await resp.blob();
     }
     await saveToGallery({ type: 'image', prompt, provider, data, mimeType: data.type });
-  } catch (e) { console.warn('Gallery save failed:', e); }
+  } catch (e) { console.warn('Gallery save failed:', e); showToast('Aviso: nao foi possivel salvar na galeria', 'error'); }
 }
 
 async function saveVideoToGallery(urlOrBlob, prompt, provider) {
@@ -5016,19 +5162,19 @@ async function saveVideoToGallery(urlOrBlob, prompt, provider) {
       return;
     }
     await saveToGallery({ type: 'video', prompt, provider, data, mimeType: data.type });
-  } catch (e) { console.warn('Gallery save failed:', e); }
+  } catch (e) { console.warn('Gallery save failed:', e); showToast('Aviso: nao foi possivel salvar video na galeria', 'error'); }
 }
 
 async function saveAudioToGallery(blob, prompt, provider) {
   try {
     await saveToGallery({ type: 'audio', prompt, provider, data: blob, mimeType: blob.type });
-  } catch (e) { console.warn('Gallery save failed:', e); }
+  } catch (e) { console.warn('Gallery save failed:', e); showToast('Aviso: nao foi possivel salvar audio na galeria', 'error'); }
 }
 
 async function saveTextToGallery(text, prompt, provider) {
   try {
     await saveToGallery({ type: 'text', prompt, provider, data: text, mimeType: 'text/plain' });
-  } catch (e) { console.warn('Gallery save failed:', e); }
+  } catch (e) { console.warn('Gallery save failed:', e); showToast('Aviso: nao foi possivel salvar texto na galeria', 'error'); }
 }
 
 // === GALLERY UI ===
@@ -5230,6 +5376,9 @@ async function renderGallery() {
     });
   } catch (e) {
     console.error('Gallery render error:', e);
+    if (grid) { grid.style.display = 'none'; }
+    if (empty) { empty.style.display = ''; }
+    showToast('Erro ao carregar galeria', 'error');
   }
 }
 
@@ -5561,7 +5710,10 @@ async function saveToHistory(entry) {
     const tx = db.transaction(HISTORY_STORE, 'readwrite');
     entry.timestamp = Date.now();
     tx.objectStore(HISTORY_STORE).add(entry);
-  } catch (e) { console.warn('History save failed:', e); }
+  } catch (e) {
+    console.warn('History save failed:', e);
+    showToast('Erro ao salvar no historico', 'error');
+  }
 }
 
 async function getHistoryItems(type) {
@@ -5775,12 +5927,16 @@ async function renderHistory() {
     });
   } catch (e) {
     console.error('History render error:', e);
+    showToast('Erro ao carregar historico', 'error');
   }
 }
 
 // Init gallery + history on load
 document.addEventListener('DOMContentLoaded', () => {
-  openGalleryDB().catch(e => console.warn('IndexedDB init:', e));
+  openGalleryDB().catch(e => {
+    console.error('IndexedDB init failed:', e);
+    showToast('Erro ao inicializar armazenamento local. Galeria e historico podem nao funcionar.', 'error');
+  });
   initGallery();
   initHistory();
   initFolderSystem();
@@ -5800,11 +5956,20 @@ const FOLDER_MAP_PREFIX = 'folder_map_';
 function getFolders() {
   try {
     return JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]');
-  } catch { return []; }
+  } catch(e) {
+    console.error('Folders data corrupted:', e);
+    showToast('Erro ao carregar pastas. Dados podem estar corrompidos.', 'error');
+    return [];
+  }
 }
 
 function saveAllFolders(folders) {
-  localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+  try {
+    localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+  } catch (e) {
+    console.error('Folder save failed (storage quota?):', e);
+    showToast('Erro ao salvar pastas: armazenamento cheio.', 'error');
+  }
 }
 
 function createFolder(page, name, color, parentId) {
@@ -5878,7 +6043,12 @@ function getFolderMap(page) {
 }
 
 function saveFolderMap(page, map) {
-  localStorage.setItem(FOLDER_MAP_PREFIX + page, JSON.stringify(map));
+  try {
+    localStorage.setItem(FOLDER_MAP_PREFIX + page, JSON.stringify(map));
+  } catch (e) {
+    console.error('Folder map save failed (storage quota?):', e);
+    showToast('Erro ao salvar mapeamento de pastas: armazenamento cheio.', 'error');
+  }
 }
 
 function setItemFolder(page, itemId, folderId) {
@@ -6324,6 +6494,9 @@ let foldersPageViewMode = 'grid'; // 'grid' or 'list'
 
 function initFoldersPage() {
   document.getElementById('foldersPageNewBtn')?.addEventListener('click', () => {
+    openFolderModal('gallery');
+  });
+  document.getElementById('foldersEmptyNewBtn')?.addEventListener('click', () => {
     openFolderModal('gallery');
   });
   document.getElementById('foldersViewGrid')?.addEventListener('click', () => {
@@ -6946,7 +7119,13 @@ function saveCurrentStoryboard() {
 
   const saved = getSavedStoryboards();
   saved.unshift(storyboardData);
-  localStorage.setItem('saved_storyboards', JSON.stringify(saved));
+  try {
+    localStorage.setItem('saved_storyboards', JSON.stringify(saved));
+  } catch (e) {
+    console.error('Storyboard save failed (storage quota?):', e);
+    showToast('Erro ao salvar storyboard: armazenamento cheio. Libere espaco na galeria.', 'error');
+    return;
+  }
 
   renderSavedStoryboards();
   renderFolderChips('storyboard');
@@ -8039,7 +8218,7 @@ Retorne APENAS o JSON array. Sem markdown, sem explicacoes, sem texto antes ou d
 ${decupagemPdfText}`;
 
   try {
-    let responseText = null;
+    let responseText = '';
     let providerUsed = '';
 
     // === CASCATA DE PROVIDERS GRATUITOS (sem depender de API key) ===
@@ -8190,7 +8369,7 @@ ${decupagemPdfText}`;
             if (candidate?.finishReason === 'SAFETY' || data.promptFeedback?.blockReason) continue;
             if (candidate?.content?.parts) {
               for (const part of candidate.content.parts) {
-                if (part.text) responseText = part.text.trim();
+                if (part.text) responseText += part.text.trim();
               }
             }
             if (responseText) providerUsed = `Gemini ${model}`;
@@ -8567,6 +8746,7 @@ async function exportDecupagemToGoogleDocs() {
         });
         if (!cellRes.ok) {
           console.warn('Erro ao preencher celulas da tabela:', cellRes.status);
+          showToast('Documento criado, mas houve erro ao preencher a tabela.', 'error');
         }
       }
     }

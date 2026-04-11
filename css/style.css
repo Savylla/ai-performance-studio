@@ -588,6 +588,61 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.88rem;
 }
 
+/* Empty state action button */
+.empty-state-action {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background var(--transition), transform var(--transition);
+}
+.empty-state-action:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+.empty-state-action:active {
+  transform: translateY(0);
+}
+
+/* Prompt hint row */
+.prompt-hint-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 16px 0;
+  min-height: 18px;
+}
+.prompt-hint {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  opacity: 0.7;
+  transition: opacity var(--transition);
+}
+.prompt-hint-row:hover .prompt-hint {
+  opacity: 1;
+}
+.prompt-char-count {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+  text-align: right;
+}
+.prompt-char-count.warn {
+  color: var(--yellow, #f59e0b);
+}
+.prompt-char-count.over {
+  color: var(--red);
+}
+
 /* Loading */
 .display-loading {
   text-align: center;
@@ -1895,6 +1950,7 @@ h1, h2, h3, h4, h5, h6 {
   gap: 8px;
   font-size: 0.82rem;
   animation: toast-in 300ms ease forwards;
+  will-change: transform, opacity;
 }
 
 .toast.success { border-color: var(--green); }
@@ -4141,6 +4197,7 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.15s ease;
+  will-change: opacity;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -5089,6 +5146,7 @@ h1, h2, h3, h4, h5, h6 {
   position: fixed; inset: 0; background: rgba(0,0,0,0.85);
   z-index: 9999; display: flex; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  will-change: opacity;
 }
 .biblioteca-modal-overlay.active { opacity: 1; pointer-events: auto; }
 .biblioteca-modal {

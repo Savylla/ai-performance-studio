@@ -209,3 +209,30 @@
     padding: 8px 6px;
   }
 }
+
+/* === TOUCH TARGETS & ACCESSIBILITY === */
+@media (hover: none) {
+  .btn-icon,
+  .topbar-link,
+  .provider-group-btn,
+  .ratio-pill,
+  .qty-pill,
+  .generate-main,
+  .gallery-card-action,
+  .moodboard-item-remove,
+  .decupagem-action-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* === PRINT STYLESHEET === */
+@media print {
+  .topbar, .bottom-bar, .sidebar, .topbar-actions,
+  .generate-main, .provider-pills, .settings-row,
+  .lightbox, #apiKeyModal, #onboardingBanner { display: none !important; }
+  .main-content { margin: 0; padding: 0; }
+  .tab-content { padding: 10px; }
+  body { background: white; color: black; }
+  .results-masonry { grid-template-columns: repeat(2, 1fr); }
+}

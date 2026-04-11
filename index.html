@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src *; worker-src blob:;">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src 'self' https://generativelanguage.googleapis.com https://text.pollinations.ai https://image.pollinations.ai https://api.groq.com https://openrouter.ai https://api.together.xyz https://router.huggingface.co https://stablehorde.net https://api.pexels.com https://pixabay.com https://api.unsplash.com https://api.openverse.org https://freesound.org https://www.thecolorapi.com https://fonts.googleapis.com https://fonts.gstatic.com https://accounts.google.com https://www.googleapis.com https://docs.googleapis.com https://docs.google.com https://api.dicebear.com https://higgsfield.ai https://platform.higgsfield.ai https://api.higgsfield.ai https://cloud.higgsfield.ai https://app.higgsfield.ai https://ads.tiktok.com https://static.higgsfield.ai https://cdn.higgsfield.ai; worker-src blob:;">
   <meta name="description" content="Gere imagens, vídeos, áudio e texto com IA gratuitamente. Múltiplos provedores, moodboard, storyboard e mais.">
   <meta property="og:title" content="AI Performance Studio">
   <meta property="og:description" content="Gere imagens, vídeos, áudio e texto com IA gratuitamente.">
@@ -14,10 +15,15 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://generativelanguage.googleapis.com">
+  <link rel="preconnect" href="https://text.pollinations.ai">
+  <link rel="preconnect" href="https://image.pollinations.ai">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" async></script>
 </head>
 <body>
   <!-- Hidden sidebar elements for JS compatibility -->
@@ -101,7 +107,8 @@
             <i class="fas fa-folder-open"></i>
           </div>
           <h3>Nenhuma pasta ainda</h3>
-          <p>Crie pastas para organizar suas imagens, vídeos, áudios e textos</p>
+          <p>Organize suas imagens, videos, audios e textos em pastas personalizadas</p>
+          <button class="empty-state-action" id="foldersEmptyNewBtn"><i class="fas fa-folder-plus"></i> Criar primeira pasta</button>
         </div>
         <!-- Status bar -->
         <div class="folders-statusbar" id="foldersStatusbar"></div>
@@ -582,7 +589,7 @@
               <i class="fas fa-palette"></i>
             </div>
             <h3>Seu Moodboard</h3>
-            <p>Busque imagens, gere paletas de cores e adicione fontes para criar seu moodboard</p>
+            <p>Use a barra de busca acima para encontrar imagens, ou clique em Paleta e Fontes para compor seu board visual</p>
           </div>
         </div>
       </div>
@@ -718,7 +725,8 @@
             <i class="fas fa-th-large"></i>
           </div>
           <h3>Galeria vazia</h3>
-          <p>Gere imagens, vídeos, áudios ou textos e eles aparecerão aqui automaticamente</p>
+          <p>Gere imagens, videos, audios ou textos e eles aparecerao aqui automaticamente</p>
+          <button class="empty-state-action" onclick="document.querySelector('[data-tab=&quot;image&quot;]').click()"><i class="fas fa-wand-magic-sparkles"></i> Criar primeira imagem</button>
         </div>
       </div>
     </div>
@@ -765,8 +773,9 @@
             <div class="empty-glow"></div>
             <i class="fas fa-clock-rotate-left"></i>
           </div>
-          <h3>Histórico vazio</h3>
-          <p>Suas geracoes aparecerão aqui automaticamente</p>
+          <h3>Historico vazio</h3>
+          <p>Cada geracao de imagem, video, audio ou texto sera registrada aqui com data e provedor</p>
+          <button class="empty-state-action" onclick="document.querySelector('[data-tab=&quot;image&quot;]').click()"><i class="fas fa-wand-magic-sparkles"></i> Comecar a gerar</button>
         </div>
       </div>
     </div>
@@ -799,7 +808,7 @@
             <i class="fas fa-trash"></i>
           </div>
           <h3>Lixeira vazia</h3>
-          <p>Itens excluidos aparecerão aqui e podem ser recuperados</p>
+          <p>Itens excluidos da galeria aparecerao aqui por 30 dias e podem ser recuperados</p>
         </div>
       </div>
     </div>
@@ -1035,6 +1044,10 @@
           <button class="prompt-btn send-btn" id="generateBtn" title="Gerar">
             <i class="fas fa-arrow-up"></i>
           </button>
+        </div>
+        <div class="prompt-hint-row">
+          <span class="prompt-hint" id="promptHint">Dica: prompts detalhados geram resultados melhores</span>
+          <span class="prompt-char-count" id="promptCharCount"></span>
         </div>
       </div>
 
