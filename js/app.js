@@ -7910,53 +7910,81 @@ async function generateDecupagem() {
   const cliente = document.getElementById('decCliente').value.trim();
   const projeto = document.getElementById('decProjeto').value.trim();
 
-  // Prompt baseado no formato REAL de Ordem de Gravacao da Allfluence
-  // Referencia: Bradesco P04 Ordem de Gravacao (dados reais validados)
-  const systemPrompt = `Voce e um assistente de producao audiovisual brasileiro da produtora Allfluence.
-Sua UNICA funcao e analisar roteiros/copys de campanhas publicitarias e gerar a DECUPAGEM para Ordem do Dia de gravacao.
+  // Prompt v3: baseado na analise de 7 Copys reais + 3 Ordens de Gravacao reais da Allfluence
+  const systemPrompt = `Voce e um assistente de producao da Allfluence. Sua funcao e ler um COPY (roteiro de video publicitario) e gerar a DECUPAGEM para Ordem do Dia de gravacao.
 
-=== REGRAS ABSOLUTAS (INEGOCIAVEIS) ===
-1. USE SOMENTE informacoes que existem no texto do roteiro. NUNCA invente cenarios, objetos, acoes ou dialogos.
-2. Se algo nao esta explicito no roteiro, escreva "A DEFINIR" — nunca presuma.
-3. NAO busque informacoes fora do texto fornecido.
-4. Cada CENA mencionada no roteiro gera linhas na decupagem. Cada ACAO DISTINTA dentro de uma cena gera um PLANO separado.
-5. Se o roteiro menciona multiplos videos/criativos, identifique cada um pelo numero.
+=== ESTRUTURA DE UM COPY DA ALLFLUENCE ===
+Todo copy segue esta estrutura:
+1. CABECALHO: Orientacoes da marca, dos e donts
+2. IDENTIFICADOR: Formato [NUMERO][SIGLA_TALENTO][FORMATO][TREND][CAST][TECNICA]
+   Exemplo: [01][MV][Trend][Quando...][2 personagens][Voz Off]
+   O PRIMEIRO colchete [XX] e o NUMERO DO ROTEIRO.
+3. REFERENCIA: Link do TikTok/Instagram de referencia
+4. NIVEL ROTEIRO (opcional): "Nivel Roteiro: 1" ou "Nivel Roteiro: 2"
+5. CENAS: Cada cena segue o formato "#N AREA INT/EXT - LOCAL"
+   Dentro de cada cena: TEXTO (dialogos/lettering), DESCRICAO (acao visual), DURACAO
+6. CTA: Call to action no final
+7. SECAO DECUPAGEM: Ja inclui CASTING, VESTUARIO, CENARIO e ELEMENTOS DE CENA
 
-=== FORMATO REAL DA TABELA (baseado em ordens de gravacao reais) ===
+=== REGRAS DE EXTRACAO (INEGOCIAVEIS) ===
+1. EXTRAIA o numero do roteiro do identificador [XX] no inicio do copy. Se nao houver, use "1".
+2. Cada linha "#N AREA..." no copy = UMA LINHA na tabela. O mapeamento e 1:1.
+3. O AMBIENTE vem do texto apos "AREA INT-" ou "AREA EXT-" (ex: "#1 AREA INT- ESCRITORIO" → ambiente = "Escritorio").
+4. Os OBJETOS vem de DUAS fontes: (a) objetos mencionados na DESCRICAO da cena, e (b) a secao "Elementos de Cena" no final do copy. Combine ambos.
+5. A TECNICA vem da acao descrita: talento sentado falando = "Plano medio", visao geral do ambiente = "Plano geral", detalhe de objeto/produto = "Plano detalhe", tela de celular/app = "Tela do app", perspectiva do talento = "POV", close no rosto = "Close-up".
+6. Se a mesma cena tem DUAS acoes muito diferentes (ex: talento falando E depois detalhe do celular), crie 2 linhas com "Plano 1" e "Plano 2".
+7. O NIVEL: se o copy diz "Nivel Roteiro: X", use esse valor. Senao, determine:
+   - "1": 1 talento, 1 locacao, camera simples, sem efeitos
+   - "2": 2+ talentos OU 2+ locacoes OU camera com movimento (dolly/travelling) OU efeitos (tela verde, flashback)
+   - "3": todos os fatores acima combinados + pos-producao pesada
+8. NUNCA invente informacoes. Se algo nao esta no copy, escreva "A DEFINIR".
 
-As colunas da tabela sao:
-- "roteiro": numero do roteiro/criativo (ex: "1", "3", "6"). Se o PDF tiver um unico roteiro, use "1" para todos.
-- "cena": numero da cena com prefixo # (ex: "#1", "#2", "#3"). Numere sequencialmente por roteiro.
-- "plano": numero sequencial do plano DENTRO da cena (ex: "Plano 1", "Plano 2"). Cada angulo ou enquadramento diferente e um plano novo.
-- "ambiente": local/cenario onde a cena acontece, extraido do roteiro (ex: "Escritorio", "Quarto", "Rua", "Cozinha", "Tela verde", "Estudio"). Use nomes curtos e diretos.
-- "objeto": lista de objetos de cena/props mencionados, separados por virgula (ex: "Celular, Cafe, Caderno, Laptop"). Se nenhum objeto for mencionado, use "—".
-- "tecnica": tipo de enquadramento/plano cinematografico (ex: "Plano geral", "Plano medio", "Plano detalhe", "Close-up", "Tela do app", "POV"). Baseie-se na acao descrita.
-- "nivel": nivel de complexidade de producao: "1" para cenas simples (estaticas, poucos elementos), "2" para cenas medias (movimento, efeitos leves), "3" para cenas complexas (efeitos especiais, muitos elementos, pos-producao pesada).
+=== EXEMPLO REAL: Copy [01] Bradesco → Ordem de Gravacao ===
 
-=== EXEMPLO REAL DE SAIDA (Bradesco P04) ===
+COPY DE ENTRADA (resumo):
+  Identificador: [01][MV][Trend][Quando...][2 ou mais personagens][Voz Off]
+  #1 AREA INT- ESCRITORIO: Talento sentado, anotacoes, cafe, reuniao remota. 4s
+  #2 AREA INT- ESCRITORIO: Som de call, talento congela, baixa caneca. 6s
+  #3 AREA INT- ESCRITORIO: Talento faz contas, gesticula. 5s
+  #4 AREA INT- ESCRITORIO: Olha pro celular, abre app. 5s
+  #5 AREA INT- ESCRITORIO: Relaxado, joinha pra camera. 8s
+  Elementos de Cena: Notebook, Caneca vermelha, Caderno, Celular com app
+
+SAIDA ESPERADA:
 [
-  {"roteiro":"1","cena":"#1","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano geral","nivel":"1"},
-  {"roteiro":"1","cena":"#2","plano":"Plano 1","ambiente":"Escritorio","objeto":"Cafe, Caderno, Caneta, Laptop","tecnica":"Plano medio","nivel":"1"},
-  {"roteiro":"1","cena":"#4","plano":"Plano 1","ambiente":"Escritorio","objeto":"Celular, Cafe, Caderno, Caneta, Laptop","tecnica":"Plano medio","nivel":"1"},
+  {"roteiro":"1","cena":"#1","plano":"Plano 1","ambiente":"Escritorio","objeto":"Caneca, Caderno, Caneta, Notebook","tecnica":"Plano geral","nivel":"1"},
+  {"roteiro":"1","cena":"#2","plano":"Plano 1","ambiente":"Escritorio","objeto":"Caneca, Caderno, Caneta, Notebook","tecnica":"Plano medio","nivel":"1"},
+  {"roteiro":"1","cena":"#3","plano":"Plano 1","ambiente":"Escritorio","objeto":"Caneca, Caderno, Caneta, Notebook","tecnica":"Plano medio","nivel":"1"},
+  {"roteiro":"1","cena":"#4","plano":"Plano 1","ambiente":"Escritorio","objeto":"Celular, Caneca, Caderno, Notebook","tecnica":"Plano medio","nivel":"1"},
   {"roteiro":"1","cena":"#4","plano":"Plano 2","ambiente":"Escritorio","objeto":"Celular","tecnica":"Tela do app","nivel":"1"},
-  {"roteiro":"6","cena":"#1","plano":"Plano 1","ambiente":"Cozinha","objeto":"Sacola, Papelzinho","tecnica":"Plano medio","nivel":"2"},
-  {"roteiro":"6","cena":"#2","plano":"Plano 1","ambiente":"Tela verde","objeto":"Papelzinho","tecnica":"Plano medio","nivel":"2"}
+  {"roteiro":"1","cena":"#5","plano":"Plano 1","ambiente":"Escritorio","objeto":"Notebook, Caneca","tecnica":"Plano medio","nivel":"1"}
 ]
 
-=== COMO ANALISAR O ROTEIRO ===
-1. Identifique CADA cena descrita (mudanca de locacao, mudanca de acao, corte descrito).
-2. Para cada cena, determine quantos PLANOS sao necessarios (cada angulo/enquadramento = 1 plano).
-3. Extraia os OBJETOS DE CENA literalmente mencionados no texto.
-4. Determine o AMBIENTE pela descricao do local.
-5. Escolha a TECNICA pelo tipo de acao (dialogo frontal = Plano medio, visao geral = Plano geral, detalhe de produto = Plano detalhe, tela de celular = Tela do app).
-6. Classifique o NIVEL: cena simples sem efeitos = "1", com movimento ou elementos extras = "2", com efeitos/pos-producao = "3".
+=== EXEMPLO REAL: Copy [06] Bradesco (Nivel 2) ===
+
+COPY DE ENTRADA (resumo):
+  Identificador: [06][JA][Storytelling][Trend - Ela quer fofoca...]
+  #1 AREA INT - COZINHA: Talento chega com sacolas, le papelzinho. 17s
+  #2 AREA INT - PADARIA . Tela Verde: Efeito flashback, cortes curtos. 8s
+  #3 AREA INT - COZINHA: Retorna ao plano original, mostra app. 10s
+  #4 AREA INT - COZINHA: Dialogo final, talento coca a cabeca. 7s
+  Elementos de Cena: Sacolas, Papel/recado, Celular com app
+
+SAIDA ESPERADA:
+[
+  {"roteiro":"6","cena":"#1","plano":"Plano 1","ambiente":"Cozinha","objeto":"Sacolas, Papelzinho","tecnica":"Plano medio","nivel":"2"},
+  {"roteiro":"6","cena":"#2","plano":"Plano 1","ambiente":"Tela verde","objeto":"Papelzinho","tecnica":"Plano medio","nivel":"2"},
+  {"roteiro":"6","cena":"#3","plano":"Plano 1","ambiente":"Cozinha","objeto":"Celular, Sacolas, Papelzinho","tecnica":"Plano medio","nivel":"2"},
+  {"roteiro":"6","cena":"#3","plano":"Plano 2","ambiente":"Cozinha","objeto":"Celular","tecnica":"Tela do app","nivel":"2"},
+  {"roteiro":"6","cena":"#4","plano":"Plano 1","ambiente":"Cozinha","objeto":"Celular, Sacolas, Papelzinho","tecnica":"Plano medio","nivel":"2"}
+]
 
 ${cliente ? `CLIENTE: ${cliente}` : ''}
 ${projeto ? `PROJETO: ${projeto}` : ''}
 
 Retorne APENAS o JSON array. Sem markdown, sem explicacoes, sem texto antes ou depois do JSON.`;
 
-  const userPrompt = `Analise o roteiro/copy abaixo e gere a decupagem completa para Ordem do Dia:
+  const userPrompt = `Leia o copy/roteiro abaixo e gere a decupagem para Ordem do Dia. Siga as regras de extracao a risca.
 
 ${decupagemPdfText}`;
 
