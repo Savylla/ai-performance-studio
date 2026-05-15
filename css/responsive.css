@@ -19,6 +19,35 @@
   flex-shrink: 0;
 }
 
+/* Mobile: wrap topbar-nav with a "swipe to see more abas" hint indicator */
+.topbar-nav-wrap { position: relative; flex: 1; min-width: 0; }
+.topbar-nav-hint {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.7rem;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 8px var(--accent-glow);
+  animation: tabHintPulse 1.8s ease-in-out infinite;
+}
+@keyframes tabHintPulse {
+  0%, 100% { opacity: 0.9; transform: translateY(-50%) translateX(0); }
+  50% { opacity: 0.5; transform: translateY(-50%) translateX(-3px); }
+}
+@media (max-width: 900px) {
+  .topbar-nav-hint.has-overflow { display: flex; }
+}
+
 @media (max-width: 900px) {
   .topbar-action-text { display: none; }
   .credits-display-topbar span { display: none; }
@@ -87,7 +116,8 @@
 }
 
 @media (max-width: 640px) {
-  html { font-size: 13px; }
+  /* font-size base permanece em 16px (definido em style.css) — anti-zoom iOS.
+     Texto pequeno é ajustado em componentes específicos via rem/em. */
 
   .topbar { padding: 0 10px; gap: 8px; }
 
@@ -210,7 +240,7 @@
   }
 }
 
-/* === TOUCH TARGETS & ACCESSIBILITY === */
+/* === TOUCH TARGETS & ACCESSIBILITY (WCAG 2.5.5 — alvo mínimo 44×44px) === */
 @media (hover: none) {
   .btn-icon,
   .topbar-link,
@@ -220,7 +250,16 @@
   .generate-main,
   .gallery-card-action,
   .moodboard-item-remove,
-  .decupagem-action-btn {
+  .decupagem-action-btn,
+  .folder-modal-close,
+  .lightbox-close,
+  .gallery-preview-close,
+  .result-card-overlay-btn,
+  .rc-download,
+  .rc-fav,
+  .rc-delete,
+  .sb-saved-card-action,
+  .history-item-action {
     min-height: 44px;
     min-width: 44px;
   }

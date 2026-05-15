@@ -20,10 +20,29 @@
   <link rel="preconnect" href="https://generativelanguage.googleapis.com">
   <link rel="preconnect" href="https://text.pollinations.ai">
   <link rel="preconnect" href="https://image.pollinations.ai">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" async></script>
+  <!-- Fonts: redução de 8 → 4 pesos (Space Grotesk 400/600 + Inter 400/500) — corta ~50% do payload de fontes -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Font Awesome via preload + onload swap — não bloqueia o first paint (~400ms de ganho em 3G) -->
+  <link rel="preload"
+        as="style"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+        onload="this.onload=null;this.rel='stylesheet';">
+  <noscript>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer">
+  </noscript>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
+          integrity="sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer"
+          async></script>
+  <!-- Google Identity Services (gsi/client) is lazy-loaded on demand from js/app.js (see loadGoogleSignIn) -->
 </head>
 <body>
   <!-- Hidden sidebar elements for JS compatibility -->
@@ -41,39 +60,40 @@
 
   <!-- Main Content -->
   <main class="main-content main-full">
+    <h1 class="sr-only">AI Performance Studio — Gerador gratuito de imagens, vídeos, áudio e texto com IA</h1>
     <!-- Top Bar -->
     <header class="topbar">
       <div class="topbar-left">
-        <div class="logo-mini" style="cursor:pointer;" onclick="switchTab('image')" title="Voltar ao inicio" role="button" tabindex="0">
-          <img src="assets/logo.png" alt="AI Studio" class="logo-icon-img">
+        <button class="logo-mini" type="button" onclick="switchTab('image')" title="Voltar ao inicio" aria-label="Voltar à aba inicial">
+          <img src="assets/logo.png" alt="" class="logo-icon-img" aria-hidden="true">
           <span class="logo-text">AI Studio</span>
-        </div>
+        </button>
       </div>
-      <nav class="topbar-nav" aria-label="Navegacao principal" role="tablist">
-        <a href="#" class="topbar-link active" data-tab="image"><i class="fas fa-image"></i> Imagem</a>
-        <a href="#" class="topbar-link" data-tab="video"><i class="fas fa-video"></i> Video</a>
-        <a href="#" class="topbar-link" data-tab="audio"><i class="fas fa-headphones"></i> Audio</a>
-        <a href="#" class="topbar-link" data-tab="text"><i class="fas fa-font"></i> Texto</a>
-        <a href="#" class="topbar-link" data-tab="moodboard"><i class="fas fa-palette"></i> Moodboard</a>
-        <a href="#" class="topbar-link" data-tab="storyboard"><i class="fas fa-book-open"></i> Story Board</a>
-        <a href="#" class="topbar-link" data-tab="gallery"><i class="fas fa-th-large"></i> Galeria</a>
-        <a href="#" class="topbar-link" data-tab="biblioteca"><i class="fas fa-book"></i> Biblioteca</a>
-        <a href="#" class="topbar-link" data-tab="history"><i class="fas fa-clock-rotate-left"></i> Histórico</a>
-        <a href="#" class="topbar-link" data-tab="folders"><i class="fas fa-folder-tree"></i> Pastas</a>
-        <a href="#" class="topbar-link" data-tab="decupagem"><i class="fas fa-clapperboard"></i> Decupagem</a>
-        <a href="#" class="topbar-link" data-tab="trash" title="Lixeira"><i class="fas fa-trash"></i> Lixeira</a>
+      <nav class="topbar-nav" aria-label="Navegação principal" role="tablist">
+        <a href="#" class="topbar-link active" data-tab="image" role="tab" aria-selected="true" aria-controls="tabImage" id="tab-image"><i class="fas fa-image" aria-hidden="true"></i> Imagem</a>
+        <a href="#" class="topbar-link" data-tab="video" role="tab" aria-selected="false" aria-controls="tabVideo" id="tab-video" tabindex="-1"><i class="fas fa-video" aria-hidden="true"></i> Video</a>
+        <a href="#" class="topbar-link" data-tab="audio" role="tab" aria-selected="false" aria-controls="tabAudio" id="tab-audio" tabindex="-1"><i class="fas fa-headphones" aria-hidden="true"></i> Audio</a>
+        <a href="#" class="topbar-link" data-tab="text" role="tab" aria-selected="false" aria-controls="tabText" id="tab-text" tabindex="-1"><i class="fas fa-font" aria-hidden="true"></i> Texto</a>
+        <a href="#" class="topbar-link" data-tab="moodboard" role="tab" aria-selected="false" aria-controls="tabMoodboard" id="tab-moodboard" tabindex="-1"><i class="fas fa-palette" aria-hidden="true"></i> Moodboard</a>
+        <a href="#" class="topbar-link" data-tab="storyboard" role="tab" aria-selected="false" aria-controls="tabStoryboard" id="tab-storyboard" tabindex="-1"><i class="fas fa-book-open" aria-hidden="true"></i> Story Board</a>
+        <a href="#" class="topbar-link" data-tab="gallery" role="tab" aria-selected="false" aria-controls="tabGallery" id="tab-gallery" tabindex="-1"><i class="fas fa-th-large" aria-hidden="true"></i> Galeria</a>
+        <a href="#" class="topbar-link" data-tab="biblioteca" role="tab" aria-selected="false" aria-controls="tabBiblioteca" id="tab-biblioteca" tabindex="-1"><i class="fas fa-book" aria-hidden="true"></i> Biblioteca</a>
+        <a href="#" class="topbar-link" data-tab="history" role="tab" aria-selected="false" aria-controls="tabHistory" id="tab-history" tabindex="-1"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Histórico</a>
+        <a href="#" class="topbar-link" data-tab="folders" role="tab" aria-selected="false" aria-controls="tabFolders" id="tab-folders" tabindex="-1"><i class="fas fa-folder-tree" aria-hidden="true"></i> Pastas</a>
+        <a href="#" class="topbar-link" data-tab="decupagem" role="tab" aria-selected="false" aria-controls="tabDecupagem" id="tab-decupagem" tabindex="-1"><i class="fas fa-clapperboard" aria-hidden="true"></i> Decupagem</a>
+        <a href="#" class="topbar-link" data-tab="trash" role="tab" aria-selected="false" aria-controls="tabTrash" id="tab-trash" tabindex="-1" title="Lixeira"><i class="fas fa-trash" aria-hidden="true"></i> Lixeira</a>
       </nav>
       <div class="topbar-actions">
-        <button class="btn-icon" title="Configurações" onclick="openApiKeyModal()" aria-label="Configurações"><i class="fas fa-gear"></i></button>
-        <div class="user-avatar" id="topbarAvatar" title="Clique para login">
-          <img src="" alt="Avatar" id="topbarAvatarImg" style="display:none;">
-          <svg class="avatar-default-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <button class="btn-icon" title="Configurações" onclick="openApiKeyModal()" aria-label="Abrir configurações"><i class="fas fa-gear" aria-hidden="true"></i></button>
+        <div class="user-avatar" id="topbarAvatar" role="button" tabindex="0" aria-label="Login com Google" title="Clique para login">
+          <img src="" alt="" id="topbarAvatarImg" style="display:none;" aria-hidden="true">
+          <svg class="avatar-default-icon" width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="18" cy="18" r="17" stroke="#555" stroke-width="1.5" fill="none"/>
             <circle cx="18" cy="14" r="5" stroke="#999" stroke-width="1.5" fill="none"/>
             <path d="M6 30c0-6 5.5-10 12-10s12 4 12 10" stroke="#999" stroke-width="1.5" fill="none"/>
           </svg>
         </div>
-        <button class="btn-icon" id="logoutBtn" title="Sair" style="display:none;"><i class="fas fa-sign-out-alt"></i></button>
+        <button class="btn-icon" id="logoutBtn" title="Sair" style="display:none;" aria-label="Sair da conta"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></button>
       </div>
     </header>
 
@@ -1312,29 +1332,33 @@
     </div>
   </main>
 
+  <!-- Toast/status live region (visual toasts are injected by app.js but read here for SR) -->
+  <div id="liveRegion" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
   <!-- Image Lightbox -->
-  <div class="lightbox" id="lightbox">
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Visualização ampliada" aria-hidden="true">
     <div class="lightbox-backdrop"></div>
     <div class="lightbox-content">
-      <button class="lightbox-close"><i class="fas fa-times"></i></button>
-      <img src="" alt="Preview" id="lightboxImg">
-      <video controls id="lightboxVideo" style="display:none;max-width:90vw;max-height:80vh;border-radius:var(--radius-md);"></video>
+      <button class="lightbox-close" aria-label="Fechar visualização"><i class="fas fa-times" aria-hidden="true"></i></button>
+      <img src="" alt="" id="lightboxImg">
+      <video controls id="lightboxVideo" style="display:none;max-width:90vw;max-height:80vh;border-radius:var(--radius-md);" aria-label="Vídeo gerado"></video>
       <div class="lightbox-actions">
-        <button class="btn-light" id="lightboxDownload"><i class="fas fa-download"></i> Download</button>
+        <button class="btn-light" id="lightboxDownload"><i class="fas fa-download" aria-hidden="true"></i> Download</button>
       </div>
       <div class="lightbox-info" id="lightboxInfo"></div>
     </div>
   </div>
 
   <!-- Folder Modal -->
-  <div class="folder-modal-overlay" id="folderModal" style="display:none;">
+  <div class="folder-modal-overlay" id="folderModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="folderModalTitle" aria-hidden="true">
     <div class="folder-modal">
       <div class="folder-modal-header">
-        <h3 id="folderModalTitle"><i class="fas fa-folder-plus"></i> Nova Pasta</h3>
-        <button class="folder-modal-close" id="folderModalClose"><i class="fas fa-times"></i></button>
+        <h3 id="folderModalTitle"><i class="fas fa-folder-plus" aria-hidden="true"></i> Nova Pasta</h3>
+        <button class="folder-modal-close" id="folderModalClose" aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
+      <label for="folderModalName" class="sr-only">Nome da pasta</label>
       <input type="text" class="folder-modal-input" id="folderModalName" placeholder="Nome da pasta..." maxlength="30" autocomplete="off">
-      <div class="folder-color-picker" id="folderColorPicker">
+      <div class="folder-color-picker" id="folderColorPicker" role="radiogroup" aria-label="Cor da pasta">
         <div class="folder-color-opt selected" data-color="#AD39FB" style="background:#AD39FB;"></div>
         <div class="folder-color-opt" data-color="#4a6cf7" style="background:#4a6cf7;"></div>
         <div class="folder-color-opt" data-color="#34d399" style="background:#34d399;"></div>
@@ -1352,54 +1376,54 @@
   </div>
 
   <!-- Move to Folder Modal -->
-  <div class="folder-modal-overlay" id="moveToFolderModal" style="display:none;">
+  <div class="folder-modal-overlay" id="moveToFolderModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="moveToFolderTitle" aria-hidden="true">
     <div class="folder-modal folder-modal-sm">
       <div class="folder-modal-header">
-        <h3><i class="fas fa-folder-open"></i> Mover para Pasta</h3>
-        <button class="folder-modal-close" id="moveToFolderClose"><i class="fas fa-times"></i></button>
+        <h3 id="moveToFolderTitle"><i class="fas fa-folder-open" aria-hidden="true"></i> Mover para Pasta</h3>
+        <button class="folder-modal-close" id="moveToFolderClose" aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
-      <div class="move-folder-list" id="moveFolderList"></div>
+      <div class="move-folder-list" id="moveFolderList" role="list"></div>
       <div class="move-folder-actions">
-        <button class="move-folder-new-btn" id="moveToFolderNewBtn"><i class="fas fa-plus"></i> Nova Pasta</button>
+        <button class="move-folder-new-btn" id="moveToFolderNewBtn"><i class="fas fa-plus" aria-hidden="true"></i> Nova Pasta</button>
       </div>
     </div>
   </div>
 
   <!-- Gallery Preview Modal (global, outside tabs) -->
-  <div class="gallery-preview-overlay" id="galleryPreview" style="display:none;">
+  <div class="gallery-preview-overlay" id="galleryPreview" style="display:none;" role="dialog" aria-modal="true" aria-label="Visualização do item" aria-hidden="true">
     <div class="gallery-preview-content">
       <div class="gallery-preview-media" id="galleryPreviewMedia"></div>
       <div class="gallery-preview-sidebar">
-        <button class="gallery-preview-close" id="galleryPreviewClose"><i class="fas fa-times"></i></button>
+        <button class="gallery-preview-close" id="galleryPreviewClose" aria-label="Fechar visualização"><i class="fas fa-times" aria-hidden="true"></i></button>
         <div class="gallery-preview-info" id="galleryPreviewInfo"></div>
       </div>
     </div>
   </div>
 
   <!-- Edit Item Info Modal -->
-  <div class="folder-modal-overlay" id="editItemModal" style="display:none;">
+  <div class="folder-modal-overlay" id="editItemModal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="editItemModalTitle" aria-hidden="true">
     <div class="folder-modal" style="max-width:420px;">
       <div class="folder-modal-header">
-        <h3><i class="fas fa-edit"></i> Editar Informacoes</h3>
-        <button class="folder-modal-close" id="editItemModalClose"><i class="fas fa-times"></i></button>
+        <h3 id="editItemModalTitle"><i class="fas fa-edit" aria-hidden="true"></i> Editar Informações</h3>
+        <button class="folder-modal-close" id="editItemModalClose" aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
       </div>
       <div style="display:flex;flex-direction:column;gap:14px;">
         <div>
-          <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Prompt / Descrição</label>
+          <label for="editItemPrompt" style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Prompt / Descrição</label>
           <input type="text" id="editItemPrompt" class="folder-modal-input" placeholder="Descreva o conteúdo...">
         </div>
         <div>
-          <label style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Modelo / Provider</label>
+          <label for="editItemProvider" style="font-size:0.78rem;color:var(--text-secondary);display:block;margin-bottom:6px;">Modelo / Provider</label>
           <input type="text" id="editItemProvider" class="folder-modal-input" placeholder="Ex: Gemini, Pollinations...">
         </div>
       </div>
       <div class="folder-modal-actions" style="margin-top:18px;">
         <button class="folder-modal-cancel" id="editItemCancelBtn">Cancelar</button>
-        <button class="folder-modal-save" id="editItemSaveBtn"><i class="fas fa-check"></i> Salvar</button>
+        <button class="folder-modal-save" id="editItemSaveBtn"><i class="fas fa-check" aria-hidden="true"></i> Salvar</button>
       </div>
     </div>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js" defer></script>
 </body>
 </html>

@@ -203,10 +203,22 @@ function initTabs() {
 
 function switchTab(tab) {
   currentTab = tab;
-  // Update topbar
-  document.querySelectorAll('.topbar-link').forEach(l => { l.classList.remove('active'); l.setAttribute('aria-selected', 'false'); });
+  // Update topbar (ARIA tab pattern: only the active tab is in the tab order)
+  document.querySelectorAll('.topbar-link').forEach(l => {
+    l.classList.remove('active');
+    l.setAttribute('aria-selected', 'false');
+    l.setAttribute('tabindex', '-1');
+  });
   const activeLink = document.querySelector(`.topbar-link[data-tab="${tab}"]`);
-  if (activeLink) { activeLink.classList.add('active'); activeLink.setAttribute('aria-selected', 'true'); }
+  if (activeLink) {
+    activeLink.classList.add('active');
+    activeLink.setAttribute('aria-selected', 'true');
+    activeLink.setAttribute('tabindex', '0');
+    // Scroll active tab into view on mobile (when nav overflows)
+    if (activeLink.scrollIntoView) {
+      try { activeLink.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); } catch(_) {}
+    }
+  }
   // Update sidebar
   document.querySelectorAll('.sidebar-nav .nav-item').forEach(i => i.classList.remove('active'));
   document.querySelector(`.sidebar-nav .nav-item[data-tab="${tab}"]`)?.classList.add('active');
@@ -1190,67 +1202,74 @@ async function startImageGeneration() {
   const grid = document.getElementById('resultsMasonry');
   let success = 0;
 
-  for (let i = 0; i < qty; i++) {
-    const card = document.createElement('div');
-    card.className = 'result-card loading';
-    card.innerHTML = `<div class="card-loading-state"><div class="spinner-ring small"></div><span>Gerando ${i + 1}/${qty}...</span></div>`;
-    grid.insertBefore(card, grid.firstChild);
-    document.getElementById('displayLoading').style.display = 'none';
-    document.getElementById('displayResults').style.display = 'block';
+  try {
+    for (let i = 0; i < qty; i++) {
+      const card = document.createElement('div');
+      card.className = 'result-card loading';
+      card.innerHTML = `<div class="card-loading-state"><div class="spinner-ring small"></div><span>Gerando ${i + 1}/${qty}...</span></div>`;
+      grid.insertBefore(card, grid.firstChild);
+      document.getElementById('displayLoading').style.display = 'none';
+      document.getElementById('displayResults').style.display = 'block';
 
-    let imageResult = null;
+      let imageResult = null;
 
-    let actualProvider = provider;
-    if (provider.startsWith('pollinations')) {
-      imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
-      if (!imageResult) {
-        console.log('Pollinations failed, falling back to Stable Horde...');
-        card.querySelector('.card-loading-state span').textContent = 'Pollinations falhou, tentando Stable Horde...';
-        try { imageResult = await generateWithStableHorde(prompt, w, h); actualProvider = 'Stable Horde (fallback)'; } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+      let actualProvider = provider;
+      try {
+        if (provider.startsWith('pollinations')) {
+          imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+          if (!imageResult) {
+            card.querySelector('.card-loading-state span').textContent = 'Pollinations falhou, tentando Stable Horde...';
+            try { imageResult = await generateWithStableHorde(prompt, w, h); actualProvider = 'Stable Horde (fallback)'; } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+          }
+        } else if (provider.startsWith('horde')) {
+          try { imageResult = await generateWithStableHorde(prompt, w, h); } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+        } else if (provider.startsWith('together-')) {
+          imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
+        } else if (provider.startsWith('hf-')) {
+          imageResult = await generateWithHuggingFace(prompt, provider, w, h);
+        } else if (provider === 'gemini-auto') {
+          imageResult = await generateWithGemini(prompt, ratio, i, null);
+        } else {
+          imageResult = await generateWithGemini(prompt, ratio, i, provider);
+        }
+      } catch (err) {
+        console.error('Provider error:', err);
+        showToast(`Erro no provedor ${provider}: ${err.message || 'desconhecido'}`, 'error');
       }
-    } else if (provider.startsWith('horde')) {
-      try { imageResult = await generateWithStableHorde(prompt, w, h); } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
-    } else if (provider.startsWith('together-')) {
-      imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
-    } else if (provider.startsWith('hf-')) {
-      imageResult = await generateWithHuggingFace(prompt, provider, w, h);
-    } else if (provider === 'gemini-auto') {
-      imageResult = await generateWithGemini(prompt, ratio, i, null);
-    } else {
-      imageResult = await generateWithGemini(prompt, ratio, i, provider);
-    }
 
-    if (imageResult) {
-      success++;
-      const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
-      card.classList.remove('loading');
-      const providerLabel = actualProvider;
-      card.innerHTML = `
-        <img src="${imgSrc}" alt="Generated" crossorigin="anonymous">
-        <div class="result-card-overlay">
-          <button class="rc-download" title="Download"><i class="fas fa-download"></i></button>
-          <button class="rc-fav" title="Favoritar"><i class="fas fa-heart"></i></button>
-          <button class="rc-delete" title="Deletar" style="color:#ff4444;"><i class="fas fa-trash"></i></button>
-        </div>
-        <div class="result-card-provider">${escapeHtml(providerLabel)}</div>
-      `;
-      card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); downloadImage(imgSrc, 'ai-image-' + Date.now() + '.png'); });
-      card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
-      card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); card.remove(); });
-      card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
-      // Save to gallery + history
-      saveImageToGallery(imgSrc, prompt, providerLabel);
-      saveToHistory({ type: 'image', prompt, provider: providerLabel, status: 'success', detail: ratio });
-    } else {
-      card.classList.remove('loading');
-      card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle"></i><span>${escapeHtml(provider)} falhou</span><small style="color:var(--text-muted);font-size:0.72rem;">Tente outro provedor ou verifique sua API key</small></div>`;
-      saveToHistory({ type: 'image', prompt, provider, status: 'error', detail: 'Falha na geracao' });
-    }
+      if (imageResult) {
+        success++;
+        const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
+        card.classList.remove('loading');
+        const providerLabel = actualProvider;
+        card.innerHTML = `
+          <img src="${encodeURI(imgSrc)}" alt="Imagem gerada para: ${escapeHtml(prompt)}" crossorigin="anonymous">
+          <div class="result-card-overlay">
+            <button class="rc-download" title="Download" aria-label="Baixar imagem"><i class="fas fa-download" aria-hidden="true"></i></button>
+            <button class="rc-fav" title="Favoritar" aria-label="Favoritar"><i class="fas fa-heart" aria-hidden="true"></i></button>
+            <button class="rc-delete" title="Deletar" aria-label="Remover imagem" style="color:#ff4444;"><i class="fas fa-trash" aria-hidden="true"></i></button>
+          </div>
+          <div class="result-card-provider">${escapeHtml(providerLabel)}</div>
+        `;
+        card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); downloadImage(imgSrc, 'ai-image-' + Date.now() + '.png'); });
+        card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
+        card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); revokeBlobUrls(card); card.remove(); });
+        card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
+        // Save to gallery + history
+        saveImageToGallery(imgSrc, prompt, providerLabel);
+        saveToHistory({ type: 'image', prompt, provider: providerLabel, status: 'success', detail: ratio });
+      } else {
+        card.classList.remove('loading');
+        card.innerHTML = `<div class="card-error-state"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><span>${escapeHtml(provider)} falhou</span><small style="color:var(--text-muted);font-size:0.72rem;">Tente outro provedor ou verifique sua API key</small></div>`;
+        saveToHistory({ type: 'image', prompt, provider, status: 'error', detail: 'Falha na geracao' });
+      }
 
-    if (i < qty - 1) await delay(1500);
+      if (i < qty - 1) await delay(1500);
+    }
+  } finally {
+    setButtonLoading('generateBtnMain', false, 'Gerar');
+    document.getElementById('displayLoading').style.display = 'none';
   }
-
-  setButtonLoading('generateBtnMain', false, 'Gerar');
   if (success > 0) showToast(`${success} imagem(ns) gerada(s)!`, 'success');
   else showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
 }
@@ -1282,41 +1301,48 @@ async function startMoodboardGeneration() {
   setButtonLoading('generateBtnMain', true, 'Gerando...');
   let success = 0;
 
-  for (let i = 0; i < qty; i++) {
-    let imageResult = null;
+  try {
+    for (let i = 0; i < qty; i++) {
+      let imageResult = null;
 
-    let actualProvider = provider;
-    if (provider.startsWith('pollinations')) {
-      imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
-      if (!imageResult) {
-        try { imageResult = await generateWithStableHorde(prompt, w, h); actualProvider = 'Stable Horde (fallback)'; } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+      let actualProvider = provider;
+      try {
+        if (provider.startsWith('pollinations')) {
+          imageResult = await generateWithPollinations(prompt, provider, w, h, seed, i);
+          if (!imageResult) {
+            try { imageResult = await generateWithStableHorde(prompt, w, h); actualProvider = 'Stable Horde (fallback)'; } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+          }
+        } else if (provider.startsWith('horde')) {
+          try { imageResult = await generateWithStableHorde(prompt, w, h); } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
+        } else if (provider.startsWith('together-')) {
+          imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
+        } else if (provider.startsWith('hf-')) {
+          imageResult = await generateWithHuggingFace(prompt, provider, w, h);
+        } else if (provider === 'gemini-auto') {
+          imageResult = await generateWithGemini(prompt, ratio, i, null);
+        } else {
+          imageResult = await generateWithGemini(prompt, ratio, i, provider);
+        }
+      } catch (err) {
+        console.error('Moodboard provider error:', err);
+        showToast(`Erro no provedor ${provider}: ${err.message || 'desconhecido'}`, 'error');
       }
-    } else if (provider.startsWith('horde')) {
-      try { imageResult = await generateWithStableHorde(prompt, w, h); } catch (e) { console.warn(e.message); showToast(e.message, 'error'); }
-    } else if (provider.startsWith('together-')) {
-      imageResult = await generateWithTogether(prompt, provider, w, h, seed, i);
-    } else if (provider.startsWith('hf-')) {
-      imageResult = await generateWithHuggingFace(prompt, provider, w, h);
-    } else if (provider === 'gemini-auto') {
-      imageResult = await generateWithGemini(prompt, ratio, i, null);
-    } else {
-      imageResult = await generateWithGemini(prompt, ratio, i, provider);
-    }
 
-    if (imageResult) {
-      success++;
-      const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
-      const providerLabel = actualProvider;
-      addImageToBoard(imgSrc, 'AI Generated (' + providerLabel + ')', null);
-      // Save to gallery + history
-      saveImageToGallery(imgSrc, prompt, providerLabel);
-      saveToHistory({ type: 'moodboard', prompt, provider: providerLabel, status: 'success', detail: 'Imagem gerada' });
-    }
+      if (imageResult) {
+        success++;
+        const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
+        const providerLabel = actualProvider;
+        addImageToBoard(imgSrc, 'AI Generated (' + providerLabel + ')', null);
+        // Save to gallery + history
+        saveImageToGallery(imgSrc, prompt, providerLabel);
+        saveToHistory({ type: 'moodboard', prompt, provider: providerLabel, status: 'success', detail: 'Imagem gerada' });
+      }
 
-    if (i < qty - 1) await delay(1500);
+      if (i < qty - 1) await delay(1500);
+    }
+  } finally {
+    setButtonLoading('generateBtnMain', false, 'Gerar');
   }
-
-  setButtonLoading('generateBtnMain', false, 'Gerar');
   if (success > 0) showToast(`${success} imagem(ns) adicionada(s) ao moodboard!`, 'success');
   else showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
 }
@@ -1619,7 +1645,9 @@ function openHiggsfield(model) {
   const h = Math.min(900, screen.height - 100);
   const left = (screen.width - w) / 2;
   const top = (screen.height - h) / 2;
-  window.open(url, 'higgsfield', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+  // noopener prevents window.opener leak; explicitly null is defense-in-depth
+  const opened = window.open(url, 'higgsfield', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,noopener,noreferrer`);
+  if (opened) { try { opened.opener = null; } catch(_) {} }
 
   // Show import widget
   showHiggsfieldImporter(modelName);
@@ -1850,7 +1878,8 @@ function openTikTokStudio() {
   const h = Math.min(900, screen.height - 100);
   const left = (screen.width - w) / 2;
   const top = (screen.height - h) / 2;
-  window.open(url, 'tiktokstudio', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+  const opened = window.open(url, 'tiktokstudio', `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no,noopener,noreferrer`);
+  if (opened) { try { opened.opener = null; } catch(_) {} }
   showTikTokImporter();
 }
 
@@ -2614,6 +2643,9 @@ async function generateI2VVideo() {
     // Show result
     document.getElementById('i2vEditor').style.display = 'none';
     const resultVideo = document.getElementById('i2vResultVideo');
+    // Revoke previous blob URL to prevent memory leak on regeneration
+    if (resultVideo._lastBlobUrl) { try { URL.revokeObjectURL(resultVideo._lastBlobUrl); } catch(_) {} }
+    resultVideo._lastBlobUrl = videoUrl;
     resultVideo.src = videoUrl;
     document.getElementById('i2vDownloadBtn').href = videoUrl;
     document.getElementById('i2vResultEffect').textContent = effect;
@@ -2978,14 +3010,18 @@ async function pollinationsSTT() {
     recordBtn.classList.add('recording');
     mediaRecorder.start();
 
-    // Auto-stop after 30 seconds
-    setTimeout(() => {
-      if (mediaRecorder.state === 'recording') {
+    // Clear any previous auto-stop timeout to prevent stale firings
+    if (recordBtn._stopTimeoutId) clearTimeout(recordBtn._stopTimeoutId);
+
+    // Auto-stop after 30 seconds (only if this recorder is still the active one)
+    recordBtn._stopTimeoutId = setTimeout(() => {
+      if (recordBtn._activeRecorder === mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
         isRecording = false;
         recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
         recordBtn.classList.remove('recording');
       }
+      recordBtn._stopTimeoutId = null;
     }, 30000);
 
     // Store mediaRecorder reference for stop control
@@ -3069,13 +3105,17 @@ async function huggingFaceSTT() {
     mediaRecorder.start();
     showToast('Gravando... fale agora (max 30s)', 'success');
 
-    setTimeout(() => {
-      if (mediaRecorder.state === 'recording') {
+    // Clear any previous auto-stop timeout to prevent stale firings
+    if (recordBtn._stopTimeoutId) clearTimeout(recordBtn._stopTimeoutId);
+
+    recordBtn._stopTimeoutId = setTimeout(() => {
+      if (recordBtn._activeRecorder === mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
         isRecording = false;
         recordBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>Gravar</span>';
         recordBtn.classList.remove('recording');
       }
+      recordBtn._stopTimeoutId = null;
     }, 30000);
 
     // Store mediaRecorder reference for stop control
@@ -4735,14 +4775,25 @@ async function generatePalette() {
 
     container.innerHTML = '';
     data.colors.forEach(c => {
+      const hex = (c.hex && c.hex.value) || '';
+      const name = (c.name && c.name.value) || '';
+      // Validate hex format (defense against CSS injection if API is compromised)
+      const safeHex = /^#[0-9a-f]{3,8}$/i.test(hex) ? hex : '#888888';
       const swatch = document.createElement('div');
       swatch.className = 'moodboard-color-swatch';
-      swatch.dataset.color = c.hex.value;
-      swatch.style.background = c.hex.value;
-      swatch.innerHTML = `<span>${c.hex.value}</span><span class="color-name">${c.name.value}</span>`;
-      swatch.title = `${c.name.value} (${c.hex.value})`;
+      swatch.dataset.color = safeHex;
+      swatch.style.background = safeHex;
+      // Use textContent on safe elements instead of innerHTML
+      const hexSpan = document.createElement('span');
+      hexSpan.textContent = safeHex;
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'color-name';
+      nameSpan.textContent = name;
+      swatch.appendChild(hexSpan);
+      swatch.appendChild(nameSpan);
+      swatch.title = `${name} (${safeHex})`;
       swatch.addEventListener('click', () => {
-        navigator.clipboard.writeText(c.hex.value).then(() => showToast(`Copiado: ${c.hex.value}`, 'success'));
+        navigator.clipboard.writeText(safeHex).then(() => showToast(`Copiado: ${safeHex}`, 'success'));
       });
       container.appendChild(swatch);
     });
@@ -4857,8 +4908,27 @@ function initGoogleAuth() {
   document.getElementById('logoutBtn').addEventListener('click', googleLogout);
 }
 
-function startGoogleLogin(clientId) {
+// Lazy-load Google Identity Services on demand. The script is intentionally NOT in
+// index.html anymore — it adds ~50KB to the critical path for users who never log in.
+let _gsiLoadPromise = null;
+function loadGoogleSignIn() {
+  if (typeof google !== 'undefined' && google.accounts) return Promise.resolve();
+  if (_gsiLoadPromise) return _gsiLoadPromise;
+  _gsiLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => { _gsiLoadPromise = null; reject(new Error('Falha ao carregar Google Sign-In')); };
+    document.head.appendChild(script);
+  });
+  return _gsiLoadPromise;
+}
+
+async function startGoogleLogin(clientId) {
   try {
+    await loadGoogleSignIn();
     if (typeof google === 'undefined' || !google.accounts) {
       showToast('Google Sign-In ainda carregando. Tente novamente.', 'error');
       return;
@@ -4884,13 +4954,30 @@ function startGoogleLogin(clientId) {
 }
 
 function handleGoogleCredential(response) {
-  // Decode JWT token
+  // Decode JWT token (header.payload.signature — we don't verify signature client-side
+  // since gsi/client already delivered it, but we DO validate iss/aud/exp to catch
+  // tampered or mis-issued tokens before trusting their claims)
   let payload;
   try {
-    payload = JSON.parse(atob(response.credential.split('.')[1]));
+    if (!response || typeof response.credential !== 'string') throw new Error('credential ausente');
+    const parts = response.credential.split('.');
+    if (parts.length !== 3) throw new Error('formato JWT inválido');
+    // base64url → base64
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+    payload = JSON.parse(atob(b64 + pad));
+
+    // Validate critical JWT claims
+    const VALID_ISS = ['https://accounts.google.com', 'accounts.google.com'];
+    if (!VALID_ISS.includes(payload.iss)) throw new Error('issuer inválido');
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof payload.exp !== 'number' || payload.exp < now) throw new Error('token expirado');
+    if (typeof payload.iat === 'number' && payload.iat > now + 60) throw new Error('iat no futuro');
+    // sub is the Google account id — required for our user isolation model
+    if (!payload.sub || typeof payload.sub !== 'string') throw new Error('sub ausente');
   } catch(e) {
-    console.error('Failed to decode Google credential:', e);
-    showToast('Erro ao processar credencial do Google.', 'error');
+    console.error('Failed to decode/validate Google credential:', e);
+    showToast('Erro ao processar credencial do Google: ' + e.message, 'error');
     return;
   }
   const user = {
@@ -5344,6 +5431,7 @@ async function renderGallery() {
       card.querySelector('.gallery-card-delete').addEventListener('click', async (e) => {
         e.stopPropagation();
         await moveToTrash(item.id);
+        revokeBlobUrls(card); // Free blob URL before removing
         card.remove();
         const remaining = grid.querySelectorAll('.gallery-card').length;
         countEl.textContent = `${remaining} ${remaining === 1 ? 'item' : 'itens'}`;
@@ -5850,8 +5938,11 @@ async function renderHistory() {
       el.className = 'history-item';
 
       let thumbHTML = '';
+      let thumbUrl = null;
       if (item.thumbnail instanceof Blob) {
-        thumbHTML = `<img src="${URL.createObjectURL(item.thumbnail)}" alt="">`;
+        // Single blob URL per item, reused for both thumb and click handler
+        thumbUrl = URL.createObjectURL(item.thumbnail);
+        thumbHTML = `<img src="${thumbUrl}" alt="">`;
       } else {
         thumbHTML = `<i class="fas ${typeIcons[item.type] || 'fa-file'}" style="color:var(--text-muted);"></i>`;
       }
@@ -5883,12 +5974,11 @@ async function renderHistory() {
         </div>
       `;
 
-      // Click to open fullscreen for items with thumbnail
-      if (item.thumbnail instanceof Blob) {
+      // Click to open fullscreen for items with thumbnail (reuse the already-created blob URL)
+      if (thumbUrl) {
         el.style.cursor = 'pointer';
         el.addEventListener('click', () => {
-          const url = URL.createObjectURL(item.thumbnail);
-          openLightbox(url, item.prompt || '', item.detail || '', item.type === 'video' ? 'video' : 'image');
+          openLightbox(thumbUrl, item.prompt || '', item.detail || '', item.type === 'video' ? 'video' : 'image');
         });
       }
 
@@ -5912,6 +6002,8 @@ async function renderHistory() {
       el.querySelector('.btn-delete').addEventListener('click', async (e) => {
         e.stopPropagation();
         await deleteHistoryItem(item.id);
+        revokeBlobUrls(el); // Free blob URL before removing
+        if (thumbUrl) { try { URL.revokeObjectURL(thumbUrl); } catch(_) {} }
         el.remove();
         const remaining = list.querySelectorAll('.history-item').length;
         countEl.textContent = `${remaining} ${remaining === 1 ? 'registro' : 'registros'}`;
@@ -7183,21 +7275,23 @@ function renderSavedStoryboards() {
     card.className = 'sb-saved-card';
 
     const thumbs = sb.panels.slice(0, 4).map(p =>
-      p.imageUrl ? `<img src="${p.imageUrl}" alt="" loading="lazy">` : `<div class="sb-thumb-placeholder"><i class="fas fa-image"></i></div>`
+      p.imageUrl ? `<img src="${encodeURI(p.imageUrl || '')}" alt="" loading="lazy">` : `<div class="sb-thumb-placeholder"><i class="fas fa-image" aria-hidden="true"></i></div>`
     ).join('');
 
     const timeStr = new Date(sb.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     const itemFolder = folderMap[sb.id];
     const folder = itemFolder ? getFolders().find(f => f.id === itemFolder) : null;
-    const folderBadge = folder ? `<span class="item-folder-badge" style="background:${folder.color}20;color:${folder.color};"><span class="badge-dot" style="background:${folder.color};"></span>${folder.name}</span>` : '';
+    // Validate folder.color (hex only) to prevent CSS injection
+    const safeColor = folder && /^#[0-9a-f]{3,8}$/i.test(folder.color || '') ? folder.color : '#AD39FB';
+    const folderBadge = folder ? `<span class="item-folder-badge" style="background:${safeColor}20;color:${safeColor};"><span class="badge-dot" style="background:${safeColor};"></span>${escapeHtml(folder.name)}</span>` : '';
 
     card.innerHTML = `
       <div class="sb-saved-card-thumb">${thumbs}</div>
       <div class="sb-saved-card-info">
-        <div class="sb-saved-card-title">${sb.title}</div>
+        <div class="sb-saved-card-title">${escapeHtml(sb.title || '')}</div>
         <div class="sb-saved-card-meta">
-          <span><i class="fas fa-film"></i> ${sb.panels.length} paineis</span>
-          <span><i class="fas fa-clock"></i> ${timeStr}</span>
+          <span><i class="fas fa-film" aria-hidden="true"></i> ${sb.panels.length} paineis</span>
+          <span><i class="fas fa-clock" aria-hidden="true"></i> ${escapeHtml(timeStr)}</span>
           ${folderBadge}
         </div>
       </div>
@@ -7253,8 +7347,8 @@ function loadSavedStoryboard(sb) {
       panelEl.className = 'storyboard-panel';
       panelEl.innerHTML = `
         <div class="sb-panel-header"><span>Painel ${i + 1}</span></div>
-        ${panel.imageUrl ? `<img src="${panel.imageUrl}" alt="Panel ${i + 1}" style="width:100%;border-radius:var(--radius-sm);cursor:pointer;">` : '<div style="aspect-ratio:16/9;background:var(--bg-input);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);"><i class="fas fa-image"></i></div>'}
-        <p style="font-size:0.78rem;color:var(--text-secondary);margin-top:8px;">${panel.description}</p>
+        ${panel.imageUrl ? `<img src="${encodeURI(panel.imageUrl || '')}" alt="Painel ${i + 1}" style="width:100%;border-radius:var(--radius-sm);cursor:pointer;">` : '<div style="aspect-ratio:16/9;background:var(--bg-input);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--text-muted);"><i class="fas fa-image" aria-hidden="true"></i></div>'}
+        <p style="font-size:0.78rem;color:var(--text-secondary);margin-top:8px;">${escapeHtml(panel.description || '')}</p>
       `;
       if (panel.imageUrl) {
         panelEl.querySelector('img')?.addEventListener('click', () => openLightbox(panel.imageUrl, panel.description || '', '', 'image'));
@@ -8751,8 +8845,8 @@ async function exportDecupagemToGoogleDocs() {
       }
     }
 
-    // Open the doc in a new tab
-    window.open(`https://docs.google.com/document/d/${docId}/edit`, '_blank');
+    // Open the doc in a new tab (noopener to prevent tabnabbing)
+    window.open(`https://docs.google.com/document/d/${encodeURIComponent(docId)}/edit`, '_blank', 'noopener,noreferrer');
     showToast('Documento criado no Google Docs!', 'success');
 
   } catch (err) {
@@ -8765,7 +8859,12 @@ async function exportDecupagemToGoogleDocs() {
   }
 }
 
-function requestGoogleDocsToken() {
+async function requestGoogleDocsToken() {
+  try {
+    await loadGoogleSignIn();
+  } catch (e) {
+    return null;
+  }
   return new Promise((resolve) => {
     try {
       if (typeof google === 'undefined' || !google.accounts) {
@@ -8790,3 +8889,185 @@ function requestGoogleDocsToken() {
     }
   });
 }
+
+// =============================================
+// === KEYBOARD SHORTCUTS & A11Y NAV ===
+// =============================================
+// Atalhos globais para creators (fluxo rápido):
+//   Cmd/Ctrl+Enter  → gerar (focado no prompt ou em qualquer lugar)
+//   M/V/A/T/D       → alternar aba Moodboard/Video/Audio/Texto/Decupagem
+//   I               → aba Imagem
+//   G               → aba Galeria
+//   B               → aba Biblioteca
+//   Esc             → fecha modais/lightbox abertos
+//   ?  (Shift+/)    → abre overlay com lista de atalhos
+//
+// As letras isoladas só atuam quando o foco NÃO está em campo de texto,
+// evitando colidir com digitação no prompt.
+
+const KEYBOARD_TAB_MAP = {
+  i: 'image', m: 'moodboard', v: 'video', a: 'audio',
+  t: 'text',  s: 'storyboard', g: 'gallery', b: 'biblioteca',
+  h: 'history', f: 'folders', d: 'decupagem'
+};
+
+function isTextInputFocused() {
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+}
+
+function getOpenModalEl() {
+  const candidates = [
+    document.getElementById('lightbox'),
+    document.getElementById('folderModal'),
+    document.getElementById('moveToFolderModal'),
+    document.getElementById('galleryPreview'),
+    document.getElementById('editItemModal'),
+    document.getElementById('apiKeyModal'),
+    document.getElementById('shortcutsModal'),
+  ];
+  for (const el of candidates) {
+    if (!el) continue;
+    const visible = el.style.display !== 'none' && !el.hidden && el.offsetParent !== null;
+    if (visible) return el;
+    if (el.classList && el.classList.contains('active')) return el;
+  }
+  return null;
+}
+
+function tryCloseOpenModal() {
+  const modal = getOpenModalEl();
+  if (!modal) return false;
+  // Try a known close button inside it
+  const closeBtn = modal.querySelector(
+    '.lightbox-close, .folder-modal-close, .gallery-preview-close, .api-modal-close, [data-modal-close]'
+  );
+  if (closeBtn) { closeBtn.click(); return true; }
+  // Fallback: hide directly
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.remove('active');
+  return true;
+}
+
+function showShortcutsModal() {
+  let modal = document.getElementById('shortcutsModal');
+  if (modal) { modal.style.display = ''; modal.setAttribute('aria-hidden', 'false'); return; }
+  modal = document.createElement('div');
+  modal.id = 'shortcutsModal';
+  modal.className = 'shortcuts-modal-overlay';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'shortcutsModalTitle');
+  modal.innerHTML = `
+    <div class="shortcuts-modal">
+      <div class="shortcuts-modal-header">
+        <h3 id="shortcutsModalTitle"><i class="fas fa-keyboard" aria-hidden="true"></i> Atalhos do teclado</h3>
+        <button class="shortcuts-modal-close" data-modal-close aria-label="Fechar"><i class="fas fa-times" aria-hidden="true"></i></button>
+      </div>
+      <div class="shortcuts-modal-body">
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Gerar</div>
+          <div class="shortcut-row"><kbd>Ctrl</kbd>+<kbd>Enter</kbd><span>ou</span><kbd>⌘</kbd>+<kbd>Enter</kbd><em>Gerar (de qualquer lugar)</em></div>
+          <div class="shortcut-row"><kbd>Esc</kbd><em>Fecha modal/lightbox</em></div>
+        </div>
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Navegar entre abas</div>
+          <div class="shortcut-row"><kbd>I</kbd><em>Imagem</em></div>
+          <div class="shortcut-row"><kbd>V</kbd><em>Video</em></div>
+          <div class="shortcut-row"><kbd>A</kbd><em>Audio</em></div>
+          <div class="shortcut-row"><kbd>T</kbd><em>Texto</em></div>
+          <div class="shortcut-row"><kbd>M</kbd><em>Moodboard</em></div>
+          <div class="shortcut-row"><kbd>S</kbd><em>Storyboard</em></div>
+          <div class="shortcut-row"><kbd>G</kbd><em>Galeria</em></div>
+          <div class="shortcut-row"><kbd>B</kbd><em>Biblioteca</em></div>
+          <div class="shortcut-row"><kbd>H</kbd><em>Histórico</em></div>
+          <div class="shortcut-row"><kbd>F</kbd><em>Pastas</em></div>
+          <div class="shortcut-row"><kbd>D</kbd><em>Decupagem</em></div>
+          <div class="shortcut-row"><kbd>←</kbd><kbd>→</kbd><em>Próxima/anterior aba (com foco na nav)</em></div>
+        </div>
+        <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Ajuda</div>
+          <div class="shortcut-row"><kbd>?</kbd><em>Mostra este painel</em></div>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.matches('[data-modal-close]') || e.target.closest('[data-modal-close]')) {
+      modal.style.display = 'none';
+    }
+  });
+}
+
+document.addEventListener('keydown', (e) => {
+  // Esc fecha modais abertos (prioridade máxima)
+  if (e.key === 'Escape') {
+    if (tryCloseOpenModal()) { e.preventDefault(); }
+    return;
+  }
+  // Cmd/Ctrl+Enter dispara o botão "Gerar" principal (funciona mesmo focado em prompt)
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    const btn = document.getElementById('generateBtnMain');
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+    return;
+  }
+  // ? abre cheatsheet (Shift + / em US, ou tecla ? direta)
+  if (e.key === '?' && !isTextInputFocused()) {
+    e.preventDefault();
+    showShortcutsModal();
+    return;
+  }
+  // Atalhos de aba só funcionam se NÃO está digitando em campo de texto
+  if (isTextInputFocused()) return;
+  // Ignora se modificadores presentes (deixa para o browser/SO)
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const key = e.key.toLowerCase();
+  if (KEYBOARD_TAB_MAP[key]) {
+    e.preventDefault();
+    switchTab(KEYBOARD_TAB_MAP[key]);
+  }
+});
+
+// === ARIA tablist: arrow-key navigation entre abas ===
+document.addEventListener('DOMContentLoaded', () => {
+  const tabsNav = document.querySelector('.topbar-nav[role="tablist"]');
+  if (!tabsNav) return;
+  tabsNav.addEventListener('keydown', (e) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    const tabs = Array.from(tabsNav.querySelectorAll('[role="tab"]'));
+    const idx = tabs.findIndex(t => t === document.activeElement);
+    if (idx < 0) return;
+    e.preventDefault();
+    let next = idx;
+    if (e.key === 'ArrowRight') next = (idx + 1) % tabs.length;
+    else if (e.key === 'ArrowLeft') next = (idx - 1 + tabs.length) % tabs.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = tabs.length - 1;
+    const target = tabs[next];
+    if (target && target.dataset.tab) {
+      target.focus();
+      switchTab(target.dataset.tab);
+    }
+  });
+
+  // === Mobile tab indicator: mostra hint quando há overflow horizontal ===
+  function updateTabOverflowHint() {
+    let hint = document.querySelector('.topbar-nav-hint');
+    if (!hint) {
+      hint = document.createElement('span');
+      hint.className = 'topbar-nav-hint';
+      hint.setAttribute('aria-hidden', 'true');
+      hint.innerHTML = '<i class="fas fa-angle-right"></i>';
+      tabsNav.parentElement && tabsNav.parentElement.appendChild(hint);
+    }
+    const hasOverflow = tabsNav.scrollWidth > tabsNav.clientWidth + 4;
+    const atEnd = tabsNav.scrollLeft + tabsNav.clientWidth >= tabsNav.scrollWidth - 4;
+    hint.classList.toggle('has-overflow', hasOverflow && !atEnd);
+  }
+  updateTabOverflowHint();
+  tabsNav.addEventListener('scroll', updateTabOverflowHint, { passive: true });
+  window.addEventListener('resize', updateTabOverflowHint);
+});

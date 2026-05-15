@@ -11,6 +11,9 @@
 // ============================================
 
 const ALLOWED_ORIGIN = 'https://savylla.github.io';
+// Internal-only endpoints (/_debug, /_discover) require the request to come from
+// the allowed origin. Production traffic uses only the normal proxy path.
+const ALLOWED_ORIGINS_INTERNAL = new Set([ALLOWED_ORIGIN]);
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -26,6 +29,27 @@ const API_BASES = [
   'https://app.higgsfield.ai',
 ];
 
+// Validate that internal endpoints (/_debug, /_discover) are only called from the
+// allowed origin. Without this check, anyone can hit them and (a) abuse the proxy as
+// an SSRF gateway by sending arbitrary Authorization headers, (b) enumerate API
+// surface area, or (c) burn CPU on the worker quota.
+function isAllowedInternalCaller(request) {
+  const origin = request.headers.get('Origin') || '';
+  const referer = request.headers.get('Referer') || '';
+  if (ALLOWED_ORIGINS_INTERNAL.has(origin)) return true;
+  try {
+    if (referer && ALLOWED_ORIGINS_INTERNAL.has(new URL(referer).origin)) return true;
+  } catch (_) {}
+  return false;
+}
+
+function forbidden() {
+  return new Response(JSON.stringify({ error: 'Forbidden: internal endpoint' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+  });
+}
+
 export default {
   async fetch(request) {
     // Handle CORS preflight
@@ -36,8 +60,9 @@ export default {
     const url = new URL(request.url);
     const targetPath = url.pathname + url.search;
 
-    // Debug endpoint: test all base URLs
+    // Debug endpoint: test all base URLs (internal — origin-gated)
     if (targetPath === '/_debug') {
+      if (!isAllowedInternalCaller(request)) return forbidden();
       const authHeader = request.headers.get('Authorization') || '';
       const results = {};
       for (const base of API_BASES) {
@@ -62,8 +87,9 @@ export default {
       });
     }
 
-    // Discovery endpoint: try a test generation on all bases
+    // Discovery endpoint: try a test generation on all bases (internal — origin-gated)
     if (targetPath === '/_discover') {
+      if (!isAllowedInternalCaller(request)) return forbidden();
       const authHeader = request.headers.get('Authorization') || '';
       const body = await request.text();
       const testPaths = [
