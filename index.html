@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src 'self' https://generativelanguage.googleapis.com https://text.pollinations.ai https://image.pollinations.ai https://api.groq.com https://openrouter.ai https://api.together.xyz https://router.huggingface.co https://stablehorde.net https://api.pexels.com https://pixabay.com https://api.unsplash.com https://api.openverse.org https://freesound.org https://www.thecolorapi.com https://fonts.googleapis.com https://fonts.gstatic.com https://accounts.google.com https://www.googleapis.com https://docs.googleapis.com https://docs.google.com https://api.dicebear.com https://higgsfield.ai https://platform.higgsfield.ai https://api.higgsfield.ai https://cloud.higgsfield.ai https://app.higgsfield.ai https://ads.tiktok.com https://static.higgsfield.ai https://cdn.higgsfield.ai; worker-src blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' https://cdnjs.cloudflare.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src * blob: data:; media-src * blob:; connect-src 'self' https://generativelanguage.googleapis.com https://text.pollinations.ai https://image.pollinations.ai https://api.groq.com https://openrouter.ai https://api.together.xyz https://router.huggingface.co https://stablehorde.net https://api.pexels.com https://pixabay.com https://api.unsplash.com https://api.openverse.org https://freesound.org https://www.thecolorapi.com https://fonts.googleapis.com https://fonts.gstatic.com https://accounts.google.com https://www.googleapis.com https://docs.googleapis.com https://docs.google.com https://api.dicebear.com https://higgsfield.ai https://platform.higgsfield.ai https://api.higgsfield.ai https://cloud.higgsfield.ai https://app.higgsfield.ai https://ads.tiktok.com https://static.higgsfield.ai https://cdn.higgsfield.ai; worker-src 'self' blob:;">
   <meta name="description" content="Gere imagens, vídeos, áudio e texto com IA gratuitamente. Múltiplos provedores, moodboard, storyboard e mais.">
   <meta property="og:title" content="AI Performance Studio">
   <meta property="og:description" content="Gere imagens, vídeos, áudio e texto com IA gratuitamente.">
@@ -1042,6 +1042,15 @@
             <button class="bilingual-close-btn" id="closeBilingualBtn"><i class="fas fa-times"></i> Fechar</button>
           </div>
         </div>
+      </div>
+
+      <!-- Presets de prompt — chips horizontais com últimos prompts salvos -->
+      <div class="prompt-presets-row" id="promptPresetsRow" aria-label="Presets de prompt salvos" hidden>
+        <div class="prompt-presets-chips" id="promptPresetsChips" role="list"></div>
+        <button class="prompt-presets-save" id="promptPresetSaveBtn" title="Salvar prompt atual como preset (Ctrl+S)" aria-label="Salvar prompt atual como preset">
+          <i class="fas fa-bookmark" aria-hidden="true"></i>
+          <span>Salvar</span>
+        </button>
       </div>
 
       <!-- Prompt Input Row -->

@@ -109,7 +109,37 @@ document.addEventListener('DOMContentLoaded', () => {
   initDecupagem();
   initGoogleAuth();
   initOnboarding();
+  initServiceWorker();
+  initPromptPresets();
 });
+
+// === SERVICE WORKER REGISTRATION ===
+// Cache static assets para visitas subsequentes serem ~instantâneas.
+// Operação em background — falha silenciosa não quebra o app.
+function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  // Só registra em produção/HTTPS ou localhost (evita ruído em file://)
+  const proto = location.protocol;
+  if (proto !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+  // Carrega após page load para não competir com critical path
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        // Detecta novas versões: avisa o user e atualiza no próximo reload
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+              // Há nova versão pronta. Não força reload (usuário pode estar gerando algo).
+              console.info('[AIOX] Nova versão disponível — recarregue para usar.');
+            }
+          });
+        });
+      })
+      .catch((err) => console.warn('[AIOX] SW register failed:', err));
+  });
+}
 
 // === ONBOARDING (first-time user experience) ===
 function initOnboarding() {
@@ -787,18 +817,14 @@ function getReferenceFiles() {
   return referenceFiles;
 }
 
-function addRefFileToMoodboard(file, dataUrl) {
+async function addRefFileToMoodboard(file, dataUrl) {
   if (file.type.startsWith('image/')) {
-    addImageToBoard(dataUrl, file.name, null);
+    await addImageToBoard(dataUrl, file.name, null);
   } else if (file.type.startsWith('video/')) {
-    moodboardItems.push({ type: 'video', url: dataUrl, provider: file.name, id: Date.now() });
-    saveMoodboard();
-    renderMoodboard();
+    await addMediaToMoodboard('video', dataUrl, { provider: file.name });
     showToast('Video adicionado ao board!', 'success');
   } else if (file.type.startsWith('audio/')) {
-    moodboardItems.push({ type: 'audio', url: dataUrl, provider: file.name, id: Date.now() });
-    saveMoodboard();
-    renderMoodboard();
+    await addMediaToMoodboard('audio', dataUrl, { provider: file.name });
     showToast('Audio adicionado ao board!', 'success');
   } else if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
     // Read as text and add as note
@@ -1254,7 +1280,14 @@ async function startImageGeneration() {
         card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); downloadImage(imgSrc, 'ai-image-' + Date.now() + '.png'); });
         card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
         card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); revokeBlobUrls(card); card.remove(); });
-        card.addEventListener('click', () => openLightbox(imgSrc, prompt, ratio));
+        card.addEventListener('click', (e) => {
+          // Shift+click: atalho criador → adiciona ao moodboard sem abrir preview
+          if (e.shiftKey) {
+            addImageToBoard(imgSrc, providerLabel, null);
+            return;
+          }
+          openLightbox(imgSrc, prompt, ratio);
+        });
         // Save to gallery + history
         saveImageToGallery(imgSrc, prompt, providerLabel);
         saveToHistory({ type: 'image', prompt, provider: providerLabel, status: 'success', detail: ratio });
@@ -3768,12 +3801,17 @@ function initLightbox() {
   // Escape handled by initKeyboardShortcuts
 }
 
+// Estado do lightbox para atalhos (Q = quick add ao moodboard)
+let _lightboxCurrent = null;
+
 function openLightbox(src, prompt, ratio, type) {
   const lightbox = document.getElementById('lightbox');
   const imgEl = document.getElementById('lightboxImg');
   const vidEl = document.getElementById('lightboxVideo');
   const infoEl = document.getElementById('lightboxInfo');
   const dlBtn = document.getElementById('lightboxDownload');
+
+  _lightboxCurrent = { src, prompt: prompt || '', ratio: ratio || '', type: type || 'image' };
 
   // Reset
   imgEl.style.display = 'none';
@@ -3816,6 +3854,7 @@ function closeLightbox() {
   vidEl.src = '';
   lightbox.classList.remove('open');
   document.body.style.overflow = '';
+  _lightboxCurrent = null;
 }
 
 // History API: Back button closes modals instead of leaving the site
@@ -4230,7 +4269,7 @@ const GOOGLE_FONTS_TOP = [
   'Space Grotesk', 'DM Sans', 'Outfit', 'Sora', 'Urbanist', 'Archivo Black'
 ];
 
-function initMoodboard() {
+async function initMoodboard() {
   // Load saved board
   const saved = localStorage.getItem('moodboard_items');
   if (saved) {
@@ -4240,6 +4279,10 @@ function initMoodboard() {
       showToast('Erro ao carregar moodboard salvo. Dados podem estar corrompidos.', 'error');
     }
   }
+  // Migra itens legados: blob: URLs estão mortos, data: URLs vão pra IDB.
+  await migrateMoodboardItemsToIDB();
+  // Pré-aquece o cache de blob URLs antes de renderizar (evita placeholders).
+  await mbPrewarmBlobUrls();
   renderMoodboard();
 
   // Source selector
@@ -4566,10 +4609,9 @@ async function searchOpenverseAudio(append) {
 }
 
 // --- Board Items ---
-function addImageToBoard(url, photographer, avgColor) {
-  moodboardItems.push({ type: 'image', url, photographer, avgColor, id: Date.now() });
-  saveMoodboard();
-  renderMoodboard();
+async function addImageToBoard(url, photographer, avgColor) {
+  // Persiste blob/data URLs em IDB para sobreviver a reloads
+  await addMediaToMoodboard('image', url, { photographer, avgColor });
   showToast('Imagem adicionada ao board!', 'success');
 }
 
@@ -4601,6 +4643,13 @@ function addFontToBoard(fontName) {
 }
 
 function removeFromBoard(id) {
+  // Encontra antes de remover pra revogar blob URL + apagar do IDB
+  const it = moodboardItems.find(i => i.id === id);
+  if (it && it.blobId != null) {
+    const url = _mbActiveBlobUrls.get(it.blobId);
+    if (url) { try { URL.revokeObjectURL(url); } catch(_) {} _mbActiveBlobUrls.delete(it.blobId); }
+    mbBlobDelete(it.blobId); // fire-and-forget
+  }
   moodboardItems = moodboardItems.filter(i => i.id !== id);
   saveMoodboard();
   renderMoodboard();
@@ -4647,59 +4696,94 @@ function renderMoodboard() {
   itemsToRender.forEach(item => {
     const el = document.createElement('div');
     el.className = 'moodboard-item moodboard-item-' + item.type;
+    const mediaUrl = getMoodboardItemUrl(item);
+    const isDead = item._dead || ((item.type === 'image' || item.type === 'video' || item.type === 'audio') && !mediaUrl);
 
     if (item.type === 'image') {
-      el.innerHTML = `
-        <img src="${item.url}" alt="" loading="lazy">
-        <div class="moodboard-item-actions">
-          <button class="moodboard-item-action-btn moodboard-item-folder-btn" title="Mover para pasta"><i class="fas fa-folder"></i></button>
-          <button class="moodboard-item-action-btn moodboard-download-btn" title="Baixar imagem"><i class="fas fa-download"></i></button>
-          <button class="moodboard-item-action-btn moodboard-gallery-btn" title="Adicionar na Galeria"><i class="fas fa-images"></i></button>
-          <button class="moodboard-item-action-btn moodboard-storyboard-btn" title="Adicionar ao Story Board"><i class="fas fa-book-open"></i></button>
-        </div>
-        <div class="moodboard-item-info">
-          <span><i class="fas fa-camera"></i> ${escapeHtml(item.photographer)}</span>
-        </div>
-        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
-      `;
+      if (isDead) {
+        el.innerHTML = `
+          <div class="moodboard-item-dead" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-muted);padding:14px;text-align:center;">
+            <i class="fas fa-image-slash" aria-hidden="true" style="font-size:1.8rem;"></i>
+            <span style="font-size:0.7rem;">Imagem não disponível</span>
+          </div>
+          <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
+        `;
+      } else {
+        el.innerHTML = `
+          <img src="${encodeURI(mediaUrl)}" alt="" loading="lazy">
+          <div class="moodboard-item-actions">
+            <button class="moodboard-item-action-btn moodboard-item-folder-btn" title="Mover para pasta"><i class="fas fa-folder" aria-hidden="true"></i></button>
+            <button class="moodboard-item-action-btn moodboard-download-btn" title="Baixar imagem"><i class="fas fa-download" aria-hidden="true"></i></button>
+            <button class="moodboard-item-action-btn moodboard-gallery-btn" title="Adicionar na Galeria"><i class="fas fa-images" aria-hidden="true"></i></button>
+            <button class="moodboard-item-action-btn moodboard-storyboard-btn" title="Adicionar ao Story Board"><i class="fas fa-book-open" aria-hidden="true"></i></button>
+          </div>
+          <div class="moodboard-item-info">
+            <span><i class="fas fa-camera" aria-hidden="true"></i> ${escapeHtml(item.photographer || '')}</span>
+          </div>
+          <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
+        `;
+      }
     } else if (item.type === 'palette') {
       el.innerHTML = `
         <div class="moodboard-palette-strip">
-          ${item.colors.map(c => `<div class="moodboard-palette-cell" style="background:${c};" title="${c}"><span>${c}</span></div>`).join('')}
+          ${item.colors.map(c => {
+            const safeC = /^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#888888';
+            return `<div class="moodboard-palette-cell" style="background:${safeC};" title="${safeC}"><span>${safeC}</span></div>`;
+          }).join('')}
         </div>
-        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
-        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder" aria-hidden="true"></i></button>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
       `;
     } else if (item.type === 'note') {
       el.innerHTML = `
-        <div class="moodboard-note-content"><i class="fas fa-sticky-note"></i> ${escapeHtml(item.text)}</div>
-        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
-        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
+        <div class="moodboard-note-content"><i class="fas fa-sticky-note" aria-hidden="true"></i> ${escapeHtml(item.text || '')}</div>
+        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder" aria-hidden="true"></i></button>
+        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
       `;
     } else if (item.type === 'video') {
-      el.innerHTML = `
-        <div class="moodboard-video-thumb" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;">
-          <video src="${item.url}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>
-          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">
-            <i class="fas fa-play-circle" style="font-size:2.5rem;color:#fff;opacity:0.9;"></i>
+      if (isDead) {
+        el.innerHTML = `
+          <div class="moodboard-item-dead" style="aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--text-muted);padding:14px;text-align:center;">
+            <i class="fas fa-video-slash" aria-hidden="true" style="font-size:1.8rem;"></i>
+            <span style="font-size:0.7rem;">Vídeo não disponível</span>
           </div>
-        </div>
-        <div class="moodboard-item-info">
-          <span><i class="fas fa-video"></i> ${escapeHtml(item.provider || 'Video')}</span>
-        </div>
-        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
-        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
-      `;
+          <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
+        `;
+      } else {
+        el.innerHTML = `
+          <div class="moodboard-video-thumb" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:var(--radius-sm);overflow:hidden;cursor:pointer;">
+            <video src="${encodeURI(mediaUrl)}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);">
+              <i class="fas fa-play-circle" aria-hidden="true" style="font-size:2.5rem;color:#fff;opacity:0.9;"></i>
+            </div>
+          </div>
+          <div class="moodboard-item-info">
+            <span><i class="fas fa-video" aria-hidden="true"></i> ${escapeHtml(item.provider || 'Video')}</span>
+          </div>
+          <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder" aria-hidden="true"></i></button>
+          <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
+        `;
+      }
     } else if (item.type === 'audio') {
-      el.innerHTML = `
-        <div style="padding:12px; text-align:center;">
-          <i class="fas fa-volume-up" style="font-size:1.5rem; color:var(--green); margin-bottom:8px;"></i>
-          <audio controls src="${item.url}" style="width:100%;"></audio>
-          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${escapeHtml(item.provider || 'Audio')}</div>
-        </div>
-        <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder"></i></button>
-        <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times"></i></button>
-      `;
+      if (isDead) {
+        el.innerHTML = `
+          <div class="moodboard-item-dead" style="padding:16px;text-align:center;color:var(--text-muted);">
+            <i class="fas fa-volume-mute" aria-hidden="true" style="font-size:1.5rem;"></i>
+            <div style="font-size:0.7rem;margin-top:4px;">Áudio não disponível</div>
+          </div>
+          <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
+        `;
+      } else {
+        el.innerHTML = `
+          <div style="padding:12px; text-align:center;">
+            <i class="fas fa-volume-up" aria-hidden="true" style="font-size:1.5rem; color:var(--green); margin-bottom:8px;"></i>
+            <audio controls src="${encodeURI(mediaUrl)}" style="width:100%;"></audio>
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">${escapeHtml(item.provider || 'Audio')}</div>
+          </div>
+          <button class="moodboard-item-folder-btn" style="position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.6);border:none;color:var(--text-secondary);width:22px;height:22px;border-radius:4px;cursor:pointer;font-size:0.65rem;display:flex;align-items:center;justify-content:center;" title="Mover para pasta"><i class="fas fa-folder" aria-hidden="true"></i></button>
+          <button class="moodboard-item-remove" title="Remover"><i class="fas fa-times" aria-hidden="true"></i></button>
+        `;
+      }
     } else if (item.type === 'font') {
       // Load the font (deduplicate)
       const fontHref = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(item.fontName)}&display=swap`;
@@ -4733,27 +4817,30 @@ function renderMoodboard() {
       });
     }
 
-    // Click to open fullscreen for images and videos
-    if (item.type === 'image') {
-      el.addEventListener('click', () => openLightbox(item.url, item.photographer || '', '', 'image'));
-    } else if (item.type === 'video') {
-      el.addEventListener('click', () => openLightbox(item.url, item.provider || '', '', 'video'));
+    // Click to open fullscreen for images and videos (só se mídia disponível)
+    if (item.type === 'image' && mediaUrl) {
+      el.addEventListener('click', () => openLightbox(mediaUrl, item.photographer || '', '', 'image'));
+    } else if (item.type === 'video' && mediaUrl) {
+      el.addEventListener('click', () => openLightbox(mediaUrl, item.provider || '', '', 'video'));
     }
 
-    // Download & Gallery buttons for images
-    if (item.type === 'image') {
-      el.querySelector('.moodboard-download-btn').addEventListener('click', (e) => {
+    // Download & Gallery buttons for images (apenas se mídia disponível)
+    if (item.type === 'image' && mediaUrl) {
+      const dlBtn = el.querySelector('.moodboard-download-btn');
+      if (dlBtn) dlBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        downloadImage(item.url, `moodboard-${item.photographer || 'image'}-${Date.now()}.jpg`);
+        downloadImage(mediaUrl, `moodboard-${item.photographer || 'image'}-${Date.now()}.jpg`);
       });
-      el.querySelector('.moodboard-gallery-btn').addEventListener('click', async (e) => {
+      const galBtn = el.querySelector('.moodboard-gallery-btn');
+      if (galBtn) galBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        await saveImageToGallery(item.url, '', item.photographer || 'Moodboard');
+        await saveImageToGallery(mediaUrl, '', item.photographer || 'Moodboard');
         showToast('Imagem salva na Galeria!', 'success');
       });
-      el.querySelector('.moodboard-storyboard-btn').addEventListener('click', (e) => {
+      const sbBtn = el.querySelector('.moodboard-storyboard-btn');
+      if (sbBtn) sbBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        addToStoryboard(item.url, item.photographer || '');
+        addToStoryboard(mediaUrl, item.photographer || '');
       });
     }
 
@@ -5051,10 +5138,11 @@ function googleLogout() {
 
 let galleryDB = null;
 const GALLERY_DB_NAME = 'AIStudioGallery';
-const GALLERY_DB_VERSION = 3;
+const GALLERY_DB_VERSION = 4; // v4: + MOODBOARD_BLOB_STORE
 const GALLERY_STORE = 'items';
 const HISTORY_STORE = 'history';
 const TRASH_STORE = 'trash';
+const MOODBOARD_BLOB_STORE = 'moodboardBlobs';
 
 function openGalleryDB() {
   return new Promise((resolve, reject) => {
@@ -5077,10 +5165,196 @@ function openGalleryDB() {
         tStore.createIndex('type', 'type', { unique: false });
         tStore.createIndex('deletedAt', 'deletedAt', { unique: false });
       }
+      // v4: blobs do moodboard armazenados aqui em vez de dataURL no localStorage
+      // — corrige B1 (blob: URLs morrem ao recarregar) e evita estouro de quota.
+      if (!db.objectStoreNames.contains(MOODBOARD_BLOB_STORE)) {
+        const mStore = db.createObjectStore(MOODBOARD_BLOB_STORE, { keyPath: 'id', autoIncrement: true });
+        mStore.createIndex('type', 'type', { unique: false });
+        mStore.createIndex('createdAt', 'createdAt', { unique: false });
+      }
     };
     req.onsuccess = (e) => { galleryDB = e.target.result; resolve(galleryDB); };
     req.onerror = (e) => reject(e.target.error);
   });
+}
+
+// === MOODBOARD BLOB STORAGE ===
+// Persiste Blobs grandes (imagens/vídeos/áudio adicionados ao board) em
+// IndexedDB. moodboardItems mantém só ids leves no localStorage.
+
+async function mbBlobSave(blob, meta) {
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(MOODBOARD_BLOB_STORE, 'readwrite');
+    const store = tx.objectStore(MOODBOARD_BLOB_STORE);
+    const record = {
+      blob,
+      type: (meta && meta.type) || (blob && blob.type) || 'application/octet-stream',
+      mimeType: blob && blob.type,
+      size: blob && blob.size,
+      createdAt: Date.now(),
+      meta: meta || null
+    };
+    const req = store.add(record);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function mbBlobGet(id) {
+  if (id == null) return null;
+  const db = await openGalleryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(MOODBOARD_BLOB_STORE, 'readonly');
+    const req = tx.objectStore(MOODBOARD_BLOB_STORE).get(id);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function mbBlobDelete(id) {
+  if (id == null) return;
+  try {
+    const db = await openGalleryDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(MOODBOARD_BLOB_STORE, 'readwrite');
+      tx.objectStore(MOODBOARD_BLOB_STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch (e) { /* silencioso — nada a fazer */ }
+}
+
+// Converte uma URL/dataURL/blob URL em um Blob.
+// dataURLs são parseadas manualmente (fetch é bloqueado pelo connect-src do CSP).
+// blob: e https: passam por fetch normal.
+async function urlToBlob(url) {
+  if (!url || typeof url !== 'string') return null;
+  if (url.startsWith('data:')) return dataUrlToBlob(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Falha ao baixar URL para Blob: ' + res.status);
+  return await res.blob();
+}
+
+// Decodifica uma data URL em Blob sem usar fetch (evita restrição de CSP).
+function dataUrlToBlob(dataUrl) {
+  const commaIdx = dataUrl.indexOf(',');
+  if (commaIdx < 0) throw new Error('dataURL inválida');
+  const meta = dataUrl.slice(5, commaIdx); // remove "data:"
+  const payload = dataUrl.slice(commaIdx + 1);
+  const isBase64 = /;base64$/i.test(meta);
+  const mime = (isBase64 ? meta.replace(/;base64$/i, '') : meta) || 'application/octet-stream';
+  let bytes;
+  if (isBase64) {
+    const bin = atob(payload);
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  } else {
+    const decoded = decodeURIComponent(payload);
+    bytes = new Uint8Array(decoded.length);
+    for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mime });
+}
+
+// Cria URL temporária a partir de um blobId persistido. Rastreia para revogar.
+const _mbActiveBlobUrls = new Map(); // blobId -> object URL
+async function mbBlobIdToUrl(blobId) {
+  if (blobId == null) return null;
+  if (_mbActiveBlobUrls.has(blobId)) return _mbActiveBlobUrls.get(blobId);
+  const record = await mbBlobGet(blobId);
+  if (!record || !record.blob) return null;
+  const objUrl = URL.createObjectURL(record.blob);
+  _mbActiveBlobUrls.set(blobId, objUrl);
+  return objUrl;
+}
+
+function mbRevokeAllBlobUrls() {
+  _mbActiveBlobUrls.forEach((url) => { try { URL.revokeObjectURL(url); } catch(_) {} });
+  _mbActiveBlobUrls.clear();
+}
+
+// Resolve a URL exibível para um item do moodboard.
+// Items novos têm blobId (persistido em IDB). Items antigos têm url direta.
+// Items com blob: URL persistida (de sessões antigas) retornam null — dead.
+function getMoodboardItemUrl(item) {
+  if (!item) return null;
+  if (item.blobId != null) {
+    return _mbActiveBlobUrls.get(item.blobId) || null;
+  }
+  if (typeof item.url !== 'string') return null;
+  // blob: URLs salvos em sessões anteriores estão mortos — não tente renderizar
+  if (item.url.startsWith('blob:')) return null;
+  return item.url;
+}
+
+// Pré-aquece o cache resolvendo todos os blobIds existentes em paralelo.
+async function mbPrewarmBlobUrls() {
+  const ids = moodboardItems.map(i => i && i.blobId).filter(id => id != null && !_mbActiveBlobUrls.has(id));
+  if (ids.length === 0) return;
+  await Promise.all(ids.map(id => mbBlobIdToUrl(id).catch(() => null)));
+}
+
+// Migração one-shot: data: URLs vão pra IDB; blob: URLs órfãos são marcados.
+async function migrateMoodboardItemsToIDB() {
+  let changed = false;
+  for (let i = 0; i < moodboardItems.length; i++) {
+    const it = moodboardItems[i];
+    if (!it || !it.url || it.blobId != null) continue;
+    if (typeof it.url !== 'string') continue;
+    if (it.url.startsWith('data:')) {
+      try {
+        const blob = await urlToBlob(it.url);
+        const blobId = await mbBlobSave(blob, { type: it.type, migratedFrom: 'dataURL' });
+        delete it.url;
+        it.blobId = blobId;
+        changed = true;
+      } catch (e) {
+        console.warn('[moodboard] migração de dataURL falhou:', e);
+      }
+    } else if (it.url.startsWith('blob:')) {
+      // blob: URL de sessão anterior — não há como recuperar o blob.
+      // Marca o item para sinalização visual, mas mantém metadados.
+      it._dead = true;
+      changed = true;
+    }
+  }
+  if (changed) {
+    try { localStorage.setItem('moodboard_items', JSON.stringify(moodboardItems)); }
+    catch(e) { console.warn('[moodboard] save pós-migração falhou:', e); }
+  }
+}
+
+// Decide se uma URL precisa ser persistida (dataURL grande ou blob: que morre)
+// vs URL pública (https://...) que pode ficar como referência leve.
+function mbUrlNeedsPersistence(url) {
+  if (typeof url !== 'string') return false;
+  return url.startsWith('data:') || url.startsWith('blob:');
+}
+
+// API pública usada pelo restante do app: adiciona uma mídia ao board.
+// Resolve o storage automaticamente (IDB para blob/data; mantém URL para http).
+async function addMediaToMoodboard(type, url, extra) {
+  const item = { type, id: Date.now(), ...extra };
+  if (mbUrlNeedsPersistence(url)) {
+    try {
+      const blob = await urlToBlob(url);
+      const blobId = await mbBlobSave(blob, { type });
+      item.blobId = blobId;
+      // Pré-aquece o cache pra renderizar imediatamente sem round-trip ao IDB
+      const objUrl = URL.createObjectURL(blob);
+      _mbActiveBlobUrls.set(blobId, objUrl);
+    } catch (e) {
+      console.warn('[moodboard] persistência IDB falhou; usando URL volátil:', e);
+      item.url = url;
+    }
+  } else {
+    item.url = url;
+  }
+  moodboardItems.push(item);
+  saveMoodboard();
+  renderMoodboard();
+  return item;
 }
 
 async function saveToGallery(item) {
@@ -5457,8 +5731,14 @@ async function renderGallery() {
         }
       });
 
-      // Open preview
-      card.addEventListener('click', () => openGalleryPreview(item));
+      // Open preview (Shift+click = quick add ao moodboard, sem abrir preview)
+      card.addEventListener('click', (e) => {
+        if (e.shiftKey) {
+          addGalleryItemToMoodboard(item);
+          return;
+        }
+        openGalleryPreview(item);
+      });
 
       grid.appendChild(card);
     });
@@ -8989,6 +9269,11 @@ function showShortcutsModal() {
           <div class="shortcut-row"><kbd>←</kbd><kbd>→</kbd><em>Próxima/anterior aba (com foco na nav)</em></div>
         </div>
         <div class="shortcuts-section">
+          <div class="shortcuts-section-title">Atalhos para creators</div>
+          <div class="shortcut-row"><kbd>Shift</kbd>+<kbd>Clique</kbd><em>Em galeria/results: adiciona ao moodboard sem abrir preview</em></div>
+          <div class="shortcut-row"><kbd>Q</kbd><em>Com lightbox aberto: adiciona ao moodboard</em></div>
+        </div>
+        <div class="shortcuts-section">
           <div class="shortcuts-section-title">Ajuda</div>
           <div class="shortcut-row"><kbd>?</kbd><em>Mostra este painel</em></div>
         </div>
@@ -9025,6 +9310,20 @@ document.addEventListener('keydown', (e) => {
   // Ignora se modificadores presentes (deixa para o browser/SO)
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const key = e.key.toLowerCase();
+
+  // Q = quick add ao moodboard (do item aberto no lightbox)
+  if (key === 'q' && _lightboxCurrent && _lightboxCurrent.src) {
+    e.preventDefault();
+    const cur = _lightboxCurrent;
+    if (cur.type === 'video') {
+      addMediaToMoodboard('video', cur.src, { provider: cur.prompt || 'Lightbox' });
+      showToast('Vídeo adicionado ao moodboard!', 'success');
+    } else {
+      addImageToBoard(cur.src, cur.prompt || 'Lightbox', null);
+    }
+    return;
+  }
+
   if (KEYBOARD_TAB_MAP[key]) {
     e.preventDefault();
     switchTab(KEYBOARD_TAB_MAP[key]);
@@ -9071,3 +9370,126 @@ document.addEventListener('DOMContentLoaded', () => {
   tabsNav.addEventListener('scroll', updateTabOverflowHint, { passive: true });
   window.addEventListener('resize', updateTabOverflowHint);
 });
+
+// =============================================
+// === PROMPT PRESETS ===
+// =============================================
+// Chips horizontais com prompts salvos. Persistência por user (ou anônimo).
+// Limite de 20 presets; deduplicação por texto exato.
+
+const PROMPT_PRESETS_MAX = 20;
+
+function getPromptPresetsKey() {
+  const uid = getUserId();
+  return uid ? `user_${uid}_prompt_presets` : 'anon_prompt_presets';
+}
+
+function getPromptPresets() {
+  try {
+    const raw = localStorage.getItem(getPromptPresetsKey());
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch(e) {
+    console.warn('[presets] dados corrompidos, resetando:', e);
+    return [];
+  }
+}
+
+function savePromptPresets(list) {
+  try {
+    localStorage.setItem(getPromptPresetsKey(), JSON.stringify(list.slice(0, PROMPT_PRESETS_MAX)));
+  } catch(e) {
+    console.warn('[presets] save falhou:', e);
+    showToast('Não foi possível salvar preset (armazenamento cheio).', 'error');
+  }
+}
+
+function addPromptPreset(text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed) return false;
+  if (trimmed.length < 3) return false; // muito curto, ignora
+  const list = getPromptPresets();
+  // Deduplica: se já existe, move pra frente
+  const existingIdx = list.findIndex(p => p.text === trimmed);
+  if (existingIdx >= 0) list.splice(existingIdx, 1);
+  list.unshift({ text: trimmed, createdAt: Date.now() });
+  savePromptPresets(list);
+  renderPromptPresets();
+  return true;
+}
+
+function removePromptPreset(index) {
+  const list = getPromptPresets();
+  if (index < 0 || index >= list.length) return;
+  list.splice(index, 1);
+  savePromptPresets(list);
+  renderPromptPresets();
+}
+
+function renderPromptPresets() {
+  const row = document.getElementById('promptPresetsRow');
+  const chips = document.getElementById('promptPresetsChips');
+  if (!row || !chips) return;
+  const list = getPromptPresets();
+  if (list.length === 0) {
+    // Mantém visível só se tiver pelo menos o botão "Salvar"
+    row.hidden = false;
+    chips.innerHTML = `<span style="font-size:0.75rem;color:var(--text-muted);align-self:center;">Salve seus prompts favoritos para reutilizar</span>`;
+    return;
+  }
+  row.hidden = false;
+  chips.innerHTML = '';
+  list.forEach((p, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'prompt-preset-chip';
+    chip.setAttribute('role', 'listitem');
+    chip.title = p.text;
+    const label = document.createElement('span');
+    label.className = 'prompt-preset-chip-label';
+    label.textContent = p.text;
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'prompt-preset-chip-remove';
+    removeBtn.type = 'button';
+    removeBtn.setAttribute('aria-label', 'Remover preset');
+    removeBtn.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+    chip.appendChild(label);
+    chip.appendChild(removeBtn);
+
+    label.addEventListener('click', () => {
+      const input = document.getElementById('promptInput');
+      if (input) {
+        input.value = p.text;
+        input.focus();
+        // Trigger char count etc.
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        showToast('Preset carregado!', 'success');
+      }
+    });
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removePromptPreset(i);
+    });
+    chips.appendChild(chip);
+  });
+}
+
+function initPromptPresets() {
+  const saveBtn = document.getElementById('promptPresetSaveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const input = document.getElementById('promptInput');
+      const text = input && input.value;
+      if (!text || !text.trim()) {
+        showToast('Digite um prompt antes de salvar', 'error');
+        return;
+      }
+      if (addPromptPreset(text)) {
+        showToast('Preset salvo!', 'success');
+      } else {
+        showToast('Prompt muito curto para salvar como preset', 'error');
+      }
+    });
+  }
+  renderPromptPresets();
+}
