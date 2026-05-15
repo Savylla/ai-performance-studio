@@ -6,6 +6,59 @@ function escapeHtml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// === Loading state com fases (creator delight) ===
+// Renderiza um card "carregando" com 3 fases: conectar → gerar → renderizar.
+function renderLoadingCard(opts) {
+  const qtyLabel = opts && opts.qtyLabel ? opts.qtyLabel : '';
+  const provider = opts && opts.provider ? opts.provider : '';
+  const safeProvider = escapeHtml(provider);
+  return `
+    <div class="card-loading-state" data-phase="connect">
+      <div class="loading-label">Gerando ${escapeHtml(qtyLabel)}${safeProvider ? ' · ' + safeProvider : ''}</div>
+      <div class="loading-phases" role="status" aria-live="polite">
+        <span class="loading-phase active" data-phase-key="connect"><span class="loading-dot" aria-hidden="true"></span>Conectando</span>
+        <span class="loading-phase" data-phase-key="generate"><span class="loading-dot" aria-hidden="true"></span>Gerando</span>
+        <span class="loading-phase" data-phase-key="render"><span class="loading-dot" aria-hidden="true"></span>Renderizando</span>
+      </div>
+    </div>
+  `;
+}
+
+// Avança a fase visual do loading card. order: connect → generate → render.
+function advanceLoadingPhase(card, toPhase) {
+  if (!card) return;
+  const order = ['connect', 'generate', 'render'];
+  const targetIdx = order.indexOf(toPhase);
+  if (targetIdx < 0) return;
+  const loadingState = card.querySelector('.card-loading-state');
+  if (!loadingState) return; // já trocou pra resultado
+  loadingState.dataset.phase = toPhase;
+  loadingState.querySelectorAll('.loading-phase').forEach((el) => {
+    const idx = order.indexOf(el.dataset.phaseKey);
+    el.classList.remove('active', 'done');
+    if (idx < targetIdx) el.classList.add('done');
+    else if (idx === targetIdx) el.classList.add('active');
+  });
+}
+
+// A11y: stack de elementos focados antes da abertura de modais.
+// Cada open guarda o activeElement; cada close restaura. Suporta modais aninhados.
+const _modalFocusStack = [];
+function rememberFocusForModal() {
+  const el = document.activeElement;
+  if (el && el !== document.body && typeof el.focus === 'function') {
+    _modalFocusStack.push(el);
+  } else {
+    _modalFocusStack.push(null);
+  }
+}
+function restoreFocusAfterModal() {
+  const el = _modalFocusStack.pop();
+  if (el && document.contains(el)) {
+    try { el.focus({ preventScroll: false }); } catch(_) {}
+  }
+}
+
 // Performance: revoke blob URLs in a container before clearing to prevent memory leaks
 function revokeBlobUrls(container) {
   if (!container) return;
@@ -231,8 +284,22 @@ function initTabs() {
   });
 }
 
+// Lazy-load de CSS pesado (biblioteca tem ~700 linhas + 37 keyframes
+// que ficam ociosos pra usuários que nunca abrem essa aba).
+const _lazyCssLoaded = new Set();
+function ensureLazyCss(href) {
+  if (_lazyCssLoaded.has(href)) return;
+  _lazyCssLoaded.add(href);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
+}
+
 function switchTab(tab) {
   currentTab = tab;
+  // Lazy-load CSS específico de abas pesadas
+  if (tab === 'biblioteca') ensureLazyCss('css/biblioteca.css');
   // Update topbar (ARIA tab pattern: only the active tab is in the tab order)
   document.querySelectorAll('.topbar-link').forEach(l => {
     l.classList.remove('active');
@@ -1232,10 +1299,12 @@ async function startImageGeneration() {
     for (let i = 0; i < qty; i++) {
       const card = document.createElement('div');
       card.className = 'result-card loading';
-      card.innerHTML = `<div class="card-loading-state"><div class="spinner-ring small"></div><span>Gerando ${i + 1}/${qty}...</span></div>`;
+      card.innerHTML = renderLoadingCard({ qtyLabel: `${i + 1}/${qty}`, provider });
       grid.insertBefore(card, grid.firstChild);
       document.getElementById('displayLoading').style.display = 'none';
       document.getElementById('displayResults').style.display = 'block';
+      // Avança pra fase "Gerando" assim que entra no loop do provider
+      setTimeout(() => advanceLoadingPhase(card, 'generate'), 400);
 
       let imageResult = null;
 
@@ -1266,6 +1335,8 @@ async function startImageGeneration() {
       if (imageResult) {
         success++;
         const imgSrc = imageResult.url || base64ToBlobUrl(imageResult.base64, imageResult.mimeType);
+        // Avança pra fase "renderizando" antes de trocar o conteúdo
+        advanceLoadingPhase(card, 'render');
         card.classList.remove('loading');
         const providerLabel = actualProvider;
         card.innerHTML = `
@@ -1277,6 +1348,8 @@ async function startImageGeneration() {
           </div>
           <div class="result-card-provider">${escapeHtml(providerLabel)}</div>
         `;
+        // Animação spring de chegada (creator delight)
+        requestAnimationFrame(() => card.classList.add('result-card-revealed'));
         card.querySelector('.rc-download').addEventListener('click', (e) => { e.stopPropagation(); downloadImage(imgSrc, 'ai-image-' + Date.now() + '.png'); });
         card.querySelector('.rc-fav').addEventListener('click', (e) => { e.stopPropagation(); e.currentTarget.style.color = 'var(--accent)'; });
         card.querySelector('.rc-delete').addEventListener('click', (e) => { e.stopPropagation(); revokeBlobUrls(card); card.remove(); });
@@ -3665,9 +3738,11 @@ Historia: ${storyPrompt}`,
     panels.forEach((desc, i) => {
       const card = document.createElement('div');
       card.className = 'storyboard-panel';
+      card.draggable = true;
       card.innerHTML = `
+        <div class="sb-panel-drag-handle" aria-hidden="true" title="Arraste para reordenar"><i class="fas fa-grip-vertical"></i></div>
         <div class="sb-panel-number">${i + 1}</div>
-        <button class="sb-panel-remove" title="Remover painel"><i class="fas fa-times"></i></button>
+        <button class="sb-panel-remove" title="Remover painel" aria-label="Remover painel"><i class="fas fa-times" aria-hidden="true"></i></button>
         <div class="sb-panel-image loading">
           <div class="spinner-ring small"></div>
           <span>Gerando painel ${i + 1}/${panels.length}...</span>
@@ -3675,6 +3750,7 @@ Historia: ${storyPrompt}`,
         <div class="sb-panel-caption">${escapeHtml(desc)}</div>
       `;
       card.querySelector('.sb-panel-remove').addEventListener('click', () => removeSbPanel(card));
+      attachStoryboardDnD(card);
       grid.appendChild(card);
     });
 
@@ -3731,16 +3807,69 @@ function addToStoryboard(imageUrl, caption) {
   const panelNum = grid.children.length + 1;
   const card = document.createElement('div');
   card.className = 'storyboard-panel';
+  card.draggable = true; // habilita reorder via drag-and-drop
   card.innerHTML = `
+    <div class="sb-panel-drag-handle" aria-hidden="true" title="Arraste para reordenar"><i class="fas fa-grip-vertical"></i></div>
     <div class="sb-panel-number">${panelNum}</div>
-    <button class="sb-panel-remove" title="Remover painel"><i class="fas fa-times"></i></button>
-    <div class="sb-panel-image"><img src="${imageUrl}" alt="Panel ${panelNum}" style="cursor:pointer;"></div>
+    <button class="sb-panel-remove" title="Remover painel" aria-label="Remover painel"><i class="fas fa-times" aria-hidden="true"></i></button>
+    <div class="sb-panel-image"><img src="${encodeURI(imageUrl)}" alt="Painel ${panelNum}" style="cursor:pointer;"></div>
     <div class="sb-panel-caption">${escapeHtml(caption) || ''}</div>
   `;
   card.querySelector('.sb-panel-remove').addEventListener('click', (e) => { e.stopPropagation(); removeSbPanel(card); });
   card.querySelector('.sb-panel-image img')?.addEventListener('click', () => openLightbox(imageUrl, caption || '', '', 'image'));
+  attachStoryboardDnD(card);
   grid.appendChild(card);
   showToast('Adicionado ao Story Board!', 'success');
+}
+
+// === Storyboard reorder via drag-and-drop nativo HTML5 ===
+function attachStoryboardDnD(card) {
+  card.addEventListener('dragstart', (e) => {
+    card.classList.add('sb-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    // Firefox precisa de algum dado pra disparar drag corretamente
+    try { e.dataTransfer.setData('text/plain', 'storyboard-panel'); } catch(_) {}
+  });
+  card.addEventListener('dragend', () => {
+    card.classList.remove('sb-dragging');
+    document.querySelectorAll('.sb-drop-before, .sb-drop-after').forEach(el => {
+      el.classList.remove('sb-drop-before', 'sb-drop-after');
+    });
+    renumberSbPanels();
+  });
+  card.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const dragging = document.querySelector('.sb-dragging');
+    if (!dragging || dragging === card) return;
+    const rect = card.getBoundingClientRect();
+    const after = (e.clientX - rect.left) > rect.width / 2;
+    card.classList.toggle('sb-drop-after', after);
+    card.classList.toggle('sb-drop-before', !after);
+  });
+  card.addEventListener('dragleave', () => {
+    card.classList.remove('sb-drop-before', 'sb-drop-after');
+  });
+  card.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const dragging = document.querySelector('.sb-dragging');
+    if (!dragging || dragging === card) return;
+    const after = card.classList.contains('sb-drop-after');
+    card.classList.remove('sb-drop-before', 'sb-drop-after');
+    const parent = card.parentElement;
+    if (!parent) return;
+    if (after) parent.insertBefore(dragging, card.nextSibling);
+    else parent.insertBefore(dragging, card);
+    renumberSbPanels();
+  });
+}
+
+function renumberSbPanels() {
+  const grid = document.getElementById('storyboardGrid');
+  if (!grid) return;
+  grid.querySelectorAll('.storyboard-panel').forEach((panel, i) => {
+    const numEl = panel.querySelector('.sb-panel-number');
+    if (numEl) numEl.textContent = i + 1;
+  });
 }
 
 function removeSbPanel(card) {
@@ -3805,6 +3934,7 @@ function initLightbox() {
 let _lightboxCurrent = null;
 
 function openLightbox(src, prompt, ratio, type) {
+  rememberFocusForModal();
   const lightbox = document.getElementById('lightbox');
   const imgEl = document.getElementById('lightboxImg');
   const vidEl = document.getElementById('lightboxVideo');
@@ -3840,8 +3970,14 @@ function openLightbox(src, prompt, ratio, type) {
   infoEl.innerHTML = infoHTML;
 
   lightbox.classList.add('open');
+  lightbox.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
   history.pushState({ modal: 'lightbox' }, '');
+  // Move foco para o botão close (a11y: novo modal precisa receber foco)
+  requestAnimationFrame(() => {
+    const closeBtn = lightbox.querySelector('.lightbox-close');
+    if (closeBtn) closeBtn.focus();
+  });
 }
 
 function closeLightbox() {
@@ -3853,8 +3989,10 @@ function closeLightbox() {
   vidEl.pause();
   vidEl.src = '';
   lightbox.classList.remove('open');
+  lightbox.setAttribute('aria-hidden', 'true');
   document.body.style.overflow = '';
   _lightboxCurrent = null;
+  restoreFocusAfterModal();
 }
 
 // History API: Back button closes modals instead of leaving the site
@@ -4191,6 +4329,7 @@ function initApiKeyModal() {
 }
 
 function openApiKeyModal() {
+  rememberFocusForModal();
   const modal = document.getElementById('apiKeyModal');
   document.getElementById('geminiKeyInput').value = getApiKey('gemini_api_key') || '';
   document.getElementById('openrouterKeyInput').value = getApiKey('openrouter_api_key') || '';
@@ -4202,12 +4341,21 @@ function openApiKeyModal() {
   document.getElementById('unsplashKeyInput').value = getApiKey('unsplash_api_key') || '';
   document.getElementById('freesoundKeyInput').value = getApiKey('freesound_api_key') || '';
   modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
   history.pushState({ modal: 'apikeys' }, '');
+  // Move foco para primeiro input
+  requestAnimationFrame(() => {
+    const first = modal.querySelector('input,button');
+    if (first) first.focus();
+  });
 }
 
 function closeApiKeyModal() {
-  document.getElementById('apiKeyModal').classList.remove('open');
+  const modal = document.getElementById('apiKeyModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
   updateApiKeyStatus();
+  restoreFocusAfterModal();
 }
 
 // Escape handled by initKeyboardShortcuts
@@ -5780,6 +5928,7 @@ function addGalleryPreviewToStoryboard() {
 }
 
 function openGalleryPreview(item) {
+  rememberFocusForModal();
   galleryPreviewCurrentItem = item;
   const overlay = document.getElementById('galleryPreview');
   const mediaEl = document.getElementById('galleryPreviewMedia');
@@ -5822,14 +5971,21 @@ function openGalleryPreview(item) {
   `;
 
   overlay.style.display = 'flex';
+  overlay.setAttribute('aria-hidden', 'false');
+  requestAnimationFrame(() => {
+    const closeBtn = overlay.querySelector('.gallery-preview-close');
+    if (closeBtn) closeBtn.focus();
+  });
 }
 
 function closeGalleryPreview() {
   const overlay = document.getElementById('galleryPreview');
   overlay.style.display = 'none';
+  overlay.setAttribute('aria-hidden', 'true');
   const mediaEl = document.getElementById('galleryPreviewMedia');
   revokeBlobUrls(mediaEl);
   mediaEl.innerHTML = '';
+  restoreFocusAfterModal();
 }
 
 async function deleteAndClosePreview(id) {
@@ -6132,6 +6288,9 @@ async function clearHistory(type) {
 // History UI
 let historyCurrentFilter = 'all';
 
+// Filtro de texto local (instantâneo, sem fetch — complementa AI search)
+let historyTextFilter = '';
+
 function initHistory() {
   document.querySelectorAll('.history-filter').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -6148,6 +6307,29 @@ function initHistory() {
     renderHistory();
     showToast('Historico limpo', 'success');
   });
+
+  // Filtro local instantâneo no input de busca (debounced 150ms).
+  // O botão AI search continua disparando busca semântica via Gemini ao clique.
+  const aiInput = document.getElementById('historyAiSearch');
+  if (aiInput) {
+    let debounceId = null;
+    aiInput.addEventListener('input', () => {
+      clearTimeout(debounceId);
+      debounceId = setTimeout(() => {
+        historyTextFilter = aiInput.value.trim().toLowerCase();
+        renderHistory();
+      }, 150);
+    });
+    // Esc no input limpa o filtro
+    aiInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && aiInput.value) {
+        e.stopPropagation(); // não fechar nenhum modal
+        aiInput.value = '';
+        historyTextFilter = '';
+        renderHistory();
+      }
+    });
+  }
 }
 
 async function renderHistory() {
@@ -6173,7 +6355,17 @@ async function renderHistory() {
       items = items.filter(item => aiSearchResultsByPage.history.has(String(item.id)));
     }
 
-    countEl.textContent = `${items.length} ${items.length === 1 ? 'registro' : 'registros'}`;
+    // Apply local text filter (substring match em prompt/provider/detail)
+    if (historyTextFilter) {
+      const q = historyTextFilter;
+      items = items.filter(item =>
+        (item.prompt || '').toLowerCase().includes(q) ||
+        (item.provider || '').toLowerCase().includes(q) ||
+        (item.detail || '').toLowerCase().includes(q)
+      );
+    }
+
+    countEl.textContent = `${items.length} ${items.length === 1 ? 'registro' : 'registros'}${historyTextFilter ? ' · busca: "' + escapeHtml(historyTextFilter) + '"' : ''}`;
 
     if (items.length === 0) {
       list.style.display = 'none';
@@ -6687,6 +6879,7 @@ let folderModalPage = '';
 let folderModalEditId = null;
 
 function openFolderModal(page, editFolder) {
+  rememberFocusForModal();
   folderModalPage = page;
   folderModalEditId = editFolder?.id || null;
   const modal = document.getElementById('folderModal');
@@ -6695,22 +6888,26 @@ function openFolderModal(page, editFolder) {
   const saveBtn = document.getElementById('folderModalSave');
 
   if (editFolder) {
-    title.innerHTML = '<i class="fas fa-pen"></i> Editar Pasta';
+    title.innerHTML = '<i class="fas fa-pen" aria-hidden="true"></i> Editar Pasta';
     input.value = editFolder.name;
-    saveBtn.innerHTML = '<i class="fas fa-check"></i> Salvar';
+    saveBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Salvar';
   } else {
-    title.innerHTML = '<i class="fas fa-folder-plus"></i> Nova Pasta';
+    title.innerHTML = '<i class="fas fa-folder-plus" aria-hidden="true"></i> Nova Pasta';
     input.value = '';
-    saveBtn.innerHTML = '<i class="fas fa-check"></i> Criar';
+    saveBtn.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i> Criar';
   }
 
   modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
   setTimeout(() => input.focus(), 100);
 }
 
 function closeFolderModal() {
-  document.getElementById('folderModal').style.display = 'none';
+  const modal = document.getElementById('folderModal');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
   folderModalEditId = null;
+  restoreFocusAfterModal();
 }
 
 function saveFolderFromModal() {
@@ -6738,7 +6935,9 @@ let moveToFolderCallback = null;
 let _moveFolderDragId = null;
 
 function openMoveToFolderModal(page, itemId, currentFolderId) {
+  rememberFocusForModal();
   const modal = document.getElementById('moveToFolderModal');
+  modal.setAttribute('aria-hidden', 'false');
   const list = document.getElementById('moveFolderList');
   const folders = getFolders();
 
@@ -6848,7 +7047,10 @@ function openMoveToFolderModal(page, itemId, currentFolderId) {
 }
 
 function closeMoveToFolderModal() {
-  document.getElementById('moveToFolderModal').style.display = 'none';
+  const modal = document.getElementById('moveToFolderModal');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  restoreFocusAfterModal();
 }
 
 function refreshPageAfterFolderChange(page) {
