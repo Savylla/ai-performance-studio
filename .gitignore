@@ -27,3 +27,7 @@ logs/
 .aiox-core/local/
 .claude/settings.local.json
 .aiox/install-log.txt
+
+# AIOX framework install (kept untracked locally — sync via update-aiox.sh)
+.aiox-core/
+.aiox-core.backup-pre-*.tar.gz
