@@ -41,6 +41,54 @@ function advanceLoadingPhase(card, toPhase) {
   });
 }
 
+// === Notificações de geração concluída (background tab) ===
+// Quando a aba está oculta (document.hidden), pedimos permissão de
+// notificação no primeiro fim de geração. Se concedida, notificações
+// futuras avisam o usuário que o asset chegou. NÃO usamos push do SW
+// (não precisamos de backend) — só Notification API local.
+let _aiox_notif_asked = false;
+let _aiox_notif_recent = 0; // dedupe: não criar > 1 por 8s
+
+function maybeNotifyGenerationDone(text) {
+  if (typeof Notification === 'undefined') return;
+  // Só notifica se aba está oculta
+  if (!document.hidden) return;
+  // Se nunca pediu permissão, pede agora (gesto do usuário não é
+  // estritamente necessário para Notification.requestPermission)
+  if (Notification.permission === 'default' && !_aiox_notif_asked) {
+    _aiox_notif_asked = true;
+    Notification.requestPermission().then((p) => {
+      if (p === 'granted') showNotification(text);
+    }).catch(() => {});
+    return;
+  }
+  if (Notification.permission === 'granted') showNotification(text);
+}
+
+function showNotification(text) {
+  const now = Date.now();
+  if (now - _aiox_notif_recent < 8000) return;
+  _aiox_notif_recent = now;
+  try {
+    const n = new Notification('AI Performance Studio', {
+      body: text || 'Sua geração está pronta',
+      icon: '/assets/logo.png',
+      badge: '/assets/logo.png',
+      tag: 'aiox-generation',
+      requireInteraction: false,
+    });
+    n.onclick = () => {
+      try { window.focus(); } catch(_) {}
+      n.close();
+    };
+    // Auto-close após 8s caso usuário não clique
+    setTimeout(() => { try { n.close(); } catch(_) {} }, 8000);
+  } catch (e) {
+    // Algumas plataformas não suportam new Notification() — silencioso
+    console.warn('[notify] falha ao criar notificação:', e);
+  }
+}
+
 // A11y: stack de elementos focados antes da abertura de modais.
 // Cada open guarda o activeElement; cada close restaura. Suporta modais aninhados.
 const _modalFocusStack = [];
@@ -164,7 +212,47 @@ document.addEventListener('DOMContentLoaded', () => {
   initOnboarding();
   initServiceWorker();
   initPromptPresets();
+  initNewFeaturesHint();
 });
+
+// === Onboarding contextual das novidades (mostra uma vez por usuário) ===
+// Diferente de initOnboarding (primeira visita), este aparece para usuários
+// já existentes apontando o que mudou nos últimos sprints.
+function initNewFeaturesHint() {
+  const KEY = 'aiox_new_features_seen_v3';
+  if (localStorage.getItem(KEY)) return;
+  // Aguarda alguns segundos para não competir com onboarding inicial
+  setTimeout(() => {
+    if (localStorage.getItem(KEY)) return; // race-condition guard
+    const hint = document.createElement('div');
+    hint.className = 'new-features-hint';
+    hint.setAttribute('role', 'status');
+    hint.setAttribute('aria-live', 'polite');
+    hint.innerHTML = `
+      <button class="new-features-close" aria-label="Fechar dica"><i class="fas fa-times" aria-hidden="true"></i></button>
+      <div class="new-features-title"><i class="fas fa-sparkles" aria-hidden="true"></i> Novidades</div>
+      <ul class="new-features-list">
+        <li><kbd>?</kbd> mostra atalhos de teclado</li>
+        <li><kbd>Shift</kbd>+<kbd>Clique</kbd> em qualquer card adiciona ao moodboard</li>
+        <li>Salve prompts como <strong>presets</strong> na barra acima do input</li>
+        <li>Painéis do <strong>storyboard</strong> agora arrastam para reordenar</li>
+      </ul>
+      <button class="new-features-ack">Entendi</button>
+    `;
+    document.body.appendChild(hint);
+    const close = () => {
+      hint.classList.add('new-features-leaving');
+      setTimeout(() => hint.remove(), 280);
+      localStorage.setItem(KEY, '1');
+    };
+    hint.querySelector('.new-features-close').addEventListener('click', close);
+    hint.querySelector('.new-features-ack').addEventListener('click', close);
+    // Auto-dismiss após 18s
+    setTimeout(() => {
+      if (document.body.contains(hint)) close();
+    }, 18000);
+  }, 4000);
+}
 
 // === SERVICE WORKER REGISTRATION ===
 // Cache static assets para visitas subsequentes serem ~instantâneas.
@@ -1376,8 +1464,12 @@ async function startImageGeneration() {
     setButtonLoading('generateBtnMain', false, 'Gerar');
     document.getElementById('displayLoading').style.display = 'none';
   }
-  if (success > 0) showToast(`${success} imagem(ns) gerada(s)!`, 'success');
-  else showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
+  if (success > 0) {
+    showToast(`${success} imagem(ns) gerada(s)!`, 'success');
+    maybeNotifyGenerationDone(`${success} imagem(ns) gerada(s) com sucesso.`);
+  } else {
+    showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
+  }
 }
 
 // --- Moodboard Image Generation ---
@@ -1449,8 +1541,12 @@ async function startMoodboardGeneration() {
   } finally {
     setButtonLoading('generateBtnMain', false, 'Gerar');
   }
-  if (success > 0) showToast(`${success} imagem(ns) adicionada(s) ao moodboard!`, 'success');
-  else showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
+  if (success > 0) {
+    showToast(`${success} imagem(ns) adicionada(s) ao moodboard!`, 'success');
+    maybeNotifyGenerationDone(`${success} imagem(ns) adicionada(s) ao moodboard.`);
+  } else {
+    showToast('Nenhuma imagem gerada. Tente outro provedor ou verifique suas API keys.', 'error');
+  }
 }
 
 // --- Pollinations Image ---
@@ -3537,6 +3633,40 @@ function initStoryboard() {
   document.getElementById('sbAiCloseBtn')?.addEventListener('click', () => {
     document.getElementById('sbAiResponse').style.display = 'none';
   });
+
+  // Keyboard reorder de painéis: Alt+←/→ move o painel com foco
+  // (acessibilidade — alternativa ao drag-and-drop mouse-only)
+  const grid = document.getElementById('storyboardGrid');
+  if (grid) {
+    grid.addEventListener('keydown', handleSbKeyboardReorder);
+  }
+}
+
+function handleSbKeyboardReorder(e) {
+  if (!e.altKey) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  // Painel com foco (ou painel que contém o elemento focado)
+  const focused = document.activeElement;
+  const panel = focused && focused.closest && focused.closest('.storyboard-panel');
+  if (!panel) return;
+  const parent = panel.parentElement;
+  if (!parent) return;
+  e.preventDefault();
+  if (e.key === 'ArrowLeft') {
+    const prev = panel.previousElementSibling;
+    if (prev) parent.insertBefore(panel, prev);
+  } else {
+    const next = panel.nextElementSibling;
+    if (next) parent.insertBefore(next, panel);
+  }
+  renumberSbPanels();
+  // Anuncia mudança pro screen reader
+  const live = document.getElementById('liveRegion');
+  if (live) {
+    const idx = Array.from(parent.children).indexOf(panel);
+    live.textContent = `Painel movido para posição ${idx + 1} de ${parent.children.length}`;
+  }
+  panel.focus(); // mantém foco no painel após reorder
 }
 
 async function sbAiAssist() {
@@ -3739,8 +3869,10 @@ Historia: ${storyPrompt}`,
       const card = document.createElement('div');
       card.className = 'storyboard-panel';
       card.draggable = true;
+      card.tabIndex = 0;
+      card.setAttribute('aria-label', `Painel ${i + 1}. Alt setas para reordenar.`);
       card.innerHTML = `
-        <div class="sb-panel-drag-handle" aria-hidden="true" title="Arraste para reordenar"><i class="fas fa-grip-vertical"></i></div>
+        <div class="sb-panel-drag-handle" aria-hidden="true" title="Arraste ou Alt+← / Alt+→ para reordenar"><i class="fas fa-grip-vertical"></i></div>
         <div class="sb-panel-number">${i + 1}</div>
         <button class="sb-panel-remove" title="Remover painel" aria-label="Remover painel"><i class="fas fa-times" aria-hidden="true"></i></button>
         <div class="sb-panel-image loading">
@@ -3808,8 +3940,10 @@ function addToStoryboard(imageUrl, caption) {
   const card = document.createElement('div');
   card.className = 'storyboard-panel';
   card.draggable = true; // habilita reorder via drag-and-drop
+  card.tabIndex = 0;     // focável pra keyboard reorder (Alt+←/→)
+  card.setAttribute('aria-label', `Painel ${panelNum}. Alt setas para reordenar.`);
   card.innerHTML = `
-    <div class="sb-panel-drag-handle" aria-hidden="true" title="Arraste para reordenar"><i class="fas fa-grip-vertical"></i></div>
+    <div class="sb-panel-drag-handle" aria-hidden="true" title="Arraste ou Alt+← / Alt+→ para reordenar"><i class="fas fa-grip-vertical"></i></div>
     <div class="sb-panel-number">${panelNum}</div>
     <button class="sb-panel-remove" title="Remover painel" aria-label="Remover painel"><i class="fas fa-times" aria-hidden="true"></i></button>
     <div class="sb-panel-image"><img src="${encodeURI(imageUrl)}" alt="Painel ${panelNum}" style="cursor:pointer;"></div>

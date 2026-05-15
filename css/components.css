@@ -771,6 +771,91 @@
 }
 .prompt-presets-save i { font-size: 0.72rem; }
 
+/* === Onboarding contextual das novidades (toast persistente) === */
+.new-features-hint {
+  position: fixed;
+  right: 16px;
+  bottom: 90px;
+  z-index: 9998;
+  width: min(340px, calc(100vw - 32px));
+  background: var(--bg-card, #1a1a1a);
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5), 0 0 24px var(--accent-glow, rgba(173,57,251,0.25));
+  animation: nfhSlideIn 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.new-features-hint.new-features-leaving {
+  animation: nfhSlideOut 240ms ease-in both;
+}
+@keyframes nfhSlideIn {
+  from { transform: translateY(20px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes nfhSlideOut {
+  to { transform: translateY(12px) scale(0.97); opacity: 0; }
+}
+.new-features-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.new-features-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.new-features-list li { margin-bottom: 4px; }
+.new-features-list li:last-child { margin-bottom: 0; }
+.new-features-list kbd {
+  background: var(--bg-input, #2a2a2a);
+  border: 1px solid var(--border, #3a3a3a);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--text-primary);
+}
+.new-features-list strong { color: var(--text-primary); font-weight: 600; }
+.new-features-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.new-features-close:hover { background: var(--bg-input); color: var(--text-primary); }
+.new-features-ack {
+  background: linear-gradient(135deg, var(--accent), var(--accent-pink, #FD41D8));
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+.new-features-ack:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.new-features-ack:active { transform: translateY(0); }
+@media (max-width: 640px) {
+  .new-features-hint { right: 8px; left: 8px; bottom: 80px; width: auto; }
+}
+
 /* === Storyboard panel reorder (drag-and-drop) === */
 .storyboard-panel {
   position: relative;
