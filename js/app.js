@@ -3490,53 +3490,68 @@ async function callGeminiModel(prompt, model) {
 
 async function pollinationsText(prompt, model, options = {}) {
   const maxRetries = options.retries ?? 2;
-  const models = [model, 'mistral', 'openai'];
-  // Remove duplicates while keeping order
-  const uniqueModels = [...new Set(models)];
+  const models = [model, 'openai', 'mistral'];
+  const uniqueModels = [...new Set(models.filter(Boolean))];
 
+  // Pollinations devolve um aviso de deprecacao (status 200) quando o request
+  // e' tratado como "authenticated". Incluir um seed randomico faz com que ele
+  // processe o request normalmente e retorne conteudo real.
+  const isDeprecationNotice = (txt) =>
+    typeof txt === 'string' && /pollinations\s+legacy\s+text\s+api/i.test(txt);
+
+  const seed = () => Math.floor(Math.random() * 1_000_000_000);
+
+  // 1) POST /openai com seed (formato chat completions, suporta prompts longos)
   for (const m of uniqueModels) {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
         const response = await fetch('https://text.pollinations.ai/openai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: m,
             messages: [{ role: 'user', content: prompt }],
-            temperature: options.temperature ?? 0.8
+            temperature: options.temperature ?? 0.8,
+            seed: seed()
           }),
           signal: controller.signal
         });
         clearTimeout(timeoutId);
         if (!response.ok) {
-          console.warn(`pollinationsText: model=${m} attempt=${attempt} HTTP ${response.status}`);
-          if (attempt < maxRetries) { await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); continue; }
+          console.warn(`pollinationsText POST: model=${m} attempt=${attempt} HTTP ${response.status}`);
+          if (attempt < maxRetries) { await new Promise(r => setTimeout(r, 800 * (attempt + 1))); continue; }
           continue;
         }
         const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || '';
-        if (content) return content;
-        console.warn(`pollinationsText: model=${m} empty response`);
+        const content = (data.choices?.[0]?.message?.content || '').trim();
+        if (content && !isDeprecationNotice(content)) return content;
+        console.warn(`pollinationsText POST: model=${m} retornou aviso/empty`);
       } catch (err) {
-        console.warn(`pollinationsText: model=${m} attempt=${attempt} error:`, err.message);
-        if (attempt < maxRetries) { await new Promise(r => setTimeout(r, 1000 * (attempt + 1))); continue; }
+        console.warn(`pollinationsText POST: model=${m} attempt=${attempt} error:`, err.message);
+        if (attempt < maxRetries) { await new Promise(r => setTimeout(r, 800 * (attempt + 1))); continue; }
       }
     }
   }
-  // Final fallback: simple GET endpoint
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-    const encoded = encodeURIComponent(prompt.slice(0, 2000));
-    const response = await fetch(`https://text.pollinations.ai/${encoded}`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    if (response.ok) {
-      const text = await response.text();
-      if (text) return text;
+
+  // 2) Fallback: GET com seed (resposta texto puro). Limita prompt para nao exceder URL.
+  for (const m of uniqueModels) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
+      const encoded = encodeURIComponent(prompt.slice(0, 3500));
+      const url = `https://text.pollinations.ai/${encoded}?model=${encodeURIComponent(m)}&seed=${seed()}`;
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!response.ok) continue;
+      const text = (await response.text()).trim();
+      if (text && !isDeprecationNotice(text)) return text;
+    } catch (e) {
+      console.warn(`pollinationsText GET: model=${m} error:`, e.message);
     }
-  } catch (e) { console.warn('pollinationsText: GET fallback failed:', e.message); }
+  }
+
   throw new Error('Todos os modelos falharam. Tente novamente.');
 }
 
