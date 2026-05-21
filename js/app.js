@@ -568,13 +568,19 @@ function updatePromptCharCount(len) {
   }
 }
 
+const PROMPT_INPUT_MAX_PX = 180;
+
+function autoResizePromptInput(textarea) {
+  if (!textarea || textarea.dataset.manualResize) return;
+  textarea.style.height = 'auto';
+  const next = Math.min(textarea.scrollHeight, PROMPT_INPUT_MAX_PX);
+  textarea.style.height = next + 'px';
+}
+
 function initPrompt() {
   const textarea = document.getElementById('promptInput');
   textarea.addEventListener('input', () => {
-    if (!textarea.dataset.manualResize) {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    }
+    autoResizePromptInput(textarea);
     // Update character count
     updatePromptCharCount(textarea.value.length);
   });
@@ -760,8 +766,7 @@ function initPrompt() {
     const enText = document.getElementById('promptEN').value.trim();
     if (enText) {
       cachedPromptInput.value = enText;
-      cachedPromptInput.style.height = 'auto';
-      cachedPromptInput.style.height = cachedPromptInput.scrollHeight + 'px';
+      autoResizePromptInput(cachedPromptInput);
       showToast('Prompt EN aplicado!', 'success');
     }
     // Collapse the bilingual area
