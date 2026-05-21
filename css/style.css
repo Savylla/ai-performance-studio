@@ -842,15 +842,27 @@ select {
   border-color: var(--border);
 }
 
-/* Action bar abaixo do prompt — empilha em coluna alinhada à direita.
-   Linha 1: PT, EN, varinha, seta.
-   Linha 2: Salvar (alinhado vertical com a seta). */
+/* Wrapper: providers (esquerda) + action bar (direita) na mesma linha */
+.providers-actions-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.providers-stack {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Action bar — botões PT/EN/varinha/seta em linha; Salvar empilhado abaixo,
+   alinhado à direita (mesma coluna que a seta send). */
 .prompt-actions-row {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
-  padding: 8px 4px 0;
+  flex-shrink: 0;
 }
 
 .prompt-actions-group {
@@ -859,36 +871,21 @@ select {
   gap: 8px;
 }
 
-/* Padroniza altura visual com .provider-group-btn (24px) — botões da action
-   bar ficam no mesmo eixo horizontal que os providers abaixo. */
+/* PT/EN/varinha-mini com pílulas robustas para casar visualmente com
+   enhance/send (36px). */
 .prompt-actions-row .lang-buttons {
-  padding: 0;
-  height: 24px;
-  align-items: center;
+  padding: 4px;
 }
 
 .prompt-actions-row .lang-btn {
-  height: 24px;
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .prompt-actions-row .lang-btn.enhance-more-btn {
-  padding: 0 8px;
-}
-
-.prompt-actions-row .prompt-btn {
-  width: 24px;
-  height: 24px;
-  font-size: 0.72rem;
-}
-
-.prompt-actions-row .prompt-presets-save {
-  height: 24px;
-  padding: 0 12px;
-  box-sizing: border-box;
+  padding: 6px 10px;
+  font-size: 0.85rem;
 }
 
 .prompt-resize-handle {
