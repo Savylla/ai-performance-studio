@@ -554,34 +554,20 @@ function initSidebar() {
 
 // === PROMPT ===
 function updatePromptCharCount(len) {
+  // Contador agora é sr-only (oculto visualmente, mantido para screen readers).
+  // Apenas atualizamos textContent — sem mexer em className (preserva sr-only).
   const counter = document.getElementById('promptCharCount');
-  const hint = document.getElementById('promptHint');
   if (!counter) return;
-  if (len === 0) {
-    counter.textContent = '';
-    if (hint) { hint.textContent = 'Dica: prompts detalhados geram resultados melhores'; hint.style.display = ''; }
-    counter.className = 'prompt-char-count';
-  } else {
-    counter.textContent = len + ' chars';
-    if (hint) hint.style.display = 'none';
-    counter.className = 'prompt-char-count' + (len > 1000 ? ' over' : len > 500 ? ' warn' : '');
-  }
+  counter.textContent = len === 0 ? '' : len + ' chars';
 }
 
 const PROMPT_INPUT_MAX_PX = 180;
-const PROMPT_PILL_ROUND_THRESHOLD_PX = 60;
 
 function autoResizePromptInput(textarea) {
   if (!textarea || textarea.dataset.manualResize) return;
   textarea.style.height = 'auto';
   const next = Math.min(textarea.scrollHeight, PROMPT_INPUT_MAX_PX);
   textarea.style.height = next + 'px';
-  // Pill arredondado vira retângulo arredondado quando cresce,
-  // senão o texto das linhas extremas fica visualmente fora da curva.
-  const wrap = textarea.closest('.prompt-input-wrap');
-  if (wrap) {
-    wrap.classList.toggle('expanded', next > PROMPT_PILL_ROUND_THRESHOLD_PX);
-  }
 }
 
 function initPrompt() {
@@ -615,7 +601,6 @@ function initPrompt() {
       const newHeight = Math.max(36, Math.min(window.innerHeight * 0.5, startHeight + diff));
       textarea.style.height = newHeight + 'px';
       textarea.dataset.manualResize = 'true';
-      promptWrap.classList.toggle('expanded', newHeight > PROMPT_PILL_ROUND_THRESHOLD_PX);
     });
 
     document.addEventListener('mouseup', () => {
@@ -639,7 +624,6 @@ function initPrompt() {
       const newHeight = Math.max(36, Math.min(window.innerHeight * 0.5, startHeight + diff));
       textarea.style.height = newHeight + 'px';
       textarea.dataset.manualResize = 'true';
-      promptWrap.classList.toggle('expanded', newHeight > PROMPT_PILL_ROUND_THRESHOLD_PX);
     }, { passive: true });
 
     document.addEventListener('touchend', () => { isDragging = false; });
@@ -648,7 +632,6 @@ function initPrompt() {
     resizeHandle.addEventListener('dblclick', () => {
       textarea.style.height = '';
       textarea.dataset.manualResize = '';
-      promptWrap.classList.remove('expanded');
     });
   }
 
@@ -9787,9 +9770,9 @@ function renderPromptPresets() {
   if (!row || !chips) return;
   const list = getPromptPresets();
   if (list.length === 0) {
-    // Mantém visível só se tiver pelo menos o botão "Salvar"
-    row.hidden = false;
-    chips.innerHTML = `<span style="font-size:0.75rem;color:var(--text-muted);align-self:center;">Salve seus prompts favoritos para reutilizar</span>`;
+    // Botão "Salvar" agora vive na action bar — sem chips, esconde a row inteira
+    row.hidden = true;
+    chips.innerHTML = '';
     return;
   }
   row.hidden = false;

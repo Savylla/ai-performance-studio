@@ -9,7 +9,7 @@
 //   - APIs de geração (Gemini, Pollinations, etc): NÃO interceptadas
 //     (sempre passam direto pela rede; cachear quebraria streaming/POST)
 
-const CACHE_VERSION = 'aiox-v5-2026-05-21-pill-expanded';
+const CACHE_VERSION = 'aiox-v6-2026-05-21-actions-row';
 const CACHE_NAME = `aiox-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [

@@ -662,37 +662,7 @@ select {
   transform: translateY(0);
 }
 
-/* Prompt hint row */
-.prompt-hint-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2px 16px 0;
-  min-height: 18px;
-}
-.prompt-hint {
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  opacity: 0.7;
-  transition: opacity var(--transition);
-}
-.prompt-hint-row:hover .prompt-hint {
-  opacity: 1;
-}
-.prompt-char-count {
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  min-width: 40px;
-  text-align: right;
-  margin-left: auto;
-}
-.prompt-char-count.warn {
-  color: var(--yellow, #f59e0b);
-}
-.prompt-char-count.over {
-  color: var(--red);
-}
+/* Prompt hint + char count viraram sr-only (mantidos para SR/live-region) */
 
 /* Loading */
 .display-loading {
@@ -856,29 +826,33 @@ select {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 6px 8px 6px 16px;
-  transition: border-color var(--transition), border-radius var(--transition);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  transition: background var(--transition), border-color var(--transition);
   position: relative;
 }
 
-/* Quando o pill cresce (drag manual ou auto-resize), troca para retângulo
-   arredondado — senão a curva de 999px corta visualmente o texto das
-   primeiras e últimas linhas. */
-.prompt-input-wrap.expanded {
-  border-radius: var(--radius-lg);
-  padding: 10px 12px 10px 18px;
-  align-items: flex-start;
+/* Foco discreto: leve clareamento de fundo, sem halo roxo */
+.prompt-input-wrap:focus-within {
+  background: var(--bg-input-focus, rgba(255,255,255,0.04));
+  border-color: var(--border);
 }
 
-.prompt-input-wrap.expanded .lang-buttons,
-.prompt-input-wrap.expanded .prompt-btn {
-  align-self: center;
+/* Action bar (PT, EN, varinha, seta, Salvar) abaixo do prompt */
+.prompt-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 0;
+  flex-wrap: wrap;
+}
+
+.prompt-actions-row .prompt-presets-save {
+  margin-left: auto;
 }
 
 .prompt-resize-handle {
@@ -906,11 +880,6 @@ select {
   background: var(--accent);
 }
 
-.prompt-input-wrap:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-glow);
-}
-
 .prompt-icon {
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -932,6 +901,14 @@ select {
   overflow-y: auto;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+/* Neutraliza o outline/halo roxo global do :focus-visible — o wrap
+   já dá feedback de foco via mudança sutil de fundo. */
+.prompt-input-wrap textarea:focus,
+.prompt-input-wrap textarea:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Quando o usuário arrasta manualmente o handle, liberar o teto até 50vh */

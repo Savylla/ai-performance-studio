@@ -12,9 +12,9 @@
   <meta property="og:type" content="website">
   <title>AI Performance Studio</title>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="css/style.css?v=2026-05-21-prompt-overflow-4">
-  <link rel="stylesheet" href="css/components.css?v=2026-05-21-prompt-overflow-4">
-  <link rel="stylesheet" href="css/responsive.css?v=2026-05-21-prompt-overflow-4">
+  <link rel="stylesheet" href="css/style.css?v=2026-05-21-actions-row-4">
+  <link rel="stylesheet" href="css/components.css?v=2026-05-21-actions-row-4">
+  <link rel="stylesheet" href="css/responsive.css?v=2026-05-21-actions-row-4">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://generativelanguage.googleapis.com">
@@ -1047,10 +1047,6 @@
       <!-- Presets de prompt — chips horizontais com últimos prompts salvos -->
       <div class="prompt-presets-row" id="promptPresetsRow" aria-label="Presets de prompt salvos" hidden>
         <div class="prompt-presets-chips" id="promptPresetsChips" role="list"></div>
-        <button class="prompt-presets-save" id="promptPresetSaveBtn" title="Salvar prompt atual como preset (Ctrl+S)" aria-label="Salvar prompt atual como preset">
-          <i class="fas fa-bookmark" aria-hidden="true"></i>
-          <span>Salvar</span>
-        </button>
       </div>
 
       <!-- Prompt Input Row -->
@@ -1060,6 +1056,10 @@
           <i class="fas fa-sparkles prompt-icon"></i>
           <label for="promptInput" class="sr-only">Prompt de geração</label>
           <textarea id="promptInput" placeholder="Descreva o que você quer criar..." rows="1"></textarea>
+        </div>
+
+        <!-- Action bar: PT/EN/varinha/seta à esquerda, Salvar à direita -->
+        <div class="prompt-actions-row">
           <div class="lang-buttons" id="langButtons">
             <button class="lang-btn active" id="langPT" title="Portugues">PT</button>
             <button class="lang-btn" id="langEN" title="English">EN</button>
@@ -1073,10 +1073,12 @@
           <button class="prompt-btn send-btn" id="generateBtn" title="Gerar">
             <i class="fas fa-arrow-up"></i>
           </button>
-        </div>
-        <div class="prompt-hint-row">
-          <span class="prompt-hint" id="promptHint">Dica: prompts detalhados geram resultados melhores</span>
-          <span class="prompt-char-count" id="promptCharCount"></span>
+          <button class="prompt-presets-save" id="promptPresetSaveBtn" title="Salvar prompt atual como preset (Ctrl+S)" aria-label="Salvar prompt atual como preset">
+            <i class="fas fa-bookmark" aria-hidden="true"></i>
+            <span>Salvar</span>
+          </button>
+          <span class="prompt-hint sr-only" id="promptHint">Dica: prompts detalhados geram resultados melhores</span>
+          <span class="prompt-char-count sr-only" id="promptCharCount" aria-live="polite"></span>
         </div>
       </div>
 
@@ -1433,6 +1435,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=2026-05-21-prompt-overflow-4" defer></script>
+  <script src="js/app.js?v=2026-05-21-actions-row-4" defer></script>
 </body>
 </html>
