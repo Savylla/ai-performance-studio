@@ -12,9 +12,9 @@
   <meta property="og:type" content="website">
   <title>AI Performance Studio</title>
   <link rel="icon" href="assets/logo.png" type="image/png">
-  <link rel="stylesheet" href="css/style.css?v=2026-05-21-actions-row-4">
-  <link rel="stylesheet" href="css/components.css?v=2026-05-21-actions-row-4">
-  <link rel="stylesheet" href="css/responsive.css?v=2026-05-21-actions-row-4">
+  <link rel="stylesheet" href="css/style.css?v=2026-05-21-actions-stacked">
+  <link rel="stylesheet" href="css/components.css?v=2026-05-21-actions-stacked">
+  <link rel="stylesheet" href="css/responsive.css?v=2026-05-21-actions-stacked">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://generativelanguage.googleapis.com">
@@ -1058,21 +1058,23 @@
           <textarea id="promptInput" placeholder="Descreva o que você quer criar..." rows="1"></textarea>
         </div>
 
-        <!-- Action bar: PT/EN/varinha/seta à esquerda, Salvar à direita -->
+        <!-- Action bar: PT/EN/varinha/seta à direita; Salvar embaixo, alinhado à seta -->
         <div class="prompt-actions-row">
-          <div class="lang-buttons" id="langButtons">
-            <button class="lang-btn active" id="langPT" title="Portugues">PT</button>
-            <button class="lang-btn" id="langEN" title="English">EN</button>
-            <button class="lang-btn enhance-more-btn" id="seedToggle" title="Melhorar prompt novamente">
+          <div class="prompt-actions-group">
+            <div class="lang-buttons" id="langButtons">
+              <button class="lang-btn active" id="langPT" title="Portugues">PT</button>
+              <button class="lang-btn" id="langEN" title="English">EN</button>
+              <button class="lang-btn enhance-more-btn" id="seedToggle" title="Melhorar prompt novamente">
+                <i class="fas fa-magic"></i>
+              </button>
+            </div>
+            <button class="prompt-btn enhance-btn" id="enhanceBtn" title="Melhorar prompt com IA">
               <i class="fas fa-magic"></i>
             </button>
+            <button class="prompt-btn send-btn" id="generateBtn" title="Gerar">
+              <i class="fas fa-arrow-up"></i>
+            </button>
           </div>
-          <button class="prompt-btn enhance-btn" id="enhanceBtn" title="Melhorar prompt com IA">
-            <i class="fas fa-magic"></i>
-          </button>
-          <button class="prompt-btn send-btn" id="generateBtn" title="Gerar">
-            <i class="fas fa-arrow-up"></i>
-          </button>
           <button class="prompt-presets-save" id="promptPresetSaveBtn" title="Salvar prompt atual como preset (Ctrl+S)" aria-label="Salvar prompt atual como preset">
             <i class="fas fa-bookmark" aria-hidden="true"></i>
             <span>Salvar</span>
@@ -1435,6 +1437,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=2026-05-21-actions-row-4" defer></script>
+  <script src="js/app.js?v=2026-05-21-actions-stacked" defer></script>
 </body>
 </html>

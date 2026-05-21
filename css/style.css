@@ -842,17 +842,21 @@ select {
   border-color: var(--border);
 }
 
-/* Action bar (PT, EN, varinha, seta, Salvar) abaixo do prompt */
+/* Action bar abaixo do prompt — empilha em coluna alinhada à direita.
+   Linha 1: PT, EN, varinha, seta.
+   Linha 2: Salvar (alinhado vertical com a seta). */
 .prompt-actions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 4px 0;
+}
+
+.prompt-actions-group {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 4px 0;
-  flex-wrap: wrap;
-}
-
-.prompt-actions-row .prompt-presets-save {
-  margin-left: auto;
 }
 
 .prompt-resize-handle {
