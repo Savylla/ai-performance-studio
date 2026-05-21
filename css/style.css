@@ -854,6 +854,7 @@ select {
 
 .prompt-input-wrap {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -862,8 +863,22 @@ select {
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   padding: 6px 8px 6px 16px;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), border-radius var(--transition);
   position: relative;
+}
+
+/* Quando o pill cresce (drag manual ou auto-resize), troca para retângulo
+   arredondado — senão a curva de 999px corta visualmente o texto das
+   primeiras e últimas linhas. */
+.prompt-input-wrap.expanded {
+  border-radius: var(--radius-lg);
+  padding: 10px 12px 10px 18px;
+  align-items: flex-start;
+}
+
+.prompt-input-wrap.expanded .lang-buttons,
+.prompt-input-wrap.expanded .prompt-btn {
+  align-self: center;
 }
 
 .prompt-resize-handle {

@@ -569,12 +569,19 @@ function updatePromptCharCount(len) {
 }
 
 const PROMPT_INPUT_MAX_PX = 180;
+const PROMPT_PILL_ROUND_THRESHOLD_PX = 60;
 
 function autoResizePromptInput(textarea) {
   if (!textarea || textarea.dataset.manualResize) return;
   textarea.style.height = 'auto';
   const next = Math.min(textarea.scrollHeight, PROMPT_INPUT_MAX_PX);
   textarea.style.height = next + 'px';
+  // Pill arredondado vira retângulo arredondado quando cresce,
+  // senão o texto das linhas extremas fica visualmente fora da curva.
+  const wrap = textarea.closest('.prompt-input-wrap');
+  if (wrap) {
+    wrap.classList.toggle('expanded', next > PROMPT_PILL_ROUND_THRESHOLD_PX);
+  }
 }
 
 function initPrompt() {
@@ -608,12 +615,7 @@ function initPrompt() {
       const newHeight = Math.max(36, Math.min(window.innerHeight * 0.5, startHeight + diff));
       textarea.style.height = newHeight + 'px';
       textarea.dataset.manualResize = 'true';
-      // Switch to rounded corners when expanded
-      if (newHeight > 60) {
-        promptWrap.style.borderRadius = 'var(--radius-lg)';
-      } else {
-        promptWrap.style.borderRadius = '';
-      }
+      promptWrap.classList.toggle('expanded', newHeight > PROMPT_PILL_ROUND_THRESHOLD_PX);
     });
 
     document.addEventListener('mouseup', () => {
@@ -637,11 +639,7 @@ function initPrompt() {
       const newHeight = Math.max(36, Math.min(window.innerHeight * 0.5, startHeight + diff));
       textarea.style.height = newHeight + 'px';
       textarea.dataset.manualResize = 'true';
-      if (newHeight > 60) {
-        promptWrap.style.borderRadius = 'var(--radius-lg)';
-      } else {
-        promptWrap.style.borderRadius = '';
-      }
+      promptWrap.classList.toggle('expanded', newHeight > PROMPT_PILL_ROUND_THRESHOLD_PX);
     }, { passive: true });
 
     document.addEventListener('touchend', () => { isDragging = false; });
@@ -650,7 +648,7 @@ function initPrompt() {
     resizeHandle.addEventListener('dblclick', () => {
       textarea.style.height = '';
       textarea.dataset.manualResize = '';
-      promptWrap.style.borderRadius = '';
+      promptWrap.classList.remove('expanded');
     });
   }
 
