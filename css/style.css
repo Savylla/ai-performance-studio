@@ -859,6 +859,38 @@ select {
   gap: 8px;
 }
 
+/* Padroniza altura visual com .provider-group-btn (24px) — botões da action
+   bar ficam no mesmo eixo horizontal que os providers abaixo. */
+.prompt-actions-row .lang-buttons {
+  padding: 0;
+  height: 24px;
+  align-items: center;
+}
+
+.prompt-actions-row .lang-btn {
+  height: 24px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prompt-actions-row .lang-btn.enhance-more-btn {
+  padding: 0 8px;
+}
+
+.prompt-actions-row .prompt-btn {
+  width: 24px;
+  height: 24px;
+  font-size: 0.72rem;
+}
+
+.prompt-actions-row .prompt-presets-save {
+  height: 24px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
 .prompt-resize-handle {
   position: absolute;
   top: -4px;
